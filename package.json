@@ -1,0 +1,28 @@
+{
+  "name": "esp-ai",
+  "version": "0.0.1",
+  "description": "Provide a complete set of AI dialogue solutions for your development board, including but not limited to the IAT+LLM+TTS integration solution for the ESP32 series development board. | 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。", 
+	"repository": "https://github.com/wangzongming/esp-ai",
+  "main": "src/index.js",
+  "keywords": ["esp-ai", "esp32-ai", "esp32", "llm", "iat", "tts", "Arduino-llm", "esp32-llm"],
+	"typings": "src/index.d.ts",
+  "dependencies": {
+    "crypto-js": "^3.1.9-1",
+    "uuid": "^10.0.0",
+    "ws": "^7.1.2"
+  },
+  "devDependencies": {},
+	"engines": {
+		"node": ">=14",
+		"npm": ">=5"
+	},
+  "scripts": { 
+    "start": "node ./src/index.js --dev",
+    "start:pm2": "pm2 start ./src/index.js -i max"
+  },
+	"files": [
+		"src"
+	],
+  "author": "wangzongming",
+  "license": "ISC"
+}

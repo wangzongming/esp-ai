@@ -1,0 +1,16 @@
+
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+db
+src/index_copy.js
+src/config_copy.js
+
+
+# dependencies
+node_modules
+example/node_modules
+example/index_copy.js
+
+# builds
+build 
+ 
