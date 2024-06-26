@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "esp-ai": "0.0.1"
+  },
   "devDependencies": {},
   "scripts": {
     "start": "node ./index.js",
