@@ -2,16 +2,9 @@
 # ESP-AI  [![npm](https://img.shields.io/npm/v/esp-ai.svg)](https://www.npmjs.com/package/esp-ai) [![npm](https://img.shields.io/npm/dm/esp-ai.svg?style=flat)](https://www.npmjs.com/package/esp-ai)
 
 
-```
- ********  ******** *******            **     **
-/**/////  **////// /**////**          ****   /**
-/**      /**       /**   /**         **//**  /**
-/******* /*********/*******  *****  **  //** /**
-/**////  ////////**/**////  /////  **********/**
-/**             /**/**            /**//////**/**
-/******** ******** /**            /**     /**/**
-//////// ////////  //             //      // // 
-```
+
+![logo.png](./logo.png)
+
 <a href="./readme.md">简体中文</a>
 
 > Provide a complete set of AI dialogue solutions for your development board, including but not limited to the IAT+LLM+TTS integration solution for the ESP32 series development board.

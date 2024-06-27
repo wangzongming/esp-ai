@@ -21,7 +21,8 @@
     "start:pm2": "pm2 start ./src/index.js -i max"
   },
 	"files": [
-		"src"
+		"src",
+    "logo.png"
 	],
   "author": "wangzongming",
   "license": "ISC"

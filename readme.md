@@ -2,16 +2,8 @@
 # ESP-AI  [![npm](https://img.shields.io/npm/v/esp-ai.svg)](https://www.npmjs.com/package/esp-ai) [![npm](https://img.shields.io/npm/dm/esp-ai.svg?style=flat)](https://www.npmjs.com/package/esp-ai)
 
 
-```
- ********  ******** *******            **     **
-/**/////  **////// /**////**          ****   /**
-/**      /**       /**   /**         **//**  /**
-/******* /*********/*******  *****  **  //** /**
-/**////  ////////**/**////  /////  **********/**
-/**             /**/**            /**//////**/**
-/******** ******** /**            /**     /**/**
-//////// ////////  //             //      // // 
-```
+![logo.png](./logo.png)
+
 <a href="./readme_english.md">English</a>
 
 > 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。
