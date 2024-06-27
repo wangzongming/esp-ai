@@ -25,6 +25,8 @@ The server-side code of this project is based on Nodejs, and the hardware code i
 
 Open source is not easy, the top right corner of a 'Star' support a little bit of it ~
 
+# communication group
+QQ group: 854445223
 
 # How to run this project?
 
