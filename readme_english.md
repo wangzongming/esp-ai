@@ -27,7 +27,7 @@ QQ group: 854445223
 
 1. Install esp-ai
 2. Introduce the plug-in into your project, configure the relevant 'key' and run it
-3. Burn the provided client code to the 'ESP32s3' development board
+3. Burn the provided client code to the 'ESP32s3' development boar(Plug-ins from /client/libraries need to be imported into the IDE)
 
 # Server required environment
 

@@ -26,7 +26,7 @@ QQ 交流群: 854445223
 
 1. 安装服务端插件
 2. 将插件引入你的项目中，配置好相关的`key`并运行
-3. 将提供的客户端代码烧录到 `ESP32s3` 开发板中
+3. 将提供的客户端代码烧录到 `ESP32s3` 开发板中(需将/client/libraries 中的插件导入到IDE)
 
 # 服务端所需环境
 
@@ -79,11 +79,27 @@ node ./index.js
 pm2 start ./index.js -i max
 ```
 
-# 客户端运行
+# 客户端(ESP32)运行
+
 客户端使用 `Arduino IDE` 编写，请先自行安装 `Arduino IDE`
 
+### 头文件
+
+需要提前将`/client/libraries`中的文件下载放到`Arduino IED`的依赖目录中，这个目录默认在：`C:\Users\用户名\Documents\Arduino\libraries`
+
+除此之外，还需要提前安装好 `esp32` 开发板环境。
+ 
+| 文件名 | 备注 |
+| -------- | ------- |
+| xiao_ming_tong_xue_inferencing      | 离线识别的模型     |
+| arduino-audio-tool      | 最新版IDE可以直接搜索安装     |
+| arduinoWebSockets      | 最新版IDE可以直接搜索安装     | 
+
+### 代码上传
+
 1. 将 /client/client.ino 下载到本地
-2. 用 `Arduino IDE` 打开文件并且上传到板子中(注意修改相关的`wifi`和引脚配置)。
+2. 用 `Arduino IDE` 打开文件并且上传到板子中(注意修改相关的`wifi`和`服务IP`和`引脚配置`)。
+3. 点击上传
 
 # 客户端接线
 ## ESP32-s3 开发板
