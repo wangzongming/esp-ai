@@ -2,7 +2,7 @@
  * @author xiaomingio 
  * @github https://github.com/wangzongming/esp-ai  
  */
-const WebSocket = require('ws') 
+const WebSocket = require('ws')
 const getServerURL = require("../../getServerURL");
 
 /**
@@ -15,7 +15,7 @@ const getServerURL = require("../../getServerURL");
  * @return {Function} (pcm)=> Promise<Boolean>
 */
 function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb }) {
-    const { devLog, api_key, tts_server } = G_config;
+    const { devLog, api_key, tts_server, tts_params_set } = G_config;
 
     const config = {
         appid: api_key[tts_server].appid,
@@ -97,19 +97,20 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
         })
         // 传输数据
         function send() {
+            const business = {
+                "aue": "raw",
+                "auf": "audio/L16;rate=16000",
+                "vcn": "aisbabyxu",
+                "tte": "UTF8",
+                volume: 80
+            }
             const frame = {
                 // 填充common
                 "common": {
                     "app_id": config.appid
                 },
                 // 填充business
-                "business": {
-                    "aue": "raw",
-                    "auf": "audio/L16;rate=16000",
-                    "vcn": "aisbabyxu",
-                    "tte": "UTF8",
-                    volume: 80
-                },
+                "business": tts_params_set ? tts_params_set(business) : business,
                 // 填充data
                 "data": {
                     "text": Buffer.from(text).toString('base64'),

@@ -16,6 +16,7 @@ function LLM_FN(device_id, { text, onError, cb }) {
     devLog && console.log('\n\n=== 开始请求 LLM，输入: ', text, " ===");
     const { llm_historys = [] } = G_devices.get(device_id);
     const config = {
+        llm: api_key[llm_server].llm,
         appid: api_key[llm_server].appid,
     }
 
@@ -78,7 +79,13 @@ function LLM_FN(device_id, { text, onError, cb }) {
             },
             "parameter": {
                 "chat": {
-                    "domain": "generalv3.5",
+                    "domain": {
+                        "v4.0": "4.0Ultra",
+                        "v3.5": "generalv3.5",
+                        "v3.1": "generalv3",
+                        "v2.1": "generalv2",
+                        "v1.1": "general",
+                    }[config.llm],  
                     "temperature": 0.5,
                     "max_tokens": 500
                 }

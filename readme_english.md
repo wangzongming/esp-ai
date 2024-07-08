@@ -21,6 +21,9 @@ Open source is not easy, the top right corner of a 'Star' support a little bit o
 # communication group
 QQ group: 854445223
 
+# Update Log
+<a href="./version-log.md">升级日志</a>
+
 # How to run this project?
 
 **Get an intelligent assistant up and running in three simple steps.**
@@ -143,7 +146,8 @@ The client is written using the Arduino IDE, please install the Arduino IDE your
 | iFlytek              | ✔️   | ✔️   | ✔️   |
 | 百度             | ❗   | ❗   | ❗   |
 | Baidu         | ❗   | ❗   | ❗   |
-| Alijline(qianwen...) | ✔️   | ✔️   | ✔️   |
+| 阿里积灵(千问等) | ❗   | ✔️   | ❗   |
+| 豆包 | ❗   |  ❗  | ❗   |
 | ...        |
 
 

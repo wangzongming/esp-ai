@@ -30,20 +30,38 @@ const config = {
     /**
      * 不同的服务商需要配置对应的 key
      * 每个服务商配置不是完全一样的，具体请参考文档
+     * 如果想用讯飞星火模型就配置，不用就不配置，其他key同理。
     */
     api_key: {
-        // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
-        xun_fei: {
-            appid: "",
-            apiSecret: "",
-            apiKey: "",
+        // // 阿里云-积灵(推荐使用)： https://dashscope.console.aliyun.com/apiKey 
+        // dashscope: {
+        //     apiKey: "sk-",
+        //     // LLM 版本
+        //     llm: "qwen-turbo",
+        // },
+
+        // // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
+        // xun_fei: {
+        //     appid: "",
+        //     apiSecret: "",
+        //     apiKey: "",
+        //     // LLM 版本
+        //     llm: "v4.0", // v4.0 v3.5 v3.1 v2.1 v1.1（Lite）
+        // },
+
+
+         // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
+         xun_fei: {
+            appid: "5200d300",
+            apiSecret: "ZjQwYzQ4YTUzN2UxY2RkNjRkMzAwMGVm",
+            apiKey: "9cd6507384678076d9f5640573374fb7",
             // LLM 版本
-            llm: "v3.5",
+            llm: "v4.0",
         },
         // 阿里云-积灵： https://dashscope.console.aliyun.com/apiKey
         // 积灵主要是提供llm（推荐使用这个llm服务）
         dashscope: {
-            apiKey: "sk-",
+            apiKey: "sk-2a9afd13184c4b239739f25b370f8d21",
             // LLM 版本
             llm: "qwen-turbo",
         }
@@ -102,18 +120,37 @@ const config = {
 
     /**
      * llm 参数控制, 可以设置温度等
+     * 不同服务要求的参数格式和属性名字不同，根据下面属性进行配置
     */
-    // llm_params_set: (params) => {
-    //     // 千问top_p、top_k ...
-    //     // params.top_p = 0.5;     
+    llm_params_set: (params) => {
+        /** 阿里积灵-千问top_p、top_k ... **/
+        // params.top_p = 0.5;     
 
-    //     // 讯飞 temperature ...
-    //     // params.parameter.chat.temperature = 0.4;
-    //     // params.parameter.chat.max_tokens = 100;
+        /** 讯飞 temperature ... **/
+        // params.parameter.chat.temperature = 0.4;
+        // params.parameter.chat.max_tokens = 100;
 
-    //     // 改完后一定要返回出去
-    //     return params;
-    // },
+        // 改完后一定要返回出去
+        return params;
+    },
+
+    /**
+     * tts 参数控制, 可以设置说话人、音量、语速等
+     * 不同服务要求的参数格式和属性名字不同，根据下面属性进行配置
+    */
+    tts_params_set: (params) => {
+
+        /** 阿里积灵 **/
+        // 阿里积灵说话人，可选列表见：https://console.xfyun.cn/services/tts
+        // params.model = : "sambert-zhimiao-emo-v1" 
+
+        /** 讯飞 **/
+        // 讯飞说话人列表见：https://help.aliyun.com/zh/dashscope/developer-reference/model-list-old-version?spm=a2c4g.11186623.0.0.5fbe490eBdtzX0
+        params.vcn = "aisbabyxu";
+
+        // 改完后一定要返回出去
+        return params;
+    },
 
 
     /**
@@ -129,7 +166,7 @@ const config = {
      * @param {string} text 语音转的文字 
     */
     // onIATcb({ device_id, text }) { },
-    
+
     /**
      * tts 回调 
      * @param {string} device_id 设备id

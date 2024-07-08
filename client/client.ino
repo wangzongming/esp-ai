@@ -45,7 +45,7 @@
 
 
 // 固定设置
-#define SAMPLE_BUFFER_SIZE 512 
+#define SAMPLE_BUFFER_SIZE 512
 
 // ============================ 可改配置 ======================
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
@@ -53,18 +53,18 @@
 // 麦克风引脚
 #define I2S_MIC_BIN 4
 #define I2S_MIC_WIN 5
-#define I2S_MIC_DIN 6  
+#define I2S_MIC_DIN 6
 #define MIC_i2s_num I2S_NUM_1
 
 // 扬声器引脚
 #define I2S_DOUT 15
 #define I2S_BCLK 16
-#define I2S_LRC  17
+#define I2S_LRC 17
 #define YSQ_i2s_num I2S_NUM_0
 // wifi信息
-const char *ssid = "oldwang"; 
+const char *ssid = "oldwang";
 const char *password = "oldwang520";           // 欢迎来蹭我网~~~
-const char *websocket_server = "192.168.3.3";  // 替换为WebSocket服务器地址
+const char *websocket_server = "192.168.1.5";  // 替换为WebSocket服务器地址
 const uint16_t websocket_port = 8080;          // 替换为WebSocket服务器端口
 const char *websocket_path = "/";              // 替换为WebSocket服务器路径
 
@@ -82,7 +82,7 @@ int cur_ctrl_val = 0;
 // 默认音量
 float volume = 0.5;
 // 离线语音 “小明同学” 识别阈值  0-1
-float voice_key_threshold = 0.8;
+float voice_key_threshold = 0.7;
 
 WebSocketsClient webSocket;
 
@@ -106,18 +106,19 @@ typedef struct {
   uint32_t n_samples;
 } inference_t;
 static inference_t inference;
+static const uint32_t sample_buffer_size = 1024;
 // static const uint32_t sample_buffer_size = 2048;
-static const uint32_t sample_buffer_size = 4096;
+// static const uint32_t sample_buffer_size = 4096;
 static signed short sampleBuffer[sample_buffer_size];
 // 设置为true以查看从原始信号生成的特征
-static bool debug_nn = false;  
+static bool debug_nn = false;
 static bool record_status = true;
 
 
 // 初始化麦克风 IsS
-static int i2s_init(uint32_t sampling_rate) { 
+static int i2s_init(uint32_t sampling_rate) {
   i2s_config_t i2s_config = {
-    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX), 
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
     .sample_rate = sampling_rate,
     .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
     .channel_format = I2S_MIC_CHANNEL,
@@ -129,7 +130,7 @@ static int i2s_init(uint32_t sampling_rate) {
     .tx_desc_auto_clear = false,
     .fixed_mclk = 0
   };
- 
+
   i2s_pin_config_t i2s_mic_pins = {
     .bck_io_num = I2S_MIC_BIN,
     .ws_io_num = I2S_MIC_WIN,
@@ -194,7 +195,7 @@ void setup() {
     delay(1000);
     Serial.print(".");
   }
-  // 不休眠，不然可能播放不了音乐
+  // 不休眠，不然可能播放不了
   WiFi.setSleep(false);
 
   Serial.println("");
@@ -225,7 +226,7 @@ void setup() {
 
   // 演示 led 灯
   pinMode(led_pin, OUTPUT);
-  digitalWrite(led_pin, LOW); 
+  digitalWrite(led_pin, LOW);
 
   // 启动扬声器
   speaker_i2s_setup();
@@ -239,6 +240,18 @@ void setup() {
 int32_t raw_samples[SAMPLE_BUFFER_SIZE];
 void loop() {
   webSocket.loop();
+
+  // ing...
+  // size_t bytes_read;
+  // uint16_t buffer[1024] = {0};
+  // i2s_read(MIC_i2s_num, &buffer, sizeof(buffer), &bytes_read, portMAX_DELAY);
+  // signal_t signal;
+  // signal.total_length = bytes_read;
+  // signal.get_data = (uint8_t *)buffer;
+  // ei_impulse_result_t result = { 0 };
+  // EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
+
+
 
   // buf 准备好后就进行推理
   if (inference.buf_ready != 0 && can_voice == "1") {
@@ -255,6 +268,7 @@ void loop() {
       return;
     }
     float xmtx_val = result.classification[2].value;
+    // Serial.print(xmtx_val);
     if (xmtx_val >= voice_key_threshold) {
       Serial.println("");
       Serial.print("小明同学：");
