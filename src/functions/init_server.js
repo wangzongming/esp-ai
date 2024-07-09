@@ -150,6 +150,12 @@ function init_server() {
         //     reRecord: false,
         //     pauseInputAudio: true
         // }); 
+
+        // await TTS_FN(device_id, {
+        //     text: "第二句，ESP-AI 萌娃音色要上线啦！",
+        //     reRecord: false,
+        //     pauseInputAudio: true
+        // }); 
  
 
         ws.on('close', () => {

@@ -48,7 +48,7 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
         // 切分缓冲区
         const chunk = audio.slice(i, end);
         ws_client.send(chunk);
-    }
+    } 
 }
 
 /**

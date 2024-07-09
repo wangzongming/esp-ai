@@ -5,7 +5,9 @@ ESP_AI    KEYWORD1
 #function and method (KEYWORD2)
 begin    KEYWORD2
 loop    KEYWORD2 
-loop    KEYWORD2 
+onEvent    KEYWORD2 
+wifiIsConnected    KEYWORD2 
+localIP    KEYWORD2 
  
  
 #constant (LITERAL1)

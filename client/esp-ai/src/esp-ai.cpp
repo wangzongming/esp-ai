@@ -1,9 +1,24 @@
 #include "esp-ai.h"
+// 模型插件
+#include <xiao_ming_tong_xue_inferencing.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
+
+#define DEBUG_PRINT(debug, x) \
+    if (debug)                \
+    {                         \
+        Serial.print(x);      \
+    }
+#define DEBUG_PRINTLN(debug, x) \
+    if (debug)                  \
+    {                           \
+        Serial.println(x);      \
+    }
 
 WebSocketsClient webSocket;
 
@@ -46,7 +61,7 @@ static signed short sampleBuffer[sample_buffer_size];
 // 设置为true以查看从原始信号生成的特征
 static bool debug_nn = false;
 static bool record_status = true;
- 
+
 ESP_AI::ESP_AI() : i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker), wifi_config(default_wifi_config), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), debug(false)
 {
 }
@@ -157,29 +172,31 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
 
-    debug &&Serial.println("==================== WIFI ====================");
-    debug &&Serial.println("wifi name: " + String(wifi_config.wifi_name));
-    debug &&Serial.println("wifi pwd: " + String(wifi_config.wifi_pwd));
+    DEBUG_PRINTLN(debug, "==================== WIFI ====================");
+    DEBUG_PRINTLN(debug, "wifi name: " + String(wifi_config.wifi_name));
+    DEBUG_PRINTLN(debug, "wifi pwd: " + String(wifi_config.wifi_pwd));
     WiFi.begin(wifi_config.wifi_name, wifi_config.wifi_pwd);
-    debug &&Serial.print("connect wifi ing..");
+    DEBUG_PRINT(debug, "connect wifi ing..");
 
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
-        debug &&Serial.print(".");
+        DEBUG_PRINT(debug, ".");
     }
 
     // 不休眠，不然可能播放不了
     WiFi.setSleep(false);
 
-    debug &&Serial.println();
-    debug &&Serial.print("IP address: ");
-    debug &&Serial.println(WiFi.localIP());
-    debug &&Serial.println("===============================================");
+    DEBUG_PRINTLN(debug, "");
+    DEBUG_PRINT(debug, "IP address: ");
+    DEBUG_PRINTLN(debug, WiFi.localIP());
+    DEBUG_PRINTLN(debug, "===============================================");
 
-    if (wake_up_config.wake_up_scheme == "edge_impulse")
+    // Serial.println(wake_up_config.wake_up_scheme);
+
+    if (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0)
     {
-        debug &&Serial.println("=================== Edge Impulse ================");
+        DEBUG_PRINTLN(debug, "=================== Edge Impulse ================");
         // 关键词模型相关信息和设置
         if (debug)
         {
@@ -200,15 +217,13 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             ei_printf("ERR: Could not allocate audio buffer (size %d), this could be due to the window length of your model\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT);
             return;
         }
-        debug &&Serial.println("===============================================");
+        DEBUG_PRINTLN(debug, "===============================================");
     }
-    // 启动扬声器
+    // 扬声器
     speaker_i2s_setup();
-    // ws 服务启动
+
     webSocket.begin(server_config.ip, server_config.port, "/");
- 
     webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
- 
 }
 
 int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr)
@@ -253,7 +268,6 @@ void ESP_AI::onEvent(void (*func)(char command_id, char data))
 
 void ESP_AI::loop()
 {
-    // Serial.println("loop 执行");
     webSocket.loop();
 
     int _cur_ctrl_val = analogRead(volume_config.input_pin);
@@ -262,10 +276,10 @@ void ESP_AI::loop()
         cur_ctrl_val = _cur_ctrl_val;
         // 计算最新音量
         volume_config.volume = static_cast<float>(cur_ctrl_val) / volume_config.max_val;
-        debug &&Serial.println(volume_config.volume);
+        DEBUG_PRINTLN(debug, volume_config.volume);
     }
 
-    if (wake_up_config.wake_up_scheme == "edge_impulse")
+    if (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0)
     {
         // buffer 准备好后就进行推理
         if (inference.buf_ready != 0 && can_voice == "1")
@@ -284,12 +298,13 @@ void ESP_AI::loop()
                 return;
             }
             float xmtx_val = result.classification[2].value;
+
             if (xmtx_val >= wake_up_config.threshold)
             {
                 if (debug)
                 {
                     Serial.println("");
-                    Serial.print("小明同学：");
+                    Serial.print("唤醒词识别得分：");
                     Serial.print(xmtx_val);
                     Serial.println("");
                 }
@@ -298,7 +313,7 @@ void ESP_AI::loop()
                 digitalWrite(LED_BUILTIN, HIGH);
                 start_ed = "1";
                 webSocket.sendTXT("start");
-                debug &&Serial.println("开始录音");
+                DEBUG_PRINTLN(debug, "开始录音");
             }
         }
     }
@@ -324,7 +339,7 @@ void ESP_AI::wakeUp()
     digitalWrite(LED_BUILTIN, HIGH);
     start_ed = "1";
     webSocket.sendTXT("start");
-    debug &&Serial.println("开始录音");
+    DEBUG_PRINTLN(debug, "开始录音");
 }
 
 // 调整音量
@@ -356,23 +371,23 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         if (strcmp((char *)payload, "start_voice") == 0)
         {
             can_voice = "1";
-            debug &&Serial.print("继续采集音频");
+            DEBUG_PRINT(debug, "继续采集音频");
         }
         if (strcmp((char *)payload, "pause_voice") == 0)
         {
             can_voice = "0";
-            debug &&Serial.print("暂停采集音频");
+            DEBUG_PRINT(debug, "暂停采集音频");
         }
         if (strcmp((char *)payload, "iat_end") == 0)
         {
-            debug &&Serial.println("当前语音识别完毕啦！");
+            DEBUG_PRINTLN(debug, "当前语音识别完毕啦！");
         }
         if (strcmp((char *)payload, "session_end") == 0)
         {
             start_ed = "0";
             can_voice = "1";
             digitalWrite(LED_BUILTIN, LOW);
-            debug &&Serial.println("会话结束");
+            DEBUG_PRINTLN(debug, "会话结束");
         }
         // 调用指令回调
         if (onEventCb != nullptr)
@@ -448,11 +463,12 @@ bool microphone_inference_record(void)
     return ret;
 }
 
-void ESP_AI::capture_samples_wrapper(void* arg) {
-    ESP_AI* instance = static_cast<ESP_AI*>(arg);
+void ESP_AI::capture_samples_wrapper(void *arg)
+{
+    ESP_AI *instance = static_cast<ESP_AI *>(arg);
     instance->capture_samples(arg);
 }
-void ESP_AI::capture_samples(void *arg) 
+void ESP_AI::capture_samples(void *arg)
 {
 
     const int32_t i2s_bytes_to_read = (uint32_t)arg;

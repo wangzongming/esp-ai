@@ -1,5 +1,4 @@
-#ifndef ESP_AI_H
-#define ESP_AI_H
+#pragma once
 
 #include <string>
 #include <stddef.h> // 包含NULL定义
@@ -10,10 +9,10 @@
 // 音频流播放插件
 #include "AudioTools.h"
 
-// 模型插件
-#include <xiao_ming_tong_xue_inferencing.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+// // 模型插件
+// #include <xiao_ming_tong_xue_inferencing.h>
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
 
 struct ESP_AI_i2s_config_mic
 {
@@ -111,13 +110,11 @@ private:
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
     bool microphone_inference_start(uint32_t n_samples); 
-    void microphone_inference_end(void);
-    // void capture_samples(void *arg);
+    void microphone_inference_end(void); 
     void capture_samples(void* arg);
     static void capture_samples_wrapper(void* arg);
 
     void audio_inference_callback(uint32_t n_bytes);
     int i2s_deinit(void);
 };
-
-#endif
+ 
