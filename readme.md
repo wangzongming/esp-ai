@@ -5,10 +5,8 @@
 ![logo.png](./logo.png)
 
 <a href="./readme_english.md">English</a>
-
-<a href="xxx">详细文档</a>
-
-
+ 
+ 
 > 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。依赖式注入到项目，并不影响现有项目。
 
 你只需要将讯飞、积灵、本地服务等平台提供`IAT`、`LLM`、`TTS`服务提供的`key`传给插件，即可运行服务，而不需考虑各个服务间的交互，也无需考虑开发板和服务间的交互，你仅需做好机器人~
@@ -24,6 +22,9 @@
 <img src="./websit/imgs/arduino.png" />
 <img src="./websit/imgs/nodejs.png" />
 
+# 网站主页 & 文档教程
+努力建设中...
+
 # 升级日志
 <a href="./version-log.md">升级日志</a>
 
@@ -33,8 +34,6 @@ QQ 交流群: 854445223
 # 详细使用教程
 [将硬件接入大语言模型(LLM)将变得如此简单~](https://juejin.cn/post/7384704245495234594)
 
-# 网站主页 & 文档教程
-努力建设中...
 
 # 案例视频
 [bilibili](https://www.bilibili.com/video/BV1xS421o7hi/#reply1505985392)
