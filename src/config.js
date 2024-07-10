@@ -18,16 +18,17 @@ const config = {
      * @value xun_fei           讯飞的服务
      * @value volcengine        火山引擎（豆包等）
      * @value dashscope         阿里（积灵等）
+     * @value oneapi            OPENAI接口类型的服务
      * @value bai_du            百度的服务（预计 2.0 版本支持）
      * @value privatization     私有服务（预计 2.0 版本支持）
     */
     iat_server: "xun_fei",
 
     // tts_server: "xun_fei",
-    tts_server: "volcengine",
+    tts_server: "xun_fei",
     // tts_server: "ttson",
 
-    llm_server: "xun_fei",
+    llm_server: "oneapi",
     // llm_server: "dashscope",
 
     /**
@@ -49,6 +50,13 @@ const config = {
             apiKey: "sk-xxx",
             // LLM 版本
             llm: "qwen-turbo",
+        },
+        // one-api项目地址： https://github.com/MartialBE/one-api
+        // Kalicyh 部署的（非az）：https://api.xn--5kv132d.com/
+        oneapi: {
+            apiKey: "sk-xxx",
+            // LLM 版本
+            llm: "gpt-4o",//gpt-3.5-turbo，gpt-4o ...
         },
 
 

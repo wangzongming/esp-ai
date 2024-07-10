@@ -153,15 +153,18 @@ node ./index.js
 
 | 服务方           | IAT | LLM | TTS |
 | ---------------- | --- | --- | --- |
-| <a src="https://www.xfyun.cn/">讯飞</a>             | ✔️   | ✔️   | ✔️   |
-| <a src="https://www.volcengine.com/">火山引擎(豆包等)</a> | ❗   |  ❗  | ✔️   |
-| <a src="https://www.ttson.cn/">海豚配音</a> | ❗   |  ❗  | ❗  |
-| <a src="https://dashscope.console.aliyun.com/"> 阿里积灵(千问等)</a> | ❗   | ✔️   | ❗   |
-| chat GPT          | ❗   | ❗   | ❗   |
+| [讯飞](https://www.xfyun.cn/)             | ✔️   | ✔️   | ✔️   |
+| [火山引擎(豆包等)](https://www.volcengine.com/) | ❗   |  ❗  | ✔️   |
+| [海豚配音]() | ❗   |  ❗  | ❗  |
+| [阿里积灵(千问等)](https://dashscope.console.aliyun.com/) | ❗   | ✔️   | ❗   |
+| [one-api](https://github.com/MartialBE/one-api)          | ❗   | ✔️   | ❗   |
+| chat GPT          | ❗   | ✔️   | ❗   |
 | 百度             | ❗   | ❗   | ❗   |
 | 本地服务         | ❗   | ❗   | ❗   |
 | 增加中...        |
 
+### 通过 [one-api](https://github.com/MartialBE/one-api) 实现接入
+openai，Gemini，百度文心，通义千问，讯飞星火，智谱，腾讯混元，百川，MiniMax，Deepseek，Moonshot，Mistral，Groq，零一万物，Cloudflare AI，Cohere，Coze，Ollama 等模型
 
 # 离线唤醒方案
 **✔️ 已支持**   **❗开发中**   **❌ 不支持**
@@ -248,6 +251,7 @@ espAi({
      * 语音识别服务、TTS服务、LLM 服务的提供方, 默认为 xun_fei
      * @value xun_fei           讯飞的服务
      * @value dashscope         阿里-积灵
+     * @value oneapi            OPENAI接口类型的服务
      * @value bai_du            百度的服务（预计 1.0 版本支持）
      * @value privatization     自己的服务（预计 1.0 版本支持）
     */
@@ -275,6 +279,11 @@ espAi({
             apiKey: "sk-xxxx",
             // LLM 版本
             llm: "qwen-turbo",
+        },
+        oneapi: {
+            apiKey: "sk-xxx",
+            // LLM 版本
+            llm: "gpt-4o",//gpt-3.5-turbo，gpt-4o ...
         },
         
 

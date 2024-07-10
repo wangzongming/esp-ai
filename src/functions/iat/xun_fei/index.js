@@ -51,7 +51,7 @@ function IAT_FN(device_id, cb) {
                 iat_server_connected: false,
             })
             devLog && console.log('\n\n=== 会话结束 ===\n\n')
-        }, 2500);
+        }, 5000);
     })
 
     let realStr = "";

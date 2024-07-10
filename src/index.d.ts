@@ -16,10 +16,11 @@ export type Config = {
      * @value dashscope         阿里-积灵
      * @value bai_du            百度的服务（预计 2.0 版本支持）
      * @value privatization     自己的服务（预计 2.0 版本支持）
+     * @value oneapi            OPENAI接口类型的服务（预计 2.0 版本支持）
     */
-    iat_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
-    tts_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
-    llm_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
+    iat_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization"| "oneapi",
+    tts_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization"| "oneapi",
+    llm_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization"| "oneapi",
 
     /**
      * 不同的服务商需要配置对应的 key
@@ -37,6 +38,11 @@ export type Config = {
         // 阿里云-积灵： https://dashscope.console.aliyun.com/apiKey
         // 积灵主要是提供llm（推荐使用这个llm服务）
         dashscope?: {
+            apiKey: string,
+            // LLM 版本
+            llm?: string,
+        },
+        oneapi?: {
             apiKey: string,
             // LLM 版本
             llm?: string,
