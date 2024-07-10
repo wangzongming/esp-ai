@@ -3,8 +3,6 @@
 ESP_AI esp_ai;
 // [必  填] 是否调试模式， 会输出更多信息
 bool debug = true;
-// [必  填] wifi 配置： { wifi 账号， wifi 密码 }  注意：要用双引号！
-ESP_AI_wifi_config wifi_config = { "oldwang", "oldwang520" };
 // [必  填] 服务配置： { 服务IP， 服务端口 }
 ESP_AI_server_config server_config = { "192.168.1.5", 8080 };
 // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
@@ -27,7 +25,7 @@ void on_command(char command_id, char data) {
 void setup() {
   Serial.begin(115200);
   // 开始运行 ESP-AI
-  esp_ai.begin({ i2s_config_mic, i2s_config_speaker, wifi_config, server_config, wake_up_config, volume_config, debug });
+  esp_ai.begin({ i2s_config_mic, i2s_config_speaker, server_config, wake_up_config, volume_config, debug });
   // wifi 测试代码
   // Serial.println(esp_ai.wifiIsConnected() ? "已连接" : "未连接");
   // Serial.println(esp_ai.localIP().c_str());

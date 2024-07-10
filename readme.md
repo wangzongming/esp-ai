@@ -65,6 +65,9 @@ QQ 交流群: 854445223
 3. Arduino IDE 中安装 esp 2.x 开发板（不能大于2.x）
 ![alt text](image.png)
 4. 需将`/client/libraries` 中的插件导入到IDE插件中，默认位置在`C:\Users\用户名\Documents\Arduino\libraries`。
+5. 需要设置开发板 `esp32 s3(n16r8)` 如图设置 
+
+<img src="image2.jpg" width="300px">
 
  
 | 文件名 | 备注 |
@@ -73,6 +76,7 @@ QQ 交流群: 854445223
 | arduinoWebSockets      | 新版IDE可以直接搜索安装     | 
 | esp-ai      | esp-ai 暂时不可搜索安装     | 
 | xiao_ming_tong_xue_inferencing      | 离线语音识别模型  暂时不可搜索安装    |
+| WiFiManager      | 新版IDE可以直接搜索安装    |
 
 
 # 运行前准备
@@ -184,8 +188,6 @@ INMP441(MIC) -> audio -> ESP32 -> wake-on-voice -> audio -> esp-ai -> IAT Server
 ESP_AI esp_ai;
 // [必  填] 是否调试模式， 会输出更多信息
 bool debug = true;
-// [必  填] wifi 配置： { wifi 账号， wifi 密码 }  注意：要用双引号！
-ESP_AI_wifi_config wifi_config = { "oldwang", "oldwang520" };
 // [必  填] 服务配置： { 服务IP， 服务端口 }
 ESP_AI_server_config server_config = { "192.168.1.5", 8080 };
 // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
@@ -208,7 +210,7 @@ void on_command(char command_id, char data) {
 void setup() {
   Serial.begin(115200);
   // 开始运行 ESP-AI
-  esp_ai.begin({ i2s_config_mic, i2s_config_speaker, wifi_config, server_config, wake_up_config, volume_config, debug });
+  esp_ai.begin({ i2s_config_mic, i2s_config_speaker, server_config, wake_up_config, volume_config, debug });
   // wifi 测试代码
   // Serial.println(esp_ai.wifiIsConnected() ? "已连接" : "未连接");
   // Serial.println(esp_ai.localIP().c_str());

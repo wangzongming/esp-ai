@@ -46,12 +46,6 @@ struct ESP_AI_volume_config
     float volume;
 };
 
-struct ESP_AI_wifi_config
-{
-    char wifi_name[20];
-    char wifi_pwd[20];
-};
-
 struct ESP_AI_server_config
 {
     char ip[16];
@@ -64,8 +58,6 @@ struct ESP_AI_CONFIG
     ESP_AI_i2s_config_mic i2s_config_mic;
     // 扬声器引脚配置
     ESP_AI_i2s_config_speaker i2s_config_speaker;
-    // wifi 配置
-    ESP_AI_wifi_config wifi_config;
     // 服务配置
     ESP_AI_server_config server_config;
     // 离线唤醒配置
@@ -98,7 +90,6 @@ public:
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
     ESP_AI_i2s_config_speaker i2s_config_speaker;
-    ESP_AI_wifi_config wifi_config;
     ESP_AI_server_config server_config;
     ESP_AI_wake_up_config wake_up_config;
     ESP_AI_volume_config volume_config;
@@ -106,6 +97,7 @@ private:
     void (*onEventCb)(char command_id, char data) = nullptr; // 初始化为nullptr
 
     void speaker_i2s_setup();
+    void wifiConnect();
     void adjustVolume(int16_t *buffer, size_t length, float volume);
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
