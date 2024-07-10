@@ -67,7 +67,7 @@ QQ 交流群: 854445223
 4. 需将`/client/libraries` 中的插件导入到IDE插件中，默认位置在`C:\Users\用户名\Documents\Arduino\libraries`。
 5. 需要设置开发板 `esp32 s3(n16r8)` 如图设置 
 
-<img src="image2.jpg" width="100px">
+<img src="image2.jpg" width="300px">
 
  
 | 文件名 | 备注 |
