@@ -3,6 +3,7 @@
 #include <xiao_ming_tong_xue_inferencing.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <WiFiManager.h>
 
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
@@ -40,8 +41,6 @@ ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
 ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15};
 // 默认离线唤醒方案
 ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.7};
-// { wifi 账号， wifi 密码 }
-ESP_AI_wifi_config default_wifi_config = {"oldwang", "oldwang520"};
 // { ip， port }
 ESP_AI_server_config default_server_config = {"192.168.1.5", 8080};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
@@ -62,7 +61,7 @@ static signed short sampleBuffer[sample_buffer_size];
 static bool debug_nn = false;
 static bool record_status = true;
 
-ESP_AI::ESP_AI() : i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker), wifi_config(default_wifi_config), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), debug(false)
+ESP_AI::ESP_AI() : i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), debug(false)
 {
 }
 
@@ -146,10 +145,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         i2s_config_speaker = config.i2s_config_speaker;
     }
-    if (strcmp(config.wifi_config.wifi_name, "") != 0)
-    {
-        wifi_config = config.wifi_config;
-    }
     if (strcmp(config.server_config.ip, "") != 0)
     {
         server_config = config.server_config;
@@ -173,23 +168,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     digitalWrite(LED_BUILTIN, LOW);
 
     DEBUG_PRINTLN(debug, "==================== WIFI ====================");
-    DEBUG_PRINTLN(debug, "wifi name: " + String(wifi_config.wifi_name));
-    DEBUG_PRINTLN(debug, "wifi pwd: " + String(wifi_config.wifi_pwd));
-    WiFi.begin(wifi_config.wifi_name, wifi_config.wifi_pwd);
-    DEBUG_PRINT(debug, "connect wifi ing..");
-
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        DEBUG_PRINT(debug, ".");
-    }
-
-    // 不休眠，不然可能播放不了
-    WiFi.setSleep(false);
-
-    DEBUG_PRINTLN(debug, "");
-    DEBUG_PRINT(debug, "IP address: ");
-    DEBUG_PRINTLN(debug, WiFi.localIP());
+    Serial.println("等待连接WIFI");
+    Serial.println("WIFI名称：ESP-AI");
+    Serial.println("后台地址：192.168.4.1");
+    wifiConnect();
     DEBUG_PRINTLN(debug, "===============================================");
 
     // Serial.println(wake_up_config.wake_up_scheme);
@@ -237,6 +219,24 @@ void ESP_AI::microphone_inference_end(void)
 {
     i2s_deinit();
     ei_free(inference.buffer);
+}
+
+/**
+ * 连接WiFi
+ */
+void ESP_AI::wifiConnect()
+{
+    WiFiManager wifiManager;
+    wifiManager.setDebugOutput(false);
+    wifiManager.setTitle("WiFi管理界面");
+
+    if (!wifiManager.autoConnect("ESP-AI"))
+    {
+        Serial.println("连接失败并超时");
+        ESP.restart();
+        delay(1000);
+    }
+    Serial.println("连接成功...^_^");
 }
 
 /**
