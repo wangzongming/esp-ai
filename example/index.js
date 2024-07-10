@@ -7,14 +7,14 @@ espAi({
         // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
         xun_fei: {
             appid: "5200d300",
-            apiSecret: "ZjQwYzQ4YTUzN2UxY2RkNjRkMzAwMGVm",
-            apiKey: "9cd6507384678076d9f5640573374fb7",
+            apiSecret: "xxx",
+            apiKey: "xx",
             llm: "v4.0",
         },
         // 阿里积灵（千问等）： https://dashscope.console.aliyun.com/apiKey
         // 积灵主要是提供llm（推荐使用这个llm服务）
         dashscope: {
-            apiKey: "sk-2a9afd13184c4b239739f25b370f8d21",
+            apiKey: "sk-xx",
             // LLM 版本
             llm: "qwen-turbo",
         },
@@ -25,8 +25,8 @@ espAi({
             // 火山引擎的TTS与LLM使用不同的key，所以需要分别配置
             tts: {
                 // 服务接口认证信息
-                appid: "6359932705",
-                accessToken: "252Do7AY5Yz0CayLMXzyNr0BJNnygbU5",
+                appid: "xxx",
+                accessToken: "xxx",
             },
 
             // 暂不支持 llm
@@ -39,7 +39,7 @@ espAi({
         },
 
         ttson: {
-            token: "ht-fc2dca28765428531557b377f5e19b24"
+            token: "ht-xxx"
         },
     },
     tts_params_set: (params) => {
