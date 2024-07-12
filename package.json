@@ -27,7 +27,8 @@
   "npm": ">=5"
  },
  "scripts": {
-  "start": "node ./src/index.js --dev",
+  "start": "node ./src/index.js",
+  "start:dev": "node ./src/index.js --dev",
   "start:pm2": "pm2 start ./src/index.js -i max"
  },
  "files": [

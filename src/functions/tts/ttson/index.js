@@ -38,7 +38,8 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
         speed_factor: 1,
         rate: "1.0",
         client_ip: "ACGN",
-        emotion: 1
+        emotion: 1,
+        zip_level: 4
     }
     const payload = JSON.stringify(tts_params_set ? tts_params_set(_payload) : _payload);
     const options = {

@@ -23,7 +23,7 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
     */
     if (is_over) {
         devLog && console.log('-> TTS 转换完毕');
-        curTTSWs.close()
+        curTTSWs.close && curTTSWs.close()
         tts_list.delete(curTTSKey)
 
         // 一旦TTS任务顺序混乱，那这里必定出问题。

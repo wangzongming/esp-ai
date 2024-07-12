@@ -13,12 +13,12 @@ const LOGO = `
 /******** ******** /**            /**     /**/**
 //////// ////////  //             //      // // 
 `
-
+const IS_DEV = process.argv[2] === "--dev" ;
 function main(config = {}) {
     console.log(LOGO);
 
     const init_server = require("./functions/init_server")
-    const _config = require("./config")
+    const _config =  IS_DEV ? require("./config_dev") : require("./config")
     global.G_ws_server = null;
     global.G_config = { ..._config, ...config };
     /**
@@ -53,6 +53,6 @@ function main(config = {}) {
     G_ws_server = init_server();
 }
 
-process.argv[2] === "--dev" && main({}); 
+IS_DEV && main({}); 
 
 module.exports = main;

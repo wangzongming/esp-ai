@@ -60,9 +60,9 @@ QQ 交流群: 854445223
 
 # 所需环境
 
-1. nodejs >= v14.0.0 
-2. Arduino IDE >= v2.x（1.x未测试过）
-3. Arduino IDE 中安装 esp 2.x 开发板（不能大于2.x）
+1. nodejs >= v14.0.0 （并且要 <= 18, 不然安装 esp-ai 可能会报错）
+2. Arduino IDE >= v2.x（ 1.x 未测试过 ）
+3. Arduino IDE 中安装 esp 2.x 开发板（不能大于 2.x ）
 ![alt text](image.png)
 4. 需将`/client/libraries` 中的插件导入到IDE插件中，默认位置在`C:\Users\用户名\Documents\Arduino\libraries`。
 
