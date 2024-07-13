@@ -1,8 +1,7 @@
-const espAi = require("esp-ai");
-// const espAi = require("../../server");
+const espAi = require("esp-ai"); 
 
 espAi({
-    llm_server: "dashscope",
+    // llm_server: "dashscope",
     api_key: {
         // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
         xun_fei: {
@@ -54,13 +53,8 @@ espAi({
 
         /** 火山引擎 **/
         // 说话人列表见：https://www.volcengine.com/docs/6561/97465
-        params.voice_type = "BV051_streaming"
-        // params.voice_type = "BV021_streaming" 
-
-        /** 海豚配音 **/
-        // token注册：https://www.ttson.cn/ 
-        // 说话人列表见：https://github.com/wangzongming/esp-ai/tree/master/src/functions/tts/ttson/角色列表.yaml
-        // params.voice_id = 2115;
+        // params.voice_type = "BV051_streaming"
+        // params.voice_type = "BV021_streaming"  
 
         // 改完后一定要返回出去
         return params;

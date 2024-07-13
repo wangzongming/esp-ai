@@ -7,7 +7,7 @@ test.py
 src/index_copy.js
 src/config_copy.js
 src/config_dev.js
-
+package-lock.json
 
 # dependencies
 node_modules

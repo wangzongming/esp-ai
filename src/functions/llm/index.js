@@ -148,7 +148,21 @@ function extractBeforeLastPunctuation(str, isLast) {
     }
 }
 module.exports = (device_id, opts) => {
-    const { llm_server } = G_config;
-    const LLM_FN = require(`./${llm_server}`);
+    const { llm_server, plugins = [] } = G_config;
+    const plugin = plugins.find(item => item.name == llm_server && item.type === "LLM")?.main;
+    let LLM_FN = null;
+
+    if (plugin) {
+        const { llm_historys = [] } = G_devices.get(device_id);
+        LLM_FN = (device_id, { text, onError, cb }) => plugin({
+            text,
+            llm_historys,
+            cb: (args) => cb(device_id, args),
+            onError: (args) => onError(device_id, args),
+        });
+    } else {
+        LLM_FN = require(`./${llm_server}`);
+    }
+
     return LLM_FN(device_id, { ...opts, onError, cb })
 };

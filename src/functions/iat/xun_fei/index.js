@@ -9,8 +9,7 @@ const TTS_FN = require(`../../tts`);
 /**
  * 讯飞语音识别 
  * @param {String} device_id 设备id  
- * @param {Function} cb ({text, device_id})=> void 回调函数  
- * @return {Function} (pcm)=> void
+ * @param {Function} cb ({text, device_id})=> void 回调函数   
 */
 function IAT_FN(device_id, cb) {
     const { devLog, api_key, iat_server } = G_config;
@@ -91,8 +90,7 @@ function IAT_FN(device_id, cb) {
                 }
             })
 
-            devLog && console.log(`-> 最终识别结果：${realStr}`)
-            // iat_end(realStr)
+            devLog && console.log(`-> 最终识别结果：${realStr}`) 
             cb({ text: realStr, device_id });
             return;
         } else {
@@ -169,7 +167,7 @@ function IAT_FN(device_id, cb) {
                     },
                     // 填充business
                     business: {
-                        vad_eos: 2000,
+                        vad_eos: 3000,
                         language: "zh_cn",
                         domain: "iat",
                         accent: "mandarin",

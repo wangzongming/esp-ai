@@ -19,6 +19,10 @@ const { v4: uuidv4 } = require('uuid');
 */
 function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb }) {
     const { devLog, api_key, tts_server, tts_params_set } = G_config;
+    if(! api_key[tts_server].tts){
+        console.log("您设置使用火山TTS，但是没有按照稳定没有配置tts服务");
+        return;
+    }
     const config = {
         appid: api_key[tts_server].tts.appid,
         accessToken: api_key[tts_server].tts.accessToken,
@@ -32,7 +36,7 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
         encoding: "pcm",
         rate: 16000, // 目前只支持16k
         speed_ratio: 1.0,
-        volume_ratio: 1.6,
+        // volume_ratio: 1.6,
         pitch_ratio: 1.0,
     }
     const request_json = {

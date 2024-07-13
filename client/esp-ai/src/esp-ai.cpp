@@ -36,8 +36,8 @@ int cur_ctrl_val = 0;
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
-// 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num }
-ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15};
+// 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
+ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15, 16000};
 // 默认离线唤醒方案
 ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.7};
 // { wifi 账号， wifi 密码 }
@@ -115,13 +115,16 @@ I2SStream i2s;
 void ESP_AI::speaker_i2s_setup()
 {
     AudioLogger::instance().begin(Serial, AudioLogger::Info);
-
+    DEBUG_PRINT(debug, "扬声器采样率：");
+    DEBUG_PRINTLN(debug, i2s_config_speaker.sample_rate);
+    DEBUG_PRINTLN(debug, "");
     // 配置项文档
     // https://pschatzmann.github.io/arduino-audio-tools/classaudio__tools_1_1_i2_s_config_e_s_p32.html
     // esp32 代码配置处，其他的板子自行查询
     // https://github.com/pschatzmann/arduino-audio-tools/blob/9045503daae3b21300ee7bb76c4ad95efe9e1e6c/src/AudioI2S/I2SESP32.h#L186
     auto config = i2s.defaultConfig(TX_MODE);
-    config.sample_rate = 16000;
+    config.sample_rate = i2s_config_speaker.sample_rate ? i2s_config_speaker.sample_rate : 16000;
+    // config.sample_rate = 16000;
     config.bits_per_sample = 16;
     config.port_no = YSQ_i2s_num; // 这里别和麦克风冲突了，esp32 有两个可用通道
     config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
@@ -191,8 +194,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINT(debug, "IP address: ");
     DEBUG_PRINTLN(debug, WiFi.localIP());
     DEBUG_PRINTLN(debug, "===============================================");
-
-    // Serial.println(wake_up_config.wake_up_scheme);
 
     if (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0)
     {
@@ -365,6 +366,8 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         can_voice = "1";
         start_ed = "0";
         Serial.println("WebSocket Connected");
+        webSocket.sendTXT("play_audio_ws_conntceed");
+
         break;
     case WStype_TEXT:
         // 一边用喇叭，一边采集音频会很卡, 待优化...

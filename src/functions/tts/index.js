@@ -1,9 +1,7 @@
- /** 
- * @author xiaomingio 
- * @github https://github.com/wangzongming/esp-ai  
- */
-// 发送到板子音频的每个分片的最大字节
-const maxChunkSize = 256;
+/** 
+* @author xiaomingio 
+* @github https://github.com/wangzongming/esp-ai  
+*/
 
 /**
  * @param {Buffer} is_over  是否完毕
@@ -43,12 +41,16 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
      * 循环发送每个分片
      * 最后一片时需要告知客户端 ing...
      */
-    for (let i = 0; i < audio.length; i += maxChunkSize) {
-        const end = Math.min(i + maxChunkSize, audio.length);
+    let isFirst = true;
+    let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
+    for (let i = 0; i < audio.length; i += c_l) {
+        isFirst = false;
+        const end = Math.min(i + c_l, audio.length);
         // 切分缓冲区
         const chunk = audio.slice(i, end);
         ws_client.send(chunk);
-    } 
+    }
+
 }
 
 /**
@@ -60,7 +62,8 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
  * @return {Function} (pcm)=> Promise<Boolean>
 */
 module.exports = (device_id, opts) => {
-    const { tts_server } = G_config;
-    const TTS_FN = require(`./${tts_server}`);
+    const { tts_server, plugins = [] } = G_config;
+    const plugin = plugins.find(item => item.name == tts_server && item.type === "TTS")?.main;
+    const TTS_FN = plugin || require(`./${tts_server}`);
     return TTS_FN(device_id, { ...opts, cb })
 };

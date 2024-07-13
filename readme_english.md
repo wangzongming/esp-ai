@@ -9,8 +9,7 @@
 
 > Provide a complete set of AI dialogue solutions for your development board, including but not limited to the IAT+LLM+TTS integration solution for the ESP32 series development board.
 
-
-You only need to configure the key of IAT, LLM, TTS services provided by IFlytek, Baidu, Ali Jaling, local services and other platforms to the plug-in, you can run the service, without considering the interaction between the various services, and do not need to consider the interaction between the development board and the service, you only need to do your robot ~
+To develop the dialogue function of the robot, you only need to prepare the 'IAT', 'LLM', 'TTS' services, and leave the rest to the 'ESP-AI'.
 
 
 The server-side code of this project is based on Nodejs, and the hardware code is based on Arduino IDE.
@@ -150,20 +149,30 @@ The client is written using the Arduino IDE, please install the Arduino IDE your
 
 
 # Supported platforms
+
+##  built-in
 **✔️ Support**   **❗developing**   **❌ nonsupport**
  
 | server           | IAT | LLM | TTS |
 | ---------------- | --- | --- | --- |
-| iFlytek              | ✔️   | ✔️   | ✔️   |
-| 百度             | ❗   | ❗   | ❗   |
-| Baidu         | ❗   | ❗   | ❗   |
-| 阿里积灵(千问等) | ❗   | ✔️   | ❗   |
-| 豆包 | ❗   |  ❗  | ❗   |
-| ...        |
+| plugin         | ✔️   | ✔️   | ✔️   | 
+| <a src="https://www.xfyun.cn/">讯飞</a>             | ✔️   | ✔️   | ✔️   |
+| <a src="https://www.volcengine.com/">火山引擎(豆包等)</a> | ❗   |  ❗  | ✔️   |
+| <a src="https://dashscope.console.aliyun.com/"> 阿里积灵(千问等)</a> | ❗   | 
+
+## Third-party plugin support
+
+| 服务方           | 插件类型 | 插件地址 | 
+| ---------------- | --- | --- | 
+| 海豚配音 | TTS   |  https://github.com/wangzongming/esp-ai-plugin-tts-ttson  | 
+| 插件演示 | IAT   |  https://github.com/wangzongming/esp-ai-plugin-iat-example  | 
+| 插件演示 | LLM   |  https://github.com/wangzongming/esp-ai-plugin-llm-example  | 
+
+<a href="./plugins_develop.md">✨ Plug-in development documentation </a>
 
 
 # Off-line wake up scheme
-**✔️ Support **   **❗developing**   **❌ nonsupport**
+**✔️ Support**   **❗developing**   **❌ nonsupport**
  
 | project      | support  | repository                                 |
 | ------------ | -------- | -------------------------------------------- |
@@ -433,6 +442,22 @@ espAi({
     onLLMcb({ device_id, text, is_over, llm_historys }) { },
 });
 ```
+
+# plugins
+
+If you have installed the plugin following the instructions in the plugin repository, you only need to add the following code to the configuration.
+
+```
+espAi({ 
+    plugins: [  
+        require("esp-ai-plugin-llm-xxx")
+    ]
+});
+```
+
+# plug-in development
+<a href="./plugins_develop.md">✨ plug-in development </a>
+
 
 # other 
 At present, due to the small number of training samples, the accuracy of voice wake-up is not high, and it will be continuously optimized. 

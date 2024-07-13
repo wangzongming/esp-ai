@@ -3,10 +3,13 @@
  * @github https://github.com/wangzongming/esp-ai  
  */
 const WebSocket = require('ws')
-const createUUID = require('./createUUID') 
+const createUUID = require('./createUUID')
+const play_temp = require('../audio_temp/play_temp')
 const IAT_FN = require(`./iat`);
 const TTS_FN = require(`./tts`);
 const LLM_FN = require(`./llm`);
+const log = require("../utils/log");
+const getIPV4 = require("../utils/getIPV4");
 
 function init_server() {
     const { port, devLog, onDeviceConnect, f_reply } = G_config;
@@ -74,7 +77,7 @@ function init_server() {
                         },
                     })
                     started = true;
-                    const start_iat = () => IAT_FN(device_id); 
+                    const start_iat = () => IAT_FN(device_id);
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         start_iat: start_iat,
@@ -107,8 +110,17 @@ function init_server() {
 
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
-                        client_out_audio_ing: false, 
+                        client_out_audio_ing: false,
                     })
+                    break;
+                case "play_audio_ws_conntceed":
+                    // 播放ws连接成功语音
+                    await TTS_FN(device_id, {
+                        text: "后台服务连接成功！",
+                        reRecord: false,
+                        pauseInputAudio: true
+                    });
+                    ws && ws.send("session_end");
                     break;
                 default:
                     // 采集的音频数据
@@ -137,33 +149,44 @@ function init_server() {
                                     default:
                                         break;
                                 }
-                            }, 1800) // 需要比静默时间少,
+                            }, 2800) // 需要比静默时间少,
                         })
                     }
                     break;
             }
-        }); 
-        
+        });
+
         // ============= TTS 测试 =============
+
+        // play_temp("du.pcm", ws); 
+        // await TTS_FN(device_id, {
+        //     text: "开始连接网络",
+        //     reRecord: false,
+        //     pauseInputAudio: true
+        // }); 
         // await TTS_FN(device_id, {
         //     text: "第一句，小明在的。请吩咐！很愿意为你效劳。",
         //     reRecord: false,
         //     pauseInputAudio: true
-        // }); 
+        // });
 
         // await TTS_FN(device_id, {
         //     text: "第二句，ESP-AI 萌娃音色要上线啦！",
         //     reRecord: false,
         //     pauseInputAudio: true
-        // }); 
- 
+        // });
+
 
         ws.on('close', () => {
             devLog && console.log(`硬件设备断开连接: ${device_id}`);
             G_devices.delete(device_id)
         });
-    });
-    console.log(`WebSocket server is running on ws://localhost:${port}`);
+    }); 
+    log.info(`---------------------------------------------------`);
+    log.info(`- Github  https://github.com/wangzongming/esp-ai`, ["bold"]);
+    log.info(`- Website https://xiaomingio.top/esp-ai`, ["bold"]);
+    log.info(`- Server  ${getIPV4()}:${port}(copy to example.ino)`, ["bold"]);
+    log.info(`---------------------------------------------------`);
     return wss;
 }
 module.exports = init_server;

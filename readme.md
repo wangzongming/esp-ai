@@ -2,18 +2,27 @@
 # ESP-AI  [![npm](https://img.shields.io/npm/v/esp-ai.svg)](https://www.npmjs.com/package/esp-ai) [![npm](https://img.shields.io/npm/dm/esp-ai.svg?style=flat)](https://www.npmjs.com/package/esp-ai)
 
 
-![logo.png](./logo.png)
+![logo.png](./imgs/logo.png)
 
 <a href="./readme_english.md">English</a>
  
  
-> 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。依赖式注入到项目，并不影响现有项目。
+> 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。依赖式注入到项目，不影响现有项目。
 
-你只需要将讯飞、积灵、本地服务等平台提供`IAT`、`LLM`、`TTS`服务提供的`key`传给插件，即可运行服务，而不需考虑各个服务间的交互，也无需考虑开发板和服务间的交互，你仅需做好机器人~
+对于开发机器人的对话功能，您仅需准备好 `IAT`、`LLM`、`TTS` 服务，其他的事情交给 `ESP-AI`。
+
 
 本项目服务端代码基于 Nodejs，硬件代码基于 Arduino IDE。
 
 开源不易，右上角点个 `Star` 支持一下下吧 ~
+
+# 特性
+
+- [x] 离线语音唤醒
+- [x] IAT ➡️ LLM/RAG ➡️ TTS
+- [x] 配置化
+- [x] 插件化
+- [x] 开箱即用
 
 # 仅几行代码为您的机器人注入灵魂
 
@@ -21,6 +30,9 @@
 
 <img src="./websit/imgs/arduino.png" />
 <img src="./websit/imgs/nodejs.png" />
+
+
+
 
 # 网站主页 & 文档教程
 努力建设中...
@@ -39,17 +51,6 @@ QQ 交流群: 854445223
 [bilibili](https://www.bilibili.com/video/BV1xS421o7hi/#reply1505985392)
 
 
-# 必读
-
-因为不同的平台提供的能力各有差异，所以可以根据需求为不同服务选择不同的提供平台。
-如讯飞虽然支持`LLM`、`TTS`、`IAT`。但是他的`LLM`可能你并不喜欢，所以你可以在服务端将 `llm_server` 配置为其他平台的。
-
-各平台提供的流式数据能力不一，所以部分平台只对接了部分功能。例如积灵目前只能对接 `LLM` ，语音识别等并不提供`wss`协议的流数据，所以不进行对接。当然平台支持后也会第一时间进行支持！
-
-还有就是不要用源码方式运行，不管是客户端还是服务端都会随时升级。
-
-**声明：本项目在非不得已情况下不会做出破坏性更新。**
-
 # 怎么运行这个项目？
 
 **简单三步，即可将一个智能助手运行起来。**
@@ -60,10 +61,12 @@ QQ 交流群: 854445223
 
 # 所需环境
 
-1. nodejs >= v14.0.0 （并且要 <= 18, 不然安装 esp-ai 可能会报错）
-2. Arduino IDE >= v2.x（ 1.x 未测试过 ）
-3. Arduino IDE 中安装 esp 2.x 开发板（不能大于 2.x ）
-![alt text](image.png)
+后续升级仅需在发布页面下载相关文件即可：https://github.com/wangzongming/esp-ai/releases
+
+1. nodejs >= v14.0.0 （node <= v18.x, npm <= v9.x  不然安装 esp-ai 可能会报错）
+2. Arduino IDE >= v2.x（ v1.x 未测试过 ）
+3. Arduino IDE 中安装 esp v2.x 开发板（不能大于 2.x ）
+![alt text](./imgs/image.png)
 4. 需将`/client/libraries` 中的插件导入到IDE插件中，默认位置在`C:\Users\用户名\Documents\Arduino\libraries`。
 
  
@@ -142,21 +145,29 @@ node ./index.js
 | 增加中...     |
 
 
-# 支持的平台
+# 支持的AI服务平台
+
+## 内置支持
 **✔️ 已支持**   **❗开发中**   **❌ 不支持** 
 
 不同功能可以使用不同的服务商，比如服务中使用讯飞的TTS和阿里的LLM, 而不是只用讯飞的产品，只需要更改配置文件即可。
 
 | 服务方           | IAT | LLM | TTS |
 | ---------------- | --- | --- | --- |
+| 本地服务(插件方式)         | ✔️   | ✔️   | ✔️   | 
 | <a src="https://www.xfyun.cn/">讯飞</a>             | ✔️   | ✔️   | ✔️   |
 | <a src="https://www.volcengine.com/">火山引擎(豆包等)</a> | ❗   |  ❗  | ✔️   |
-| <a src="https://www.ttson.cn/">海豚配音</a> | ❗   |  ❗  | ❗  |
-| <a src="https://dashscope.console.aliyun.com/"> 阿里积灵(千问等)</a> | ❗   | ✔️   | ❗   |
-| chat GPT          | ❗   | ❗   | ❗   |
-| 百度             | ❗   | ❗   | ❗   |
-| 本地服务         | ❗   | ❗   | ❗   |
-| 增加中...        |
+| <a src="https://dashscope.console.aliyun.com/"> 阿里积灵(千问等)</a> | ❗   | ✔️   | ❗   | 
+
+## 第三方插件支持
+
+| 服务方           | 插件类型 | 插件地址 | 
+| ---------------- | --- | --- | 
+| 海豚配音 | TTS   |  https://github.com/wangzongming/esp-ai-plugin-tts-ttson  | 
+| 插件演示 | IAT   |  https://github.com/wangzongming/esp-ai-plugin-iat-example  | 
+| 插件演示 | LLM   |  https://github.com/wangzongming/esp-ai-plugin-llm-example  | 
+
+<a href="./plugins_develop.md">✨ 插件开发文档 </a>
 
 
 # 离线唤醒方案
@@ -193,7 +204,7 @@ ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.7 };
 
 // [可留空] 麦克风引脚配置：{ bck_io_num, ws_io_num, data_in_num }
 ESP_AI_i2s_config_mic i2s_config_mic = {};
-// [可留空] 扬声器引脚配置：{ bck_io_num, ws_io_num, data_in_num }
+// [可留空] 扬声器引脚配置：{ bck_io_num, ws_io_num, data_in_num, 采样率(默认 1600) }
 ESP_AI_i2s_config_speaker i2s_config_speaker = {};
 // [可留空] 音量调节配置：{ 输入引脚，输入最大值(1024|4096)，默认音量(0-1) }
 ESP_AI_volume_config volume_config = { 34, 4096, 0.5 };
@@ -430,6 +441,23 @@ espAi({
     onLLMcb({ device_id, text, is_over, llm_historys }) { },
 });
 ```
+
+# 插件使用
+
+假如你按照插件仓库中的说明安装好插件后，只需要在配置中增加如下代码即可。
+
+```
+espAi({ 
+    plugins: [ 
+        // 引入插件
+        require("esp-ai-plugin-llm-xxx")
+    ]
+});
+```
+
+# 插件开发
+<a href="./plugins_develop.md">✨ 插件开发文档 </a>
+
 
 # 其他说明
 目前语音唤醒由于训练样本不多，准确度并不高，会持续优化。

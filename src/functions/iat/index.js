@@ -8,7 +8,8 @@ async function cb({ device_id, text }) {
     const LLM_FN = require(`../llm`);
     onIATcb && onIATcb({ device_id, text });
     const { first_session, ws: ws_client } = G_devices.get(device_id);
-    // 调用聊天模型
+    
+
     if (text.length) {
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
@@ -50,8 +51,7 @@ async function cb({ device_id, text }) {
                     });
                     break;
             }
-        } else {
-
+        } else { 
             // 其他情况交给 LLM
             LLM_FN(device_id, { text })
         }
@@ -69,8 +69,12 @@ async function cb({ device_id, text }) {
         ws_client && ws_client.send("iat_end");
     }
 }
-module.exports = (device_id) => {
-    const { iat_server } = G_config;
-    const IAT_FN = require(`./${iat_server}`);
+module.exports = async (device_id) => {
+    const { iat_server, plugins = [] } = G_config;
+    const { ws: ws_client } = G_devices.get(device_id);
+    const plugin = plugins.find(item => item.name == iat_server && item.type === "IAT")?.main;
+    const IAT_FN = plugin || require(`./${iat_server}`);
+    const play_temp = require(`../../audio_temp/play_temp`);
+    await play_temp("du.pcm", ws_client);
     return IAT_FN(device_id, cb)
 };

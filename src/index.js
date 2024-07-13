@@ -1,3 +1,6 @@
+ 
+const log = require("./utils/log");
+
 /** 
  * @author xiaomingio 
  * @github https://github.com/wangzongming/esp-ai  
@@ -13,12 +16,16 @@ const LOGO = `
 /******** ******** /**            /**     /**/**
 //////// ////////  //             //      // // 
 `
-const IS_DEV = process.argv[2] === "--dev" ;
+const IS_DEV = process.argv[2] === "--dev";
 function main(config = {}) {
-    console.log(LOGO);
+    log.info(LOGO);
 
     const init_server = require("./functions/init_server")
-    const _config =  IS_DEV ? require("./config_dev") : require("./config")
+    const _config = IS_DEV ? require("./config_dev") : require("./config")
+
+    // buffer_count * (buffer_size / 2) = 8 * 512 = 4096
+    global.G_max_audio_chunk_size = 4096;
+
     global.G_ws_server = null;
     global.G_config = { ..._config, ...config };
     /**
@@ -53,6 +60,6 @@ function main(config = {}) {
     G_ws_server = init_server();
 }
 
-IS_DEV && main({}); 
+IS_DEV && main({});
 
 module.exports = main;

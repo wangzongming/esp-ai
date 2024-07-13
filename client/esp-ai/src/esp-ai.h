@@ -18,7 +18,7 @@ struct ESP_AI_i2s_config_mic
 {
     int bck_io_num;
     int ws_io_num;
-    int data_in_num;
+    int data_in_num; 
 };
 
 struct ESP_AI_i2s_config_speaker
@@ -26,6 +26,7 @@ struct ESP_AI_i2s_config_speaker
     int bck_io_num;
     int ws_io_num;
     int data_in_num;
+    int sample_rate;
 };
 struct ESP_AI_wake_up_config
 {
