@@ -5,6 +5,7 @@
 
 const max_his = 6 * 2;
 const ttsMinNum = 2;
+const play_temp = require(`../../audio_temp/play_temp`);
 
 async function cb(device_id, { text, is_over, texts }) {
     const { devLog, llm_server, onLLMcb } = G_config;
@@ -39,13 +40,7 @@ async function cb(device_id, { text, is_over, texts }) {
         await_out_tts_ing: true
     })
 
-
-
-    // ttsText && await TTS_FN(device_id, {
-    //     text: ttsText,
-    //     reRecord: false,
-    //     pauseInputAudio: true
-    // })
+ 
     if (is_over) {
         devLog && console.log('-> LLM 推理完毕');
         llm_ws && llm_ws.close()
@@ -64,24 +59,20 @@ async function cb(device_id, { text, is_over, texts }) {
                 ...G_devices.get(device_id),
                 await_out_tts_ing: true
             })
-
-            // await TTS_FN(device_id, {
-            //     text: ttsText,
-            //     reRecord: false,
-            //     pauseInputAudio: true
-            // })
         }
 
         await_out_tts.push(async () => {
             devLog && console.log('\n\n=== 重新开始识别音频 ===')
+            console.log('开始播放du')
+            G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: true })
+            await play_temp("du.pcm", ws_client);
+            G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: false })
+            console.log('播放du完毕')
+
             ws_client && ws_client.send("start_voice");
             start_iat && start_iat();
         })
         ttsText && await_out_tts_run();
-
-        // devLog && console.log('\n\n=== 重新开始识别音频 ===')
-        // ws_client && ws_client.send("start_voice");
-        // start_iat && start_iat();
 
         switch (llm_server) {
             case "xun_fei":

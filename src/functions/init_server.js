@@ -30,7 +30,7 @@ function init_server() {
 
         ws.on('message', async function (data) {
             // 避免浪费性能, 否则播放会卡顿
-            const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing } = G_devices.get(device_id);
+            const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing, alert_ing } = G_devices.get(device_id);
 
             switch (data) {
                 case "start":
@@ -40,7 +40,7 @@ function init_server() {
                     };
                     // 清空 tts 任务 
                     for (const [key, ttsWS] of tts_list) {
-                        ttsWS.close();
+                        ttsWS && ttsWS.close && ttsWS.close();
                         tts_list.delete(key)
                     }
                     iat_ws && iat_ws.close()
@@ -88,7 +88,15 @@ function init_server() {
                         reRecord: true,
                         pauseInputAudio: true
                     });
-                    !first_session && start_iat();
+
+                    if (!first_session) { 
+                        console.log('开始播放du')
+                        G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: true })
+                        await play_temp("du.pcm", ws_client);
+                        G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: false })
+                        console.log('播放du完毕')
+                        await start_iat();
+                    }
 
 
                     // ============= LLM 测试 =============
@@ -96,12 +104,14 @@ function init_server() {
                     // LLM_FN(device_id, { text: "你好，帮我写一首现代诗，描写春色，模仿徐志摩的手笔。" }) 
                     break;
                 case "client_out_audio_ing":
+                    if (alert_ing) return;
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         client_out_audio_ing: true,
                     })
                     break;
                 case "client_out_audio_over":
+                    if (alert_ing) return;
                     devLog && console.log("-> 客户端音频流播放完毕");
                     for (const fn of audio_queue) {
                         await fn();
@@ -157,7 +167,6 @@ function init_server() {
         });
 
         // ============= TTS 测试 =============
-
         // play_temp("du.pcm", ws); 
         // await TTS_FN(device_id, {
         //     text: "开始连接网络",
@@ -181,7 +190,7 @@ function init_server() {
             devLog && console.log(`硬件设备断开连接: ${device_id}`);
             G_devices.delete(device_id)
         });
-    }); 
+    });
     log.info(`---------------------------------------------------`);
     log.info(`- Github  https://github.com/wangzongming/esp-ai`, ["bold"]);
     log.info(`- Website https://xiaomingio.top/esp-ai`, ["bold"]);

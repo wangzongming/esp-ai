@@ -12,7 +12,7 @@ const TTS_FN = require(`../../tts`);
  * @param {Function} cb ({text, device_id})=> void 回调函数   
 */
 function IAT_FN(device_id, cb) {
-    const { devLog, api_key, iat_server } = G_config;
+    const { devLog, api_key, iat_server, sleep_reply } = G_config;
     devLog && console.log('\n=== 开始请求语音识别 ===');
     const config = {
         appid: api_key[iat_server].appid,
@@ -49,7 +49,13 @@ function IAT_FN(device_id, cb) {
                 first_session: true,
                 iat_server_connected: false,
             })
-            devLog && console.log('\n\n=== 会话结束 ===\n\n')
+            devLog && console.log('\n\n=== 会话结束 ===\n\n');
+
+            TTS_FN(device_id, {
+                text: sleep_reply || "我先退下了，有需要再叫我。",
+                reRecord: false,
+                pauseInputAudio: true
+            });
         }, 2500);
     })
 

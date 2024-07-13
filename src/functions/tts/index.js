@@ -2,6 +2,7 @@
 * @author xiaomingio 
 * @github https://github.com/wangzongming/esp-ai  
 */
+const play_temp = require(`../../audio_temp/play_temp`);
 
 /**
  * @param {Buffer} is_over  是否完毕
@@ -25,11 +26,18 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
         tts_list.delete(curTTSKey)
 
         // 一旦TTS任务顺序混乱，那这里必定出问题。
-        add_audio_out_over_queue(() => {
+        add_audio_out_over_queue(async () => {
             const { ws: ws_client, start_iat } = G_devices.get(device_id);
             devLog && console.log('-> TTS 客户端播放完毕');
             if (reRecord) {
                 devLog && console.log('\n\n=== 重新开始识别音频 ===')
+
+                console.log('开始播放du')
+                G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: true })
+                await play_temp("du.pcm", ws_client);
+                G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: false })
+                console.log('播放du完毕')
+
                 ws_client && ws_client.send("start_voice");
                 start_iat && start_iat();
             }

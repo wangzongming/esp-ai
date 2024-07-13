@@ -412,8 +412,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // 调整音量
         adjustVolume((int16_t *)payload, length, volume_config.volume);
         // 输出
-        i2s.write(payload, length);
-
+        i2s.write(payload, length); 
         break;
     }
     case WStype_PING:

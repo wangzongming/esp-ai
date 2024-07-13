@@ -8,6 +8,7 @@ function play_temp(name, client_ws) {
         let isFirst = true;
         readStream.on('data', (audio) => {
             let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
+            // let c_l = 24;
             isFirst = false;
             for (let i = 0; i < audio.length; i += c_l) {
                 const end = Math.min(i + c_l, audio.length); 
@@ -16,7 +17,9 @@ function play_temp(name, client_ws) {
             }
         });
         readStream.on('end', () => {
-            resolve(true);
+            setTimeout(()=>{
+                resolve(true);
+            }, 500)
         });
         readStream.on('error', (err) => {
             console.error('读取文件时出错:', err);

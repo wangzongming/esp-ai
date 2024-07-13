@@ -101,7 +101,7 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
             let done = false;
             if (message_type === 0xb) {  // audio-only server response
                 if (message_type_specific_flags === 0) {  // no sequence number as ACK
-                    console.log("                Payload size: 0");
+                    // console.log("                Payload size: 0");
                     return false;
                 } else {
                     const sequence_number = payload.readInt32BE(0); 

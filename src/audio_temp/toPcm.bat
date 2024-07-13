@@ -1,0 +1,1 @@
+C:\Users\jonas\Desktop\ffmpeg.exe -i du.wav -f s16le -ar 16000 -ac 1 du.pcm

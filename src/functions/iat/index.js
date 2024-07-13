@@ -69,12 +69,22 @@ async function cb({ device_id, text }) {
         ws_client && ws_client.send("iat_end");
     }
 }
+// const play_temp = require(`../../audio_temp/play_temp`);
 module.exports = async (device_id) => {
     const { iat_server, plugins = [] } = G_config;
-    const { ws: ws_client } = G_devices.get(device_id);
+    // const { ws: ws_client } = G_devices.get(device_id);
     const plugin = plugins.find(item => item.name == iat_server && item.type === "IAT")?.main;
     const IAT_FN = plugin || require(`./${iat_server}`);
-    const play_temp = require(`../../audio_temp/play_temp`);
-    await play_temp("du.pcm", ws_client);
+    // console.log('开始播放du')
+    // G_devices.set(device_id, {
+    //     ...G_devices.get(device_id),
+    //     alert_ing: true,
+    // })
+    // await play_temp("du.pcm", ws_client); 
+    // G_devices.set(device_id, {
+    //     ...G_devices.get(device_id),
+    //     alert_ing: false,
+    // }) 
+    // console.log('播放du完毕')
     return IAT_FN(device_id, cb)
 };

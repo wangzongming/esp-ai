@@ -20,14 +20,6 @@ const IS_DEV = process.argv[2] === "--dev";
 function main(config = {}) {
     log.info(LOGO);
 
-    const init_server = require("./functions/init_server")
-    const _config = IS_DEV ? require("./config_dev") : require("./config")
-
-    // buffer_count * (buffer_size / 2) = 8 * 512 = 4096
-    global.G_max_audio_chunk_size = 4096;
-
-    global.G_ws_server = null;
-    global.G_config = { ..._config, ...config };
     /**
      * [UUID, { 
      *       ws:{}, 
@@ -50,6 +42,15 @@ function main(config = {}) {
      * }]
     */
     global.G_devices = new Map();
+    
+    const init_server = require("./functions/init_server")
+    const _config = IS_DEV ? require("./config_dev") : require("./config")
+
+    // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
+    global.G_max_audio_chunk_size = 4096;
+
+    global.G_ws_server = null;
+    global.G_config = { ..._config, ...config };
 
     // 讯飞 IAT 帧定义
     global.XF_IAT_FRAME = {

@@ -44,6 +44,7 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
         })
 
         curTTSWs.on('message', (data, err) => {
+            // console.log('G_devices', G_devices);
             const { tts_list } = G_devices.get(device_id);
 
             if (err) {
