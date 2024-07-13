@@ -19,15 +19,14 @@ const { v4: uuidv4 } = require('uuid');
 */
 function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb }) {
     const { devLog, api_key, tts_server, tts_params_set } = G_config;
-    if(! api_key[tts_server].tts){
+    if(!api_key[tts_server].tts){
         console.log("您设置使用火山TTS，但是没有按照稳定没有配置tts服务");
         return;
     }
     const config = {
         appid: api_key[tts_server].tts.appid,
         accessToken: api_key[tts_server].tts.accessToken,
-    }   
-    console.log(config)
+    }    
     const host = "openspeech.bytedance.com";
     const api_url = `wss://${host}/api/v1/tts/ws_binary`;
     const default_header = Buffer.from([0x11, 0x10, 0x11, 0x00]);
