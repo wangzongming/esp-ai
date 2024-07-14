@@ -17,6 +17,23 @@ The server-side code of this project is based on Nodejs, and the hardware code i
 
 Open source is not easy, the top right corner of a 'Star' support a little bit of it ~
 
+# Character
+
+- [x] Off-line voice wake-up
+- [x] IAT ➡️ LLM/RAG ➡️ TTS
+- [x] configuration
+- [x] Plug-in modular seating
+- [x] Out of the box
+
+# 下一步
+
+- [ ] Offline voice wake-up optimization
+- [ ] Document Workspace site
+- [ ] Provides code-free access solutions
+- [ ] Both free and paid services are available
+- [ ] PCB
+
+
 # Breathe soul into your robot with just a few lines of code
 
 The following shows the `Node.js` and `Arduino` code that you need to write in the case that you only need dialogue.
