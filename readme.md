@@ -101,12 +101,13 @@ QQ 交流群: 854445223
 # 或者使用：yarn add esp-ai
 npm i esp-ai
 ```
-1. 运行服务
+4. 运行服务
 ```
-# 生产环境中请使用 pm2 来运行服务以保证服务的可靠和性能。 
+# 生产环境中请使用 pm2 来运行服务以保证服务的可靠和性能： pm2 start ./index.js -i max 
 node ./index.js
 ```
-1. 打开 `example.ino` 并且上传到开发板中。
+5. 在 `Arduino IDE` 中打开 `example.ino` 并且上传到开发板中。
+6. 接好线就搞定啦~
 
 
 # 客户端接线
