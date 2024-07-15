@@ -301,33 +301,33 @@ void ESP_AI::loop()
 
             float xmtx_val = result.classification[2].value;
 
-            Serial.print("唤醒词识别得分：");
-            if (xmtx_val >= wake_up_config.threshold)
-            {
-                Serial.print(xmtx_val);
-                Serial.println("-> 小明同学 <- ");
-            }
-            else
-            {
-                Serial.println(xmtx_val);
-            }
-
+            // Serial.print("唤醒词识别得分：");
             // if (xmtx_val >= wake_up_config.threshold)
             // {
-            //     if (debug)
-            //     {
-            //         Serial.println("");
-            //         Serial.print("唤醒词识别得分：");
-            //         Serial.print(xmtx_val);
-            //         Serial.println("");
-            //     }
-
-            //     // 开始录音
-            //     digitalWrite(LED_BUILTIN, HIGH);
-            //     start_ed = "1";
-            //     webSocket.sendTXT("start");
-            //     DEBUG_PRINTLN(debug, "开始录音");
+            //     Serial.print(xmtx_val);
+            //     Serial.println("-> 小明同学 <- ");
             // }
+            // else
+            // {
+            //     Serial.println(xmtx_val);
+            // }
+
+            if (xmtx_val >= wake_up_config.threshold)
+            {
+                if (debug)
+                {
+                    Serial.println("");
+                    Serial.print("唤醒词识别得分：");
+                    Serial.print(xmtx_val);
+                    Serial.println("");
+                }
+
+                // 开始录音
+                digitalWrite(LED_BUILTIN, HIGH);
+                start_ed = "1";
+                webSocket.sendTXT("start");
+                DEBUG_PRINTLN(debug, "开始录音");
+            }
         }
     }
 
