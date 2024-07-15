@@ -56,7 +56,7 @@ typedef struct
     uint32_t n_samples;
 } inference_t;
 static inference_t inference;
-static const uint32_t sample_buffer_size = 1024; // 2048 4096
+static const uint32_t sample_buffer_size = 4096; // 1024 2048 4096 8192
 static signed short sampleBuffer[sample_buffer_size];
 // 设置为true以查看从原始信号生成的特征
 static bool debug_nn = false;
@@ -298,24 +298,36 @@ void ESP_AI::loop()
                 ei_printf("ERR: Failed to run classifier (%d)\n", r);
                 return;
             }
+
             float xmtx_val = result.classification[2].value;
 
+            Serial.print("唤醒词识别得分：");
             if (xmtx_val >= wake_up_config.threshold)
             {
-                if (debug)
-                {
-                    Serial.println("");
-                    Serial.print("唤醒词识别得分：");
-                    Serial.print(xmtx_val);
-                    Serial.println("");
-                }
-
-                // 开始录音
-                digitalWrite(LED_BUILTIN, HIGH);
-                start_ed = "1";
-                webSocket.sendTXT("start");
-                DEBUG_PRINTLN(debug, "开始录音");
+                Serial.print(xmtx_val);
+                Serial.println("-> 小明同学 <- ");
             }
+            else
+            {
+                Serial.println(xmtx_val);
+            }
+
+            // if (xmtx_val >= wake_up_config.threshold)
+            // {
+            //     if (debug)
+            //     {
+            //         Serial.println("");
+            //         Serial.print("唤醒词识别得分：");
+            //         Serial.print(xmtx_val);
+            //         Serial.println("");
+            //     }
+
+            //     // 开始录音
+            //     digitalWrite(LED_BUILTIN, HIGH);
+            //     start_ed = "1";
+            //     webSocket.sendTXT("start");
+            //     DEBUG_PRINTLN(debug, "开始录音");
+            // }
         }
     }
 
@@ -412,7 +424,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // 调整音量
         adjustVolume((int16_t *)payload, length, volume_config.volume);
         // 输出
-        i2s.write(payload, length); 
+        i2s.write(payload, length);
         break;
     }
     case WStype_PING:
@@ -445,8 +457,6 @@ bool ESP_AI::microphone_inference_start(uint32_t n_samples)
     ei_sleep(100);
 
     record_status = true;
-
-    // xTaskCreate(capture_samples, "CaptureSamples", 1024 * 32, (void *)sample_buffer_size, 10, NULL);
     xTaskCreate(capture_samples_wrapper, "CaptureSamples", 1024 * 32, (void *)sample_buffer_size, 10, NULL);
 
     return true;
@@ -502,7 +512,11 @@ void ESP_AI::capture_samples(void *arg)
             // scale the data (otherwise the sound is too quiet)
             for (int x = 0; x < i2s_bytes_to_read / 2; x++)
             {
-                sampleBuffer[x] = (int16_t)(sampleBuffer[x]) * 8;
+                // 1. 这里不放大，并且上面设置 4069 容量, 正确率：...
+                // 2. 这里不放大，并且上面设置 2048 容量, 正确率：...
+                // 3. 这里不放大，并且上面设置 8192 容量, 正确率：...
+                // sampleBuffer[x] = (int16_t)(sampleBuffer[x]) * 8;
+                sampleBuffer[x] = (int16_t)(sampleBuffer[x]);
             }
 
             if (record_status)

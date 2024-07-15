@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "esp-ai": "0.0.1"
+    "esp-ai": "1.6.0"
   },
   "devDependencies": {},
   "scripts": {
