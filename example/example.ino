@@ -11,17 +11,25 @@ ESP_AI_server_config server_config = { "192.168.1.5", 8080 };
 ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.7 };
 
 // [可留空] 麦克风引脚配置：{ bck_io_num, ws_io_num, data_in_num }
-ESP_AI_i2s_config_mic i2s_config_mic = {4, 5, 6};
+ESP_AI_i2s_config_mic i2s_config_mic = { 4, 5, 6 };
 // [可留空] 扬声器引脚配置：{ bck_io_num, ws_io_num, data_in_num, 采样率 }
-ESP_AI_i2s_config_speaker i2s_config_speaker = {16, 17, 15, 16000}; 
+ESP_AI_i2s_config_speaker i2s_config_speaker = { 16, 17, 15, 16000 };
 // [可留空] 音量调节配置：{ 输入引脚，输入最大值(1024|4096)，默认音量(0-1) }
 ESP_AI_volume_config volume_config = { 34, 4096, 0.5 };
 
-// 收到指令后的回调，比如开灯、关灯，由服务端配置。
-void on_command(char command_id, char data) {
-  Serial.print("收到指令");
-  Serial.println(command_id);
-  Serial.println(data);
+// 收到指令后的回调，比如开灯、关灯，由服务端配置。 
+void on_command(String command_id, String data) {
+  Serial.printf("\n收到指令：%s -- %s\n", command_id, data);
+
+  // 控制小灯演示
+  // if (command_id == "device_open_001") {
+  //   Serial.println("开灯");
+  //   digitalWrite(led_pin, HIGH);
+  // }
+  // if (command_id == "device_close_001") {
+  //   Serial.println("关灯");
+  //   digitalWrite(led_pin, LOW);
+  // }
 }
 
 void setup() {
@@ -33,9 +41,25 @@ void setup() {
 }
 
 void loop() {
+  esp_ai.loop();
   // 连接wifi后会返回 True
   if (!esp_ai.wifiIsConnected()) {
     return;
-  } 
-  esp_ai.loop();
+  }
+
+
+  // // 第三方模快唤醒（如搭配 天问 使用）
+  // char tw[20] = "";
+  // int i = 0;
+  // while (Serial.available()) // 当发现缓存中有数据时，将数据送至字符数组a中
+  // {
+  //   tw[i] = Serial.read();
+  //   // Serial.println(tw[i]);
+  //   i++;
+  //   delay(3);
+  // }
+  // if(tw){
+  //   Serial.println(tw);
+  //   // esp_ai.wakeUp()
+  // }
 }

@@ -1,5 +1,6 @@
  
 const log = require("./utils/log");
+const package = require("../package.json");
 
 /** 
  * @author xiaomingio 
@@ -7,6 +8,7 @@ const log = require("./utils/log");
  */
 global.G_config = {};
 const LOGO = `  
+
  ********  ******** *******            **     **
 /**/////  **////// /**////**          ****   /**
 /**      /**       /**   /**         **//**  /**
@@ -15,6 +17,8 @@ const LOGO = `
 /**             /**/**            /**//////**/**
 /******** ******** /**            /**     /**/**
 //////// ////////  //             //      // // 
+
+服务端版本号：v${package.version}
 `
 const IS_DEV = process.argv[2] === "--dev";
 function main(config = {}) {
@@ -23,14 +27,14 @@ function main(config = {}) {
     /**
      * [UUID, { 
      *       ws:{}, 
-     *       runing: false,                   // 小明同学运行中 ing...
+     *       runing: false,                   // 小明同学运行中  
      *       tts_list: new Map(ws),           // TTS 任务队列
      *       await_out_tts: [],               // 待播放任务列表
      *       await_out_tts_ing: false,        // 待播放任务正在执行
      *       await_out_tts_run: ()=> {},      // 执行播放
-     *       iat_server_connected: false, 
-     *       iat_status: 0,                   // iat 状态
+     *       iat_server_connected: false,  
      *       iat_ws: {},  
+     *       iat_end_queue: ()=> void,        // iat 结束后的任务
      *       llm_ws: {},  
      *       llm_historys: [],                // 历史对话
      *       first_session: true              // 第一次的 会话
@@ -52,12 +56,9 @@ function main(config = {}) {
     global.G_ws_server = null;
     global.G_config = { ..._config, ...config };
 
-    // 讯飞 IAT 帧定义
-    global.XF_IAT_FRAME = {
-        STATUS_FIRST_FRAME: 0,
-        STATUS_CONTINUE_FRAME: 1,
-        STATUS_LAST_FRAME: 2
-    }
+    // IAT 静默时间
+    global.G_vad_eos = G_config.vad_eos || 2500;
+ 
     G_ws_server = init_server();
 }
 

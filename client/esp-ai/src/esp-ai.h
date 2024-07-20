@@ -93,8 +93,8 @@ public:
      * 接收到控制命令后的后调
      * command_id 命令id
      * data       其他数据
-     **/
-    void onEvent(void (*func)(char command_id, char data));
+     **/ 
+    void onEvent(void (*func)(String command_id, String data));
 
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
@@ -104,7 +104,8 @@ private:
     ESP_AI_wake_up_config wake_up_config;
     ESP_AI_volume_config volume_config;
     bool debug;
-    void (*onEventCb)(char command_id, char data) = nullptr; // 初始化为nullptr
+    // void (*onEventCb)(char command_id, char data) = nullptr; // 初始化为nullptr
+    void (*onEventCb)(String command_id, String data) = nullptr; // 初始化为nullptr
 
     void speaker_i2s_setup();
     void adjustVolume(int16_t *buffer, size_t length, float volume);

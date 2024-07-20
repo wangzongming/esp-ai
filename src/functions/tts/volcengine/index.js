@@ -4,29 +4,35 @@
  */
 const WebSocket = require('ws')
 const zlib = require('zlib');
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('uuid'); 
 
 // 本文件对接文档： https://www.volcengine.com/docs/6561/79823
 
+
 /**
- * TTS 模块
- * @param {String} device_id 设备id 
- * @param {String} text 待播报的文本 
- * @param {Boolean} pauseInputAudio 客户端是否需要暂停音频采集
- * @param {Boolean} reRecord TTS播放完毕后是再次进入iat识别环节
- * @param {Function} (is_over, audio, TTS_resolve)=> void 音频回调
- * @return {Function} (pcm)=> Promise<Boolean>
+ * TTS 插件封装 - 火山引擎 TTS 
+ * @param {String}      device_id           设备ID   
+ * @param {String}      text                待播报的文本   
+ * @param {Object}      api_key             用户配置的key   
+ * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
+ * @param {Function}    tts_params_set      用户自定义传输给 TTS 服务的参数，eg: tts_params_set(参数体)
+ * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> {} })
+ * @param {Function}    ttsServerErrorCb    与 TTS 服务之间发生错误时调用，并且传入错误说明，eg: ttsServerErrorCb("意外错误")
+ * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
+ * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
-function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb }) {
-    const { devLog, api_key, tts_server, tts_params_set } = G_config;
-    if(!api_key[tts_server].tts){
-        console.log("您设置使用火山TTS，但是没有按照稳定没有配置tts服务");
+function TTS_FN({ device_id, text, devLog, api_key, logWSServer, tts_params_set, cb, log, ttsServerErrorCb }) {
+  
+    if (!api_key.tts) {
+        log.error("您设置使用火山TTS，但是没有按照稳定没有配置tts服务");
         return;
     }
     const config = {
-        appid: api_key[tts_server].tts.appid,
-        accessToken: api_key[tts_server].tts.accessToken,
-    }    
+        appid: api_key.tts.appid,
+        accessToken: api_key.tts.accessToken,
+    }
+
+   
     const host = "openspeech.bytedance.com";
     const api_url = `wss://${host}/api/v1/tts/ws_binary`;
     const default_header = Buffer.from([0x11, 0x10, 0x11, 0x00]);
@@ -57,46 +63,33 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
     };
 
 
-    return new Promise((resolve) => {
-        devLog && console.log('\n=== 开始请求TTS: ', text, " ===");
-        const { ws: ws_client, tts_list } = G_devices.get(device_id);
-        // 开始播放直接先让 esp32 暂停采集音频，不然处理不过来
-        if (pauseInputAudio) {
-            ws_client && ws_client.send("pause_voice");
-            G_devices.set(device_id, {
-                ...G_devices.get(device_id),
-                client_out_audio_ing: true,
-            })
-        }
-
+    return new Promise((resolve) => {  
         const submit_request_json = JSON.parse(JSON.stringify(request_json));
         let payload_bytes = Buffer.from(JSON.stringify(submit_request_json));
         payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
         const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
         full_client_request.writeUInt32BE(payload_bytes.length, 4);
+        
         const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${config["accessToken"]}` }, perMessageDeflate: false });
-
-        const curTTSKey = tts_list.size;
-        tts_list.set(curTTSKey, curTTSWs)
+        logWSServer(curTTSWs) 
 
         // 连接建立完毕，读取数据进行识别
         curTTSWs.on('open', () => {
-            devLog && console.log("-> 讯飞 tts服务连接成功！")
+            devLog && log.tts_info("-> 火山引擎 TTS 服务连接成功！")
             send()
         })
 
-        curTTSWs.on('message', (res, err) => {
-            const { tts_list } = G_devices.get(device_id);
+        curTTSWs.on('message', (res, err) => { 
             if (err) {
                 console.log('tts message error: ' + err)
                 return
-            } 
+            }
             // const protocol_version = res[0] >> 4;
             const header_size = res[0] & 0x0f;
             const message_type = res[1] >> 4;
             const message_type_specific_flags = res[1] & 0x0f;
             // const serialization_method = res[2] >> 4;
-            const message_compression = res[2] & 0x0f; 
+            const message_compression = res[2] & 0x0f;
             let payload = res.slice(header_size * 4);
             let done = false;
             if (message_type === 0xb) {  // audio-only server response
@@ -104,8 +97,8 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
                     // console.log("                Payload size: 0");
                     return false;
                 } else {
-                    const sequence_number = payload.readInt32BE(0); 
-                    payload = payload.slice(8); 
+                    const sequence_number = payload.readInt32BE(0);
+                    payload = payload.slice(8);
 
                     done = sequence_number < 0;
                 }
@@ -119,45 +112,40 @@ function TTS_FN(device_id, { text, reRecord = false, pauseInputAudio = true, cb 
                 error_msg = error_msg.toString('utf-8');
                 console.log(`          Error message code: ${code}`);
                 console.log(`          Error message size: ${msg_size} bytes`);
-                console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`); 
+                console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
                 console.log(`               Error message: ${error_msg}`);
-                
-                tts_list.delete(curTTSKey)
-                devLog && console.log(`tts错误 ${res.code}: ${res.message}`)
+ 
+                ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
                 curTTSWs.close()
                 resolve(false);
-                return 
-            } else if (message_type === 0xc) { 
+                return
+            } else if (message_type === 0xc) {
                 payload = payload.slice(4);
                 if (message_compression === 1) {
                     payload = zlib.gunzipSync(payload);
                 }
-                console.log(`            Frontend message: ${payload}`);
+                log.tts_info(`            Frontend message: ${payload}`);
             } else {
-                console.log("undefined message type!");
+                log.tts_info("undefined message type!");
                 done = true;
             }
- 
+
             cb({
                 // 根据服务控制
                 is_over: done,
                 audio: payload,
 
                 // 固定写法
-                TTS_resolve: resolve,
-                curTTSWs,
-                curTTSKey,
-                device_id,
-                reRecord,
+                resolve: resolve,
+                ws: curTTSWs, 
             });
 
- 
+
         })
 
         // 连接错误
-        curTTSWs.on('error', (err) => {
-            tts_list.delete(curTTSKey)
-            console.log("websocket connect err: " + err)
+        curTTSWs.on('error', (err) => { 
+            ttsServerErrorCb("websocket connect err: " + err)
             resolve(false);
         })
         // 传输数据

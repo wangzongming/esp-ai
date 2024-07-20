@@ -3,186 +3,219 @@
  * @github https://github.com/wangzongming/esp-ai  
  */
 const WebSocket = require('ws')
-const createUUID = require('./createUUID')
 const play_temp = require('../audio_temp/play_temp')
 const IAT_FN = require(`./iat`);
 const TTS_FN = require(`./tts`);
 const LLM_FN = require(`./llm`);
 const log = require("../utils/log");
 const getIPV4 = require("../utils/getIPV4");
+const createUUID = require("../utils/createUUID");
+const { tts_info, iat_info, llm_info, info } = require("../utils/log");
+var qs = require('qs');
 
 function init_server() {
-    const { port, devLog, onDeviceConnect, f_reply } = G_config;
+    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb } = G_config;
     const wss = new WebSocket.Server({ port });
-    wss.on('connection', async function connection(ws) {
+    wss.on('connection', async function connection(ws, req) {
         const device_id = createUUID();
-        onDeviceConnect && onDeviceConnect({ ws, device_id });
+        const client_version = qs.parse(req.url)["/?v"]
 
-        // 音频流播放完毕的任务队列
-        let audio_queue = [];
-        function add_audio_out_over_queue(fn) {
-            audio_queue.push(fn);
+        // TTS 音频流播放完毕的任务队列 
+        const audio_queue = new Map([]);
+
+        function add_audio_out_over_queue(key, fn) {
+            if (!key) {
+                log.error("add_audio_out_over_queue key is null");
+                return;
+            }
+            const fns = audio_queue.get(key) || [];
+            fns.push(fn)
+            audio_queue.set(key, fns);
         }
 
-        G_devices.set(device_id, { ws, first_session: true, tts_list: new Map(), await_out_tts: [], add_audio_out_over_queue })
-        devLog && console.log(`\n\n硬件设备连接成功：${device_id}`);
-        let started = false;
+        async function run_audio_out_over_queue(key) {
+            const fns = audio_queue.get(key);
+            if (fns) {
+                for (const fn of fns) {
+                    await fn();
+                }
+                audio_queue.delete(key);
+            }
+        }
 
+        G_devices.set(device_id, {
+            ws,
+            first_session: true,
+            tts_list: new Map(),
+            await_out_tts: [],
+            add_audio_out_over_queue,
+            run_audio_out_over_queue,
+        })
+        devLog && log.info(`\n硬件连接成功：${device_id}`, ["bold"]);
+        devLog && log.info(`客户端版本号：v${client_version}\n`, ["bold"]);
+
+        onDeviceConnect && onDeviceConnect({ ws, device_id, client_version });
+
+        let started = false;
         ws.on('message', async function (data) {
             // 避免浪费性能, 否则播放会卡顿
-            const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing, alert_ing } = G_devices.get(device_id);
+            const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing, alert_ing, iat_end_queue } = G_devices.get(device_id);
+            if (typeof data === "string") {
+                const { type, tts_task_id } = JSON.parse(data);
+                // console.log(JSON.parse(data));
+                switch (type) {
+                    case "start":
 
-            switch (data) {
-                case "start":
-                    if (iat_server_connected || client_out_audio_ing) {
-                        // devLog && console.log("--- IAT 识别途中收到重新输入音频");
-                        return;
-                    };
-                    // 清空 tts 任务 
-                    for (const [key, ttsWS] of tts_list) {
-                        ttsWS && ttsWS.close && ttsWS.close();
-                        tts_list.delete(key)
-                    }
-                    iat_ws && iat_ws.close()
-                    llm_ws && llm_ws.close()
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        first_session: false,
-                        iat_server_connected: false,
-                        tts_list: new Map(),
-                        await_out_tts: [],
-                        await_out_tts_ing: false,
-                        await_out_tts_run: async () => {
-                            const { await_out_tts_ing } = G_devices.get(device_id);
-                            if (await_out_tts_ing) return;
-                            async function doTask() {
-                                const { await_out_tts } = G_devices.get(device_id);
-                                if (await_out_tts[0]) {
-                                    await await_out_tts[0]();
-                                    await_out_tts.shift()
-                                    G_devices.set(device_id, {
-                                        ...G_devices.get(device_id),
-                                        await_out_tts,
-                                    })
-                                    await doTask();
-                                    return;
-                                } else {
-                                    G_devices.set(device_id, {
-                                        ...G_devices.get(device_id),
-                                        await_out_tts_ing: false,
-                                    })
-                                }
-                            }
-                            await doTask();
-                        },
-                    })
-                    started = true;
-                    const start_iat = () => IAT_FN(device_id);
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        start_iat: start_iat,
-                    })
+                        // ...
+                        if (iat_server_connected || client_out_audio_ing) {
+                            // devLog && console.log("--- IAT 识别途中收到重新输入音频");
+                            return;
+                        };
+                        // 清空 tts 任务 
+                        for (const [key, ttsWS] of tts_list) {
+                            ttsWS && ttsWS.close && ttsWS.close();
+                            tts_list.delete(key)
+                        }
+                        iat_ws && iat_ws.close && iat_ws.close()
+                        llm_ws && llm_ws.close && llm_ws.close()
 
-                    first_session && await TTS_FN(device_id, {
-                        text: f_reply || "小明在的",
-                        reRecord: true,
-                        pauseInputAudio: true
-                    });
-
-                    if (!first_session) { 
-                        console.log('开始播放du')
-                        G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: true })
-                        await play_temp("du.pcm", ws_client);
-                        G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: false })
-                        console.log('播放du完毕')
-                        await start_iat();
-                    }
-
-
-                    // ============= LLM 测试 =============
-                    // LLM_FN(device_id, { text: "你好。" }) 
-                    // LLM_FN(device_id, { text: "你好，帮我写一首现代诗，描写春色，模仿徐志摩的手笔。" }) 
-                    break;
-                case "client_out_audio_ing":
-                    if (alert_ing) return;
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        client_out_audio_ing: true,
-                    })
-                    break;
-                case "client_out_audio_over":
-                    if (alert_ing) return;
-                    devLog && console.log("-> 客户端音频流播放完毕");
-                    for (const fn of audio_queue) {
-                        await fn();
-                    }
-                    audio_queue = [];
-
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        client_out_audio_ing: false,
-                    })
-                    break;
-                case "play_audio_ws_conntceed":
-                    // 播放ws连接成功语音
-                    await TTS_FN(device_id, {
-                        text: "后台服务连接成功！",
-                        reRecord: false,
-                        pauseInputAudio: true
-                    });
-                    ws && ws.send("session_end");
-                    break;
-                default:
-                    // 采集的音频数据
-                    if (started && data && data.length && send_pcm && iat_server_connected) {
-                        // 发送数据 
-                        send_pcm(data);
-                        // 准备发送最后一帧
-                        clearTimeout(iat_end_frame_timer);
                         G_devices.set(device_id, {
                             ...G_devices.get(device_id),
-                            iat_end_frame_timer: setTimeout(() => {
-                                const { send_pcm, iat_server_connected, iat_server } = G_devices.get(device_id);
-                                switch (iat_server) {
-                                    case "xun_fei":
-                                        if (iat_server_connected && send_pcm) {
-                                            devLog && console.log("主动发送IAT最后一帧");
-                                            // 最终帧发送结束 
-                                            started = false;
-                                            G_devices.set(device_id, {
-                                                ...G_devices.get(device_id),
-                                                iat_status: XF_IAT_FRAME.STATUS_LAST_FRAME,
-                                            })
-                                            send_pcm("");
-                                        }
-                                        break;
-                                    default:
-                                        break;
+                            first_session: false,
+                            iat_server_connected: false,
+                            tts_list: new Map(),
+                            await_out_tts: [],
+                            await_out_tts_ing: false,
+                            await_out_tts_run: async () => {
+                                const { await_out_tts_ing } = G_devices.get(device_id);
+                                if (await_out_tts_ing) return;
+                                async function doTask() {
+                                    const { await_out_tts } = G_devices.get(device_id);
+                                    if (await_out_tts[0]) {
+                                        await await_out_tts[0]();
+                                        await_out_tts.shift()
+                                        G_devices.set(device_id, {
+                                            ...G_devices.get(device_id),
+                                            await_out_tts,
+                                        })
+                                        await doTask();
+                                        return;
+                                    } else {
+                                        G_devices.set(device_id, {
+                                            ...G_devices.get(device_id),
+                                            await_out_tts_ing: false,
+                                        })
+                                    }
                                 }
-                            }, 2800) // 需要比静默时间少,
+                                await doTask();
+                            },
                         })
-                    }
-                    break;
+                        started = true;
+                        const start_iat = () => {
+                            ws && ws.send("start_voice");
+                            started = true;
+                            return IAT_FN(device_id);
+                        };
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id),
+                            start_iat: start_iat,
+                        })
+
+                        if (first_session) {
+                            TTS_FN(device_id, {
+                                text: f_reply || "小明在的",
+                                reRecord: true,
+                                pauseInputAudio: true
+                            });
+                        } else { 
+                            await play_temp("du.pcm", ws); 
+                            add_audio_out_over_queue(() => {
+                                start_iat();
+                            })
+                        }
+
+                        // ============= LLM 测试 =============
+                        // LLM_FN(device_id, { text: "你好。" }) 
+                        // LLM_FN(device_id, { text: "你好，帮我写一首现代诗，描写春色，模仿徐志摩的手笔。" }) 
+                        break;
+                    case "client_out_audio_ing":
+                        // if (alert_ing) return;
+                        devLog && tts_info("-> 客户端音频流播放中");
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id),
+                            client_out_audio_ing: true,
+                        })
+                        break;
+                    case "client_out_audio_over":
+                        devLog && tts_info("-> 客户端音频流播放完毕：", tts_task_id);
+                        run_audio_out_over_queue(tts_task_id);
+
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id),
+                            client_out_audio_ing: false,
+                        })
+                        break;
+                    case "play_audio_ws_conntceed":
+                        // 播放ws连接成功语音
+                        await TTS_FN(device_id, {
+                            text: `后台服务连接成功，呼喊小明同学就可以唤醒我。`,
+                            reRecord: false,
+                            pauseInputAudio: true,
+                            onAudioOutOver: () => {
+                                ws && ws.send("session_end");
+                            }
+                        })
+                        break;
+                }
+            } else { 
+                // 采集的音频数据
+                if (started && data && data.length && send_pcm && iat_server_connected) {
+                    // 发送数据 
+                    send_pcm(data);
+                    // 准备发送最后一帧
+                    clearTimeout(iat_end_frame_timer);
+                    G_devices.set(device_id, {
+                        ...G_devices.get(device_id),
+                        iat_end_frame_timer: setTimeout(async () => {
+                            const { iat_server_connected } = G_devices.get(device_id);
+                            started = false;
+                            if (!iat_server_connected) {
+                                return;
+                            }
+                            devLog && iat_info("IAT 超时未收到音频数据，执行主动结束回调。");
+                            iat_end_queue && await iat_end_queue();
+                            onIATEndcb && await onIATEndcb(device_id);
+                        }, G_vad_eos - 300) // 需要比静默时间少,
+                    })
+                }
             }
+
         });
 
-        // ============= TTS 测试 =============
+        // ============= 提示音测试 =============
         // play_temp("du.pcm", ws); 
+
+        // ============= 指令发送测试 ============= 
+        // ws.send(JSON.stringify({ type: "instruct", command_id: "open_test", data: "这是数据" }));
+
+
+        // ============= TTS 测试 =============  
         // await TTS_FN(device_id, {
-        //     text: "开始连接网络",
+        //     text: "第一句，小明在的！",
         //     reRecord: false,
-        //     pauseInputAudio: true
+        //     pauseInputAudio: true,
+        //     onAudioOutOver: () => {
+        //         console.log('第一句播放完毕的回调')
+        //     }
         // }); 
-        // await TTS_FN(device_id, {
-        //     text: "第一句，小明在的。请吩咐！很愿意为你效劳。",
-        //     reRecord: false,
-        //     pauseInputAudio: true
-        // });
 
         // await TTS_FN(device_id, {
-        //     text: "第二句，ESP-AI 萌娃音色要上线啦！",
+        //     text: "第二句，萌娃音色要上线啦！",
         //     reRecord: false,
-        //     pauseInputAudio: true
+        //     pauseInputAudio: true,
+        //     onAudioOutOver: () => {
+        //         console.log('第二句播放完毕的回调')
+        //     }
         // });
 
 

@@ -3,6 +3,7 @@
 #include <xiao_ming_tong_xue_inferencing.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <Arduino_JSON.h>
 
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
@@ -22,6 +23,8 @@
 
 WebSocketsClient webSocket;
 
+String Version = "1.0.0";
+
 String start_ed = "0";
 // 是否可以采集音频，由客户端控制的
 String can_voice = "1";
@@ -30,7 +33,7 @@ long last_get_audio_time = 0;
 // 是否已经通知服务端播放完毕
 String is_send_server_audio_over = "1";
 // 超过多少时间没有接收到音频后就算结束播放 ms
-long audio_delay = 600;
+long audio_delay = 300;
 // 当前电位器值
 int cur_ctrl_val = 0;
 
@@ -47,6 +50,10 @@ ESP_AI_server_config default_server_config = {"192.168.1.5", 8080};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 ESP_AI_volume_config default_volume_config = {34, 4096, 0.5};
 
+bool ws_connected = false;
+// 当前 tts 任务 id
+String tts_task_id = "";
+
 /** 音频缓冲区，指针和选择器 */
 typedef struct
 {
@@ -56,7 +63,7 @@ typedef struct
     uint32_t n_samples;
 } inference_t;
 static inference_t inference;
-static const uint32_t sample_buffer_size = 4096; // 1024 2048 4096 8192
+static const uint32_t sample_buffer_size = 1024; // 1024 2048 4096 8192
 static signed short sampleBuffer[sample_buffer_size];
 // 设置为true以查看从原始信号生成的特征
 static bool debug_nn = false;
@@ -223,7 +230,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 扬声器
     speaker_i2s_setup();
 
-    webSocket.begin(server_config.ip, server_config.port, "/");
+    webSocket.begin(server_config.ip, server_config.port, "/?v=" + Version);
     webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
@@ -262,7 +269,8 @@ std::string ESP_AI::localIP()
 /**
  * 记录指令回调函数
  */
-void ESP_AI::onEvent(void (*func)(char command_id, char data))
+// void ESP_AI::onEvent(void (*func)(char command_id, char data))
+void ESP_AI::onEvent(void (*func)(String command_id, String data))
 {
     onEventCb = func;
 }
@@ -280,7 +288,7 @@ void ESP_AI::loop()
         DEBUG_PRINTLN(debug, volume_config.volume);
     }
 
-    if (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0)
+    if (ws_connected && start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
     {
         // buffer 准备好后就进行推理
         if (inference.buf_ready != 0 && can_voice == "1")
@@ -324,8 +332,13 @@ void ESP_AI::loop()
 
                 // 开始录音
                 digitalWrite(LED_BUILTIN, HIGH);
-                start_ed = "1";
-                webSocket.sendTXT("start");
+                start_ed = "1"; 
+
+                JSONVar data;
+                data["type"] = "start";
+                String sendData = JSON.stringify(data);
+                webSocket.sendTXT(sendData);
+
                 DEBUG_PRINTLN(debug, "开始录音");
             }
         }
@@ -333,11 +346,21 @@ void ESP_AI::loop()
 
     // Complete or not
     long cur_time = millis();
-    if (is_send_server_audio_over == "0" && (cur_time - last_get_audio_time > audio_delay))
+    if (tts_task_id && is_send_server_audio_over == "0" && ((cur_time - last_get_audio_time) > audio_delay))
     {
+        Serial.println("=== 发送播放结束标识到服务端 ===");
         is_send_server_audio_over = "1";
-        digitalWrite(LED_BUILTIN, LOW);
-        webSocket.sendTXT("client_out_audio_over");
+        // 恢复可以录音的状态
+        can_voice = "1";
+        // 告诉服务端播放完毕
+        digitalWrite(LED_BUILTIN, LOW); 
+
+        JSONVar data;
+        data["type"] = "client_out_audio_over";
+        data["tts_task_id"] = tts_task_id;
+        String sendData = JSON.stringify(data);
+        webSocket.sendTXT(sendData);
+        tts_task_id = "";
     }
 }
 
@@ -351,7 +374,11 @@ void ESP_AI::wakeUp()
     // 开始录音
     digitalWrite(LED_BUILTIN, HIGH);
     start_ed = "1";
-    webSocket.sendTXT("start");
+
+    JSONVar data;
+    data["type"] = "start";
+    String sendData = JSON.stringify(data);
+    webSocket.sendTXT(sendData);
     DEBUG_PRINTLN(debug, "开始录音");
 }
 
@@ -363,53 +390,94 @@ void ESP_AI::adjustVolume(int16_t *buffer, size_t length, float volume)
         buffer[i] = (int16_t)(buffer[i] * volume);
     }
 }
-
 void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 {
     switch (type)
     {
     case WStype_DISCONNECTED:
-        can_voice = "1";
-        start_ed = "0";
-        digitalWrite(LED_BUILTIN, LOW);
-        Serial.println("WebSocket Disconnected");
+        if (ws_connected)
+        {
+            ws_connected = false;
+            can_voice = "1";
+            start_ed = "0";
+            digitalWrite(LED_BUILTIN, LOW);
+            Serial.println("WebSocket Disconnected");
+        }
         break;
     case WStype_CONNECTED:
+    {
+        ws_connected = true;
         can_voice = "1";
         start_ed = "0";
         Serial.println("WebSocket Connected");
-        webSocket.sendTXT("play_audio_ws_conntceed");
 
+        JSONVar data_1;
+        data_1["type"] = "play_audio_ws_conntceed";
+        String sendData = JSON.stringify(data_1);
+        webSocket.sendTXT(sendData); 
         break;
+    }
     case WStype_TEXT:
         // 一边用喇叭，一边采集音频会很卡, 待优化...
         if (strcmp((char *)payload, "start_voice") == 0)
         {
             can_voice = "1";
-            DEBUG_PRINT(debug, "继续采集音频");
+            DEBUG_PRINTLN(debug, "继续采集音频");
         }
-        if (strcmp((char *)payload, "pause_voice") == 0)
+        else if (strcmp((char *)payload, "pause_voice") == 0)
         {
             can_voice = "0";
-            DEBUG_PRINT(debug, "暂停采集音频");
+            DEBUG_PRINTLN(debug, "暂停采集音频");
         }
-        if (strcmp((char *)payload, "iat_end") == 0)
-        {
-            DEBUG_PRINTLN(debug, "当前语音识别完毕啦！");
-        }
-        if (strcmp((char *)payload, "session_end") == 0)
+        // else if (strcmp((char *)payload, "iat_end") == 0)
+        // {
+        //     DEBUG_PRINTLN(debug, "当前语音识别完毕啦！");
+        // }
+        else if (strcmp((char *)payload, "session_end") == 0)
         {
             start_ed = "0";
             can_voice = "1";
             digitalWrite(LED_BUILTIN, LOW);
             DEBUG_PRINTLN(debug, "会话结束");
         }
-        // 调用指令回调
-        if (onEventCb != nullptr)
+        else
         {
-            char *char_payload = (char *)payload;
-            onEventCb(*char_payload, NULL);
-            // onEventCb("open", "0001");
+            if (onEventCb != nullptr)
+            {
+                JSONVar parseRes = JSON.parse((char *)payload);
+                if (JSON.typeof(parseRes) == "undefined")
+                {
+                    return;
+                }
+                if (parseRes.hasOwnProperty("type"))
+                {
+                    String type = (const char *)parseRes["type"];
+                    String command_id = "";
+                    String data = "";
+                    if (parseRes.hasOwnProperty("command_id"))
+                    {
+                        command_id = (const char *)parseRes["command_id"];
+                    }
+                    if (parseRes.hasOwnProperty("data"))
+                    {
+                        data = (const char *)parseRes["data"];
+                    }
+
+                    // user command
+                    if (type == "instruct")
+                    {
+                        DEBUG_PRINTLN(debug, "客户端收到用户指令：" + command_id + " --- " + data);
+                        onEventCb(command_id, data);
+                    }
+
+                    // tts task log
+                    if (type == "play_audio")
+                    {
+                        tts_task_id = (const char *)parseRes["tts_task_id"];
+                        DEBUG_PRINTLN(debug, "客户端收到 TTS 任务：" + tts_task_id);
+                    }
+                }
+            }
         }
 
         Serial.printf("Received Text: %s\n", payload);
@@ -510,7 +578,8 @@ void ESP_AI::capture_samples(void *arg)
             }
 
             // scale the data (otherwise the sound is too quiet)
-            for (int x = 0; x < i2s_bytes_to_read / 2; x++)
+            // for (int x = 0; x < i2s_bytes_to_read / 2; x++)
+            for (int x = 0; x < i2s_bytes_to_read; x++)
             {
                 // 1. 这里不放大，并且上面设置 4069 容量, 正确率：...
                 // 2. 这里不放大，并且上面设置 2048 容量, 正确率：...

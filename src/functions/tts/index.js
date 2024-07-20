@@ -3,51 +3,49 @@
 * @github https://github.com/wangzongming/esp-ai  
 */
 const play_temp = require(`../../audio_temp/play_temp`);
+const log = require("../../utils/log");
+const createUUID = require("../../utils/createUUID");
 
 /**
- * @param {Buffer} is_over  是否完毕
- * @param {Buffer} audio    音频流
- * @param {WebSocket} curTTSKey    WebSocket 连接key
- * @param {WebSocket} curTTSWs    WebSocket 连接
- * @param {Function} TTS_resolve  TTS 函数的 resolve 参数
+ * @param {Buffer}    is_over       是否完毕
+ * @param {Buffer}    audio         音频流
+ * @param {WebSocket} tts_task_id   WebSocket 连接key
+ * @param {WebSocket} ws            WebSocket 连接
+ * @param {Function}  resolve       TTS 函数的 resolve 参数
 */
-async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve, reRecord }) {
+async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecord }) {
     const { devLog, onTTScb } = G_config;
     const { ws: ws_client, tts_list, add_audio_out_over_queue } = G_devices.get(device_id);
     onTTScb && onTTScb({ device_id, is_over, audio });
+    if (!resolve) {
+        log.error('TTS 插件中，调用 cb 时 resolve 参数不能为空');
+    }
     /**
      * 1. TTS 转换完毕，并且发往客户端
      * 2. 客户端告知服务已经完成音频流播放
      * 3. 本任务完成
     */
     if (is_over) {
-        devLog && console.log('-> TTS 转换完毕');
-        curTTSWs.close && curTTSWs.close()
-        tts_list.delete(curTTSKey)
+        devLog && log.tts_info('-> TTS 转换完毕');
+        ws.close && ws.close()
+        tts_list.delete(tts_task_id)
 
-        // 一旦TTS任务顺序混乱，那这里必定出问题。
-        add_audio_out_over_queue(async () => {
+        add_audio_out_over_queue(tts_task_id, async () => {
             const { ws: ws_client, start_iat } = G_devices.get(device_id);
-            devLog && console.log('-> TTS 客户端播放完毕');
-            if (reRecord) {
-                devLog && console.log('\n\n=== 重新开始识别音频 ===')
-
-                console.log('开始播放du')
-                G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: true })
-                await play_temp("du.pcm", ws_client);
-                G_devices.set(device_id, { ...G_devices.get(device_id), alert_ing: false })
-                console.log('播放du完毕')
-
-                ws_client && ws_client.send("start_voice");
-                start_iat && start_iat();
+            if (reRecord) { 
+                add_audio_out_over_queue("warning_tone", () => { 
+                    start_iat && start_iat();
+                    resolve(true);
+                })
+                await play_temp("du.pcm", ws_client); 
+            }else{ 
+                resolve(true);
             }
-            TTS_resolve(true);
         })
     }
 
     /**
-     * 循环发送每个分片
-     * 最后一片时需要告知客户端 ing...
+     * 循环发送每个分片 
      */
     let isFirst = true;
     let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
@@ -70,8 +68,61 @@ async function cb({ device_id, is_over, audio, curTTSWs, curTTSKey, TTS_resolve,
  * @return {Function} (pcm)=> Promise<Boolean>
 */
 module.exports = (device_id, opts) => {
-    const { tts_server, plugins = [] } = G_config;
+    const { devLog, api_key, tts_server, plugins = [], tts_params_set } = G_config;
+    const { ws: ws_client, tts_list, add_audio_out_over_queue } = G_devices.get(device_id);
+    const { text, pauseInputAudio, reRecord, onAudioOutOver } = opts;
     const plugin = plugins.find(item => item.name == tts_server && item.type === "TTS")?.main;
+
     const TTS_FN = plugin || require(`./${tts_server}`);
-    return TTS_FN(device_id, { ...opts, cb })
+    if (!api_key[tts_server]) {
+        log.error(`请先配置好 TTS 服务 ${tts_server} 的 api_key`);
+        return false;
+    }
+    if (!text) {
+        return true;
+    }
+    devLog && log.tts_info("");
+    devLog && log.tts_info('=== 开始请求TTS: ', text, " ===");
+
+    // 开始播放直接先让 esp32 暂停采集音频，不然处理不过来
+    if (pauseInputAudio) {
+        ws_client && ws_client.send("pause_voice");
+        G_devices.set(device_id, {
+            ...G_devices.get(device_id),
+            client_out_audio_ing: true,
+        })
+    }
+
+    // 任务ID
+    const tts_task_id = createUUID();
+    onAudioOutOver && add_audio_out_over_queue(tts_task_id, onAudioOutOver)
+
+    /**
+     * 记录 tts 服务对象
+    */
+    const logWSServer = (wsServer) => {
+        tts_list.set(tts_task_id, wsServer)
+    }
+
+    /**
+     * tts 服务发生错误时调用
+    */
+    const ttsServerErrorCb = (err) => {
+        tts_list.delete(tts_task_id)
+        log.error(err)
+    }
+
+
+    ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
+    return TTS_FN({
+        text,
+        device_id,
+        devLog,
+        api_key: api_key[tts_server],
+        tts_params_set,
+        log,
+        cb: (arg) => cb({ ...arg, tts_task_id, device_id, reRecord }),
+        logWSServer,
+        ttsServerErrorCb
+    })
 };

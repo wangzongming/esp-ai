@@ -11,15 +11,20 @@ export type Config = {
     devLog?: number,
 
     /**
+     * 语音识别静默时间, 单位毫秒，默认 2500
+    */
+    vad_eos?: number;
+
+    /**
      * 语音识别服务、TTS服务、LLM 服务的提供方, 默认为 xun_fei
      * @value xun_fei           讯飞的服务
-     * @value dashscope         阿里-积灵
-     * @value bai_du            百度的服务（预计 2.0 版本支持）
-     * @value privatization     自己的服务（预计 2.0 版本支持）
+     * @value dashscope         阿里-积灵  
+     * @value volcengine        火山引擎（豆包等）
+     * @value [string]          自定义插件
     */
-    iat_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
-    tts_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
-    llm_server?: "xun_fei" | "dashscope" | "bai_du" | "privatization",
+    iat_server?: "xun_fei" | "dashscope" | "volcengine" | string,
+    tts_server?: "xun_fei" | "dashscope" | "volcengine" | string,
+    llm_server?: "xun_fei" | "dashscope" | "volcengine" | string,
 
     /**
      * 不同的服务商需要配置对应的 key
@@ -33,14 +38,15 @@ export type Config = {
             apiKey: string,
             // LLM 版本
             llm?: string,
-        },
+        };
         // 阿里云-积灵： https://dashscope.console.aliyun.com/apiKey
         // 积灵主要是提供llm（推荐使用这个llm服务）
         dashscope?: {
             apiKey: string,
             // LLM 版本
             llm?: string,
-        }
+        };
+        [nemae: string]: Record<string, any>
     },
 
     /**
@@ -51,7 +57,10 @@ export type Config = {
         key: string[],
         // 向客户端发送的指令
         instruct: "__sleep__" | string,
-        message: string,
+        // 客户端执行指令后的回复消息（如：打开电灯完毕/关闭电灯完毕）
+        message?: string,
+        // 附加参数, 不管什么数据，都需要写为 string 类型，且不建议放较大的数据在这里
+        data?: string;
     }[];
 
     /**
@@ -71,22 +80,38 @@ export type Config = {
     llm_params_set?: (params: Record<string, any>) => Record<string, any>;
 
     /**
-     * 新设备连接服务的回调 
-     * @param {string} device_id 设备id
-     * @param {WebSocket} ws 连接句柄，可使用 ws.send() 发送数据
+     * tts 参数控制, 可以设置说话人、音量、语速等
+     * @param {object} params 默认的tts参数
      */
-    onDeviceConnect?: (arg: { device_id: string, ws: WebSocket }) => void;
+    tts_params_set?: (params: Record<string, any>) => Record<string, any>;
+
 
     /**
-     * iat 回调 
+     * 新设备连接服务的回调 
+     * @param {string} device_id 设备id
+     * @param {string} client_version 客户端版本
+     * @param {WebSocket} ws 连接句柄，可使用 ws.send() 发送数据
+     */
+    onDeviceConnect?: (arg: { device_id: string, ws: WebSocket, client_version: string }) => void;
+
+    /**
+     * iat 回调: 语音识别过程中的回调
      * @param {string} device_id 设备id
      * @param {string} text 语音转的文字 
     */
     onIATcb?: (arg: { device_id: string, text: string }) => void;
+
+    /**
+    * iat 回调: 语音识别完毕的回调，可以在这里面发出最后一帧到语音识别服务器等操作
+    * @param {string} device_id 设备id
+    * @param {string} text 语音转的文字 
+   */
+    onIATEndcb?: (arg: { device_id: string, text: string }) => void;
+
     /**
      * tts 回调 
      * @param {string} device_id 设备id
-     * @param {Buffer} is_over  是否完毕
+     * @param {Boolean} is_over  是否完毕
      * @param {Buffer} audio    音频流
     */
     onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer }) => void;
@@ -99,6 +124,15 @@ export type Config = {
      * 
     */
     onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[] }) => void;
+
+    /**
+     * 插件
+    */
+    plugins?: {
+        name: string;
+        type: "LLM" | "TTS" | "IAT"; 
+        main: (arg: Record<string, any>) => void;
+    }[]
 }
 
 export type Math = (config: Config) => void;
