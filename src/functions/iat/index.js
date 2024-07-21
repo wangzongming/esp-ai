@@ -40,8 +40,7 @@ async function cb({ device_id, text }) {
                         ...G_devices.get(device_id),
                         first_session: true,
                     })
-                    ws_client && ws_client.send("session_end");
-                    // ws_client && ws_client.send("iat_end");
+                    ws_client && ws_client.send("session_end"); 
                     devLog && console.log('\n\n === 会话结束 ===\n\n')
                     break;
                 default:
@@ -71,8 +70,7 @@ async function cb({ device_id, text }) {
             ...G_devices.get(device_id),
             first_session: true,
         })
-        ws_client && ws_client.send("session_end");
-        // ws_client && ws_client.send("iat_end");
+        ws_client && ws_client.send("session_end"); 
     }
 }
 

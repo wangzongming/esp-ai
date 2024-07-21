@@ -288,8 +288,10 @@ void ESP_AI::loop()
         DEBUG_PRINTLN(debug, volume_config.volume);
     }
 
+    // DEBUG_PRINTLN(debug, start_ed);
     if (ws_connected && start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
     {
+        // DEBUG_PRINTLN(debug, can_voice);
         // buffer 准备好后就进行推理
         if (inference.buf_ready != 0 && can_voice == "1")
         {
@@ -332,7 +334,7 @@ void ESP_AI::loop()
 
                 // 开始录音
                 digitalWrite(LED_BUILTIN, HIGH);
-                start_ed = "1"; 
+                start_ed = "1";
 
                 JSONVar data;
                 data["type"] = "start";
@@ -352,8 +354,10 @@ void ESP_AI::loop()
         is_send_server_audio_over = "1";
         // 恢复可以录音的状态
         can_voice = "1";
+        // if(tts_task_id === "")
+        // start_ed = "0";
         // 告诉服务端播放完毕
-        digitalWrite(LED_BUILTIN, LOW); 
+        digitalWrite(LED_BUILTIN, LOW);
 
         JSONVar data;
         data["type"] = "client_out_audio_over";
@@ -414,7 +418,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         JSONVar data_1;
         data_1["type"] = "play_audio_ws_conntceed";
         String sendData = JSON.stringify(data_1);
-        webSocket.sendTXT(sendData); 
+        webSocket.sendTXT(sendData);
         break;
     }
     case WStype_TEXT:

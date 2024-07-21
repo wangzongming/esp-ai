@@ -65,7 +65,7 @@ function init_server() {
                 // console.log(JSON.parse(data));
                 switch (type) {
                     case "start":
-
+                        // console.log(first_session, iat_server_connected, client_out_audio_ing)
                         // ...
                         if (iat_server_connected || client_out_audio_ing) {
                             // devLog && console.log("--- IAT 识别途中收到重新输入音频");
@@ -128,10 +128,10 @@ function init_server() {
                                 pauseInputAudio: true
                             });
                         } else { 
-                            await play_temp("du.pcm", ws); 
-                            add_audio_out_over_queue(() => {
+                            add_audio_out_over_queue("warning_tone", () => {
                                 start_iat();
                             })
+                            await play_temp("du.pcm", ws); 
                         }
 
                         // ============= LLM 测试 =============
@@ -167,7 +167,7 @@ function init_server() {
                         })
                         break;
                 }
-            } else { 
+            } else {  
                 // 采集的音频数据
                 if (started && data && data.length && send_pcm && iat_server_connected) {
                     // 发送数据 
