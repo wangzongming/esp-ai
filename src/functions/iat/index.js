@@ -1,4 +1,5 @@
 const log = require("../../utils/log");
+const play_audio = require("../../audio_temp/play_audio");
 
 /** 
  * @author xiaomingio 
@@ -21,14 +22,22 @@ async function cb({ device_id, text }) {
         let task_info = null;
         intention_for: for (const item of intention) {
             const { key = [] } = item;
-            // 后期需要加入意图识别模型...
-            if (key.includes(text)) {
-                task_info = item;
-                break intention_for;
+            if (typeof key === "function") {
+                const res = key(text);
+                if (res) {
+                    task_info = item;
+                    task_info["__name__"] = res;
+                    break intention_for;
+                }
+            } else {
+                if (key.includes(text)) {
+                    task_info = item;
+                    break intention_for;
+                }
             }
         }
         if (task_info) {
-            const { instruct, message, data } = task_info;
+            const { instruct, message, data, __name__, music_server } = task_info;
             switch (instruct) {
                 case "__sleep__":
                     await TTS_FN(device_id, {
@@ -40,14 +49,27 @@ async function cb({ device_id, text }) {
                         ...G_devices.get(device_id),
                         first_session: true,
                     })
-                    ws_client && ws_client.send("session_end"); 
+                    ws_client && ws_client.send("session_end");
                     devLog && console.log('\n\n === 会话结束 ===\n\n')
                     break;
+                case "__play_music__":
+                    await TTS_FN(device_id, {
+                        text: message || "好的",
+                        reRecord: false,
+                        pauseInputAudio: true,
+                        onAudioOutOver: async () => {
+                            const url = await music_server(__name__);
+                            play_audio(url, ws_client, "play_music")
+                        }
+                    });
+                    break;
                 default:
+                    devLog && log.iat_info(`执行指令：${instruct}, data: ${data}, name: ${__name__}`);
                     instruct && ws_client && ws_client.send(JSON.stringify({
                         type: "instruct",
                         command_id: instruct,
-                        data: data
+                        data: data,
+                        name: __name__
                     }));
                     message && await TTS_FN(device_id, {
                         text: message,
@@ -70,7 +92,7 @@ async function cb({ device_id, text }) {
             ...G_devices.get(device_id),
             first_session: true,
         })
-        ws_client && ws_client.send("session_end"); 
+        ws_client && ws_client.send("session_end");
     }
 }
 
@@ -152,7 +174,7 @@ module.exports = async (device_id) => {
         if (!iat_server_connected) return;
         iat_ws && iat_ws.close();
         connectServerCb(false);
-        
+
         devLog && log.iat_info('=== IAT服务响应超时，会话结束 ===');
         TTS_FN(device_id, {
             text: sleep_reply || "我先退下了，有需要再叫我。",

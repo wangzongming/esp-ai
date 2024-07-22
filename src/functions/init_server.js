@@ -4,6 +4,7 @@
  */
 const WebSocket = require('ws')
 const play_temp = require('../audio_temp/play_temp')
+const play_audio = require('../audio_temp/play_audio')
 const IAT_FN = require(`./iat`);
 const TTS_FN = require(`./tts`);
 const LLM_FN = require(`./llm`);
@@ -149,7 +150,9 @@ function init_server() {
                     case "client_out_audio_over":
                         devLog && tts_info("-> 客户端音频流播放完毕：", tts_task_id);
                         run_audio_out_over_queue(tts_task_id);
-
+                        if(tts_task_id === "play_music"){
+                            ws && ws.send("session_end");
+                        }
                         G_devices.set(device_id, {
                             ...G_devices.get(device_id),
                             client_out_audio_ing: false,
@@ -193,8 +196,10 @@ function init_server() {
         });
 
         // ============= 提示音测试 =============
-        // play_temp("du.pcm", ws); 
-
+        // play_temp("du.pcm", ws);  
+        // play_audio("https://lw-sycdn.kuwo.cn/e25b7b2361d8799936bd4420551a36a3/669c7f3b/resource/30106/trackmedia/M5000009BMvP2ZlJAD.mp3?bitrate$128&format$mp3", ws)
+       
+       
         // ============= 指令发送测试 ============= 
         // ws.send(JSON.stringify({ type: "instruct", command_id: "open_test", data: "这是数据" }));
 

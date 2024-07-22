@@ -23,7 +23,7 @@
 
 WebSocketsClient webSocket;
 
-String Version = "1.0.0";
+String Version = "1.2.0";
 
 String start_ed = "0";
 // 是否可以采集音频，由客户端控制的
@@ -33,7 +33,7 @@ long last_get_audio_time = 0;
 // 是否已经通知服务端播放完毕
 String is_send_server_audio_over = "1";
 // 超过多少时间没有接收到音频后就算结束播放 ms
-long audio_delay = 300;
+long audio_delay = 800;
 // 当前电位器值
 int cur_ctrl_val = 0;
 
@@ -278,7 +278,7 @@ void ESP_AI::onEvent(void (*func)(String command_id, String data))
 void ESP_AI::loop()
 {
     webSocket.loop();
-
+    // Serial.print("-");
     int _cur_ctrl_val = analogRead(volume_config.input_pin);
     if (_cur_ctrl_val != cur_ctrl_val)
     {
@@ -588,8 +588,8 @@ void ESP_AI::capture_samples(void *arg)
                 // 1. 这里不放大，并且上面设置 4069 容量, 正确率：...
                 // 2. 这里不放大，并且上面设置 2048 容量, 正确率：...
                 // 3. 这里不放大，并且上面设置 8192 容量, 正确率：...
-                // sampleBuffer[x] = (int16_t)(sampleBuffer[x]) * 8;
-                sampleBuffer[x] = (int16_t)(sampleBuffer[x]);
+                sampleBuffer[x] = (int16_t)(sampleBuffer[x]) * 8;
+                // sampleBuffer[x] = (int16_t)(sampleBuffer[x]);
             }
 
             if (record_status)

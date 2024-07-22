@@ -2,7 +2,7 @@
  * @author xiaomingio 
  * @github https://github.com/wangzongming/esp-ai  
  */
-const WebSocket = require('ws') 
+const WebSocket = require('ws')
 const getServerURL = require("../../getServerURL");
 const log = require("../../../utils/log");
 
@@ -24,7 +24,7 @@ const log = require("../../../utils/log");
 */
 function LLM_FN({ device_id, devLog, api_key, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer }) {
     const config = { ...api_key }
- 
+
     // 这个对象是固定写法，每个 TTS 都必须按这个结构定义
     const texts = {
         all_text: "",
@@ -48,8 +48,8 @@ function LLM_FN({ device_id, devLog, api_key, text, llmServerErrorCb, llm_init_m
 
         const jsonData = JSON.parse(resultData)
         if (jsonData.header.code !== 0) {
-            onError(device_id, { text: "LLM 数据返回错误！" })
-            log.llm_info('提问失败: ', jsonData)
+            llmServerErrorCb(device_id, "LLM 数据返回错误！")
+            log.llm_info('提问失败: ', JSON.stringify(jsonData))
             return
         }
         const chunk_text = jsonData.payload.choices.text[0]["content"];
@@ -89,7 +89,7 @@ function LLM_FN({ device_id, devLog, api_key, text, llmServerErrorCb, llm_init_m
                         "v3.1": "generalv3",
                         "v2.1": "generalv2",
                         "v1.1": "general",
-                    }[config.llm],  
+                    }[config.llm],
                     "temperature": 0.5,
                     "max_tokens": 500
                 }

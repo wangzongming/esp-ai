@@ -19,24 +19,28 @@ ESP_AI_i2s_config_speaker i2s_config_speaker = { 16, 17, 15, 16000 };
 // [可留空] 音量调节配置：{ 输入引脚，输入最大值(1024|4096)，默认音量(0-1) }
 ESP_AI_volume_config volume_config = { 34, 4096, 0.5 };
 
+// 控制小灯演示
+int led_pin = 18;
 // 收到指令后的回调，比如开灯、关灯，由服务端配置。
 void on_command(String command_id, String data) {
-  Serial.printf("\n收到指令：%s -- %s\n", command_id, data);
+  Serial.print("\n收到指令:");
+  Serial.print(command_id);
+  Serial.println(data);
 
-  // 控制小灯演示
-  // if (command_id == "device_open_001") {
-  //   Serial.println("开灯");
-  //   digitalWrite(led_pin, HIGH);
-  // }
-  // if (command_id == "device_close_001") {
-  //   Serial.println("关灯");
-  //   digitalWrite(led_pin, LOW);
-  // }
+  if (command_id == "device_open_001") {
+    Serial.println("开灯");
+    digitalWrite(led_pin, HIGH);
+  }
+  if (command_id == "device_close_001") {
+    Serial.println("关灯");
+    digitalWrite(led_pin, LOW);
+  }
 }
 
 void setup() {
-  // Serial.begin(115200);
-  Serial.begin(9600);
+  Serial.begin(115200);
+  // Serial.begin(9600);
+  pinMode(led_pin, OUTPUT);
   // 开始运行 ESP-AI
   esp_ai.begin({ i2s_config_mic, i2s_config_speaker, wifi_config, server_config, wake_up_config, volume_config, debug });
   // 用户指令监听
@@ -74,21 +78,21 @@ void loop() {
 
 
 
-int find_string(char str[], char substr[]){
-    int i, j, k;
-    int len1 = strlen(str);
-    int len2 = strlen(substr);
+int find_string(char str[], char substr[]) {
+  int i, j, k;
+  int len1 = strlen(str);
+  int len2 = strlen(substr);
 
-    for(i = 0; i < len1 - len2 + 1; i++){
-        k = i;
-        j = 0;
-        while(str[k] == substr[j] && j < len2){
-            k++;
-            j++;
-        }
-        if(j == len2){
-            return i;
-        }
+  for (i = 0; i < len1 - len2 + 1; i++) {
+    k = i;
+    j = 0;
+    while (str[k] == substr[j] && j < len2) {
+      k++;
+      j++;
     }
-    return -1;
+    if (j == len2) {
+      return i;
+    }
+  }
+  return -1;
 }
