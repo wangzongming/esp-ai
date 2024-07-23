@@ -2,7 +2,7 @@
 # ESP-AI  [![npm](https://img.shields.io/npm/v/esp-ai.svg)](https://www.npmjs.com/package/esp-ai) [![npm](https://img.shields.io/npm/dm/esp-ai.svg?style=flat)](https://www.npmjs.com/package/esp-ai)
 
 
-![logo.png](./imgs/logo.png)
+![logo.png](./imgs/ESP-AI.png)
 
 <a href="./readme_english.md">English</a>
  
