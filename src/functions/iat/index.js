@@ -23,7 +23,7 @@ async function cb({ device_id, text }) {
         intention_for: for (const item of intention) {
             const { key = [] } = item;
             if (typeof key === "function") {
-                const res = key(text);
+                const res = await key(text);
                 if (res) {
                     task_info = item;
                     task_info["__name__"] = res;

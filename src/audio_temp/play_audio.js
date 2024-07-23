@@ -1,5 +1,6 @@
 
 const https = require('https');
+const http = require('http');
 const log = require('../utils/log');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
@@ -10,11 +11,17 @@ function isHttpUrl(url) {
     return regex.test(url);
 }
 
+function isHttpsUrl(url) {
+    const regex = /^https:\/\/.+/;
+    return regex.test(url);
+}
+
 function urlToStream(url) {
     const stream = new PassThrough();
-
-    https.get(url, (response) => {
+    const hf = isHttpsUrl(url) ? https : http;
+    hf.get(url, (response) => {
         if (response.statusCode !== 200) {
+            log.error(`音频地址不可用：${url}`)
             stream.emit('error', new Error(`Request failed with status code ${response.statusCode}`));
             return;
         }

@@ -197,7 +197,7 @@ function init_server() {
 
         // ============= 提示音测试 =============
         // play_temp("du.pcm", ws);  
-        // play_audio("https://lw-sycdn.kuwo.cn/e25b7b2361d8799936bd4420551a36a3/669c7f3b/resource/30106/trackmedia/M5000009BMvP2ZlJAD.mp3?bitrate$128&format$mp3", ws)
+        // play_audio("http://m10.music.126.net/20240723180659/13eabc0c9291dab9a836120bf3f609ea/ymusic/5353/0f0f/0358/d99739615f8e5153d77042092f07fd77.mp3", ws)
        
        
         // ============= 指令发送测试 ============= 

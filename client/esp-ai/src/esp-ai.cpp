@@ -23,7 +23,7 @@
 
 WebSocketsClient webSocket;
 
-String Version = "1.2.0";
+String Version = "1.2.1";
 
 String start_ed = "0";
 // 是否可以采集音频，由客户端控制的
