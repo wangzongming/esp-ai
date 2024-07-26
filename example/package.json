@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "esp-ai": "1.6.0"
+    "esp-ai": "^1.14.5"
   },
   "devDependencies": {},
   "scripts": {
@@ -12,5 +12,8 @@
     "start:pm2": "pm2 start ./index.js -i max"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  }
 }

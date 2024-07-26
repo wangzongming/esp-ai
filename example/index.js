@@ -1,6 +1,8 @@
 const espAi = require("esp-ai"); 
 
-espAi({
+// 详情配置项见： https://xiaomingio.top/esp-ai/server.html
+const config = {
+    port: 8080,
     // llm_server: "dashscope",
     api_key: {
         // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
@@ -35,11 +37,7 @@ espAi({
                 // 获取地址：https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey
                 apiKey: "32dacfe4xxx",
             }
-        },
-
-        ttson: {
-            token: "ht-xxx"
-        },
+        }, 
     },
     tts_params_set: (params) => {
 
@@ -59,4 +57,6 @@ espAi({
         // 改完后一定要返回出去
         return params;
     },
-});
+};
+
+espAi(config);
