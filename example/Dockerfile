@@ -20,4 +20,4 @@ EXPOSE 8080
 
 # 镜像运行后执行的node服务启动命令
 # pm2启动服务时默认在后台运行，但是docker运行时需保持一个进程在前台，所以要加上--no-daemon参数
-CMD ["pm2", "start", "src/index.js", "-i max", "--no-daemon"]
+CMD ["pm2", "start", "src/index.js", "-i", "max", "--no-daemon"]
