@@ -23,9 +23,12 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 
 - [x] Customizable offline voice wake-up
 - [x] IAT(ASR) ➡️ LLM/RAG ➡️ TTS
+- [x] User command recognition (home appliance control, singing, etc.)
 - [x] Configurable
 - [x] Plugin-based
 - [x] Ready to use
+
+
 
 # Next Steps
 
