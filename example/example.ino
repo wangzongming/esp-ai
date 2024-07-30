@@ -6,12 +6,13 @@ ESP_AI esp_ai;
 bool debug = true;
 // [必  填] wifi 配置： { wifi 账号， wifi 密码 }  注意：要用双引号！
 ESP_AI_wifi_config wifi_config = { "oldwang", "oldwang520" };
-// [必  填] 服务配置： { 服务IP， 服务端口, "请求参数，用多个参数&号分割" }
+// [必  填] 服务配置： { 服务IP， 服务端口, "请求参数，用多个参数用&号分割，最大256字节" }
 // ESP_AI_server_config server_config = { "192.168.3.3", 8080, "api-key=your_api_key&p2=test" };
-ESP_AI_server_config server_config = { "101.34.59.36", 8088 };
+// 免费测试服务器，带宽很差，仅可用于测试联通性。
+ESP_AI_server_config server_config = { "101.34.59.36", 8088, "api-key=free-test" };
 
 // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
-ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.7 };
+ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.95 };
 // ESP_AI_wake_up_config wake_up_config = { "diy", 0.7 };
 
 // [可留空] 麦克风引脚配置：{ bck_io_num, ws_io_num, data_in_num }

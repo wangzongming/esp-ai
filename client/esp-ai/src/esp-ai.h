@@ -57,7 +57,7 @@ struct ESP_AI_server_config
 {
     char ip[16];
     int port;
-    char params[512];
+    char params[256];
 };
 
 struct ESP_AI_CONFIG

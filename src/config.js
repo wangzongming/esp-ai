@@ -23,8 +23,8 @@ const config = {
     */
     iat_server: "xun_fei",
 
-    // tts_server: "xun_fei",
-    tts_server: "volcengine",
+    tts_server: "xun_fei",
+    // tts_server: "volcengine",
     // tts_server: "ttson",
 
     llm_server: "xun_fei",
