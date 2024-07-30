@@ -28,6 +28,7 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 - [x] Plugin-based
 - [x] The service and client have a one-to-many relationship
 - [x] Server authentication
+- [x] Streaming data interaction 
 - [x] Ready to use
 
 
