@@ -39,6 +39,17 @@ const config = {
             }
         }, 
     },
+    /**
+     * 客户端鉴权, 客户端首次连接与每一次调用接口都会进行回调。
+     * 返回 success: false, 如 Promise.resolve({ success: false, message:"ak无效" }) 可使客户端鉴权失败
+     * 返回 success: true,  如 Promise.resolve({ success: true }) 可使客户端鉴权成功
+     * @param {object} params 参数为客户端中配置的参数， 这里会解析为字面量对象，开发者直接使用 key 方式引用即可。
+     * @param {string} scene 什么场景下的鉴权, "connect" 连接时， "start_session" 开始会话时
+     */
+    auth: async (params, scene) => {
+        // console.log(scene, params);
+        return { success: true }
+    },
     tts_params_set: (params) => {
 
         /** 阿里积灵 **/

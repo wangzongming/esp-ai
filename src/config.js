@@ -125,7 +125,7 @@ const config = {
     /**
      * 休息时的回复
     */
-    sleep_reply: "我先退下了，有需要再叫我。",
+    sleep_reply: "我先退下了，有需要再叫我。", 
 
     /**
      * llm 参数控制, 可以设置温度等
@@ -204,6 +204,8 @@ const config = {
      * 
     */
     // onLLMcb({ device_id, text, is_over, llm_historys }) { },
+
+    auth: ()=> ({ success: true })
 }
 
 module.exports = config;

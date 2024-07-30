@@ -10,16 +10,23 @@ const TTS_FN = require(`./tts`);
 const LLM_FN = require(`./llm`);
 const log = require("../utils/log");
 const getIPV4 = require("../utils/getIPV4");
+const parseUrlParams = require("../utils/parseUrlParams");
 const createUUID = require("../utils/createUUID");
 const { tts_info, iat_info, llm_info, info } = require("../utils/log");
-var qs = require('qs');
 
 function init_server() {
-    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb } = G_config;
+    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb, auth } = G_config; 
     const wss = new WebSocket.Server({ port });
     wss.on('connection', async function connection(ws, req) {
         const device_id = createUUID();
-        const client_version = qs.parse(req.url)["/?v"]
+        const client_params = parseUrlParams(req.url);
+        const client_version = client_params.v;
+        const { success: auth_success, message: auth_message } = await auth(client_params, "connect");
+        if (!auth_success) {
+            ws.send(JSON.stringify({ type: "auth_fail", message: `${auth_message || "-"}` }));
+            ws.close();
+            return;
+        };
 
         // TTS 音频流播放完毕的任务队列 
         const audio_queue = new Map([]);
@@ -49,9 +56,11 @@ function init_server() {
             first_session: true,
             tts_list: new Map(),
             await_out_tts: [],
+            client_params,
             add_audio_out_over_queue,
             run_audio_out_over_queue,
         })
+
         devLog && log.info(`\n硬件连接成功：${device_id}`, ["bold"]);
         devLog && log.info(`客户端版本号：v${client_version}\n`, ["bold"]);
 
@@ -66,8 +75,12 @@ function init_server() {
                 // console.log(JSON.parse(data));
                 switch (type) {
                     case "start":
-                        // console.log(first_session, iat_server_connected, client_out_audio_ing)
-                        // ...
+                        const { success: auth_success, message: auth_message } = await auth(client_params, "start_session");
+                        if (!auth_success) {
+                            ws.send(JSON.stringify({ type: "auth_fail", message: `${auth_message || "-"}` }));
+                            ws.close();
+                            return;
+                        };
                         if (iat_server_connected || client_out_audio_ing) {
                             // devLog && console.log("--- IAT 识别途中收到重新输入音频");
                             return;
@@ -128,11 +141,11 @@ function init_server() {
                                 reRecord: true,
                                 pauseInputAudio: true
                             });
-                        } else { 
+                        } else {
                             add_audio_out_over_queue("warning_tone", () => {
                                 start_iat();
                             })
-                            await play_temp("du.pcm", ws); 
+                            await play_temp("du.pcm", ws);
                         }
 
                         // ============= LLM 测试 =============
@@ -150,7 +163,7 @@ function init_server() {
                     case "client_out_audio_over":
                         devLog && tts_info("-> 客户端音频流播放完毕：", tts_task_id);
                         run_audio_out_over_queue(tts_task_id);
-                        if(tts_task_id === "play_music"){
+                        if (tts_task_id === "play_music") {
                             ws && ws.send("session_end");
                         }
                         G_devices.set(device_id, {
@@ -170,7 +183,7 @@ function init_server() {
                         })
                         break;
                 }
-            } else {  
+            } else {
                 // 采集的音频数据
                 if (started && data && data.length && send_pcm && iat_server_connected) {
                     // 发送数据 
@@ -198,8 +211,8 @@ function init_server() {
         // ============= 提示音测试 =============
         // play_temp("du.pcm", ws);  
         // play_audio("http://m10.music.126.net/20240723180659/13eabc0c9291dab9a836120bf3f609ea/ymusic/5353/0f0f/0358/d99739615f8e5153d77042092f07fd77.mp3", ws)
-       
-       
+
+
         // ============= 指令发送测试 ============= 
         // ws.send(JSON.stringify({ type: "instruct", command_id: "open_test", data: "这是数据" }));
 

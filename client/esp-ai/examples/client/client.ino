@@ -5,8 +5,8 @@ ESP_AI esp_ai;
 bool debug = true;
 // [必  填] wifi 配置： { wifi 账号， wifi 密码 }  注意：要用双引号！
 ESP_AI_wifi_config wifi_config = { "oldwang", "oldwang520" };
-// [必  填] 服务配置： { 服务IP， 服务端口 }
-ESP_AI_server_config server_config = { "192.168.1.5", 8080 };
+// [必  填] 服务配置： { 服务IP， 服务端口, "请求参数，用多个参数&号分割" }
+ESP_AI_server_config server_config = { "192.168.1.5", 8080, "api-key=your_api_key&p2=test" };
 // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
 ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.7 }; 
 

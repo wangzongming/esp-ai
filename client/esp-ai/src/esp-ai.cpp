@@ -23,7 +23,7 @@
 
 WebSocketsClient webSocket;
 
-String Version = "1.2.1";
+String Version = "1.3.1";
 
 String start_ed = "0";
 // 是否可以采集音频，由客户端控制的
@@ -46,7 +46,7 @@ ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.7};
 // { wifi 账号， wifi 密码 }
 ESP_AI_wifi_config default_wifi_config = {"oldwang", "oldwang520"};
 // { ip， port }
-ESP_AI_server_config default_server_config = {"192.168.1.5", 8080};
+ESP_AI_server_config default_server_config = {"192.168.1.5", 8080, ""};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 ESP_AI_volume_config default_volume_config = {34, 4096, 0.5};
 
@@ -229,8 +229,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
     // 扬声器
     speaker_i2s_setup();
-
-    webSocket.begin(server_config.ip, server_config.port, "/?v=" + Version);
+ 
+    webSocket.begin(server_config.ip, server_config.port, "/?v=" + Version + "&" + server_config.params);
     webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
@@ -479,6 +479,15 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         tts_task_id = (const char *)parseRes["tts_task_id"];
                         DEBUG_PRINTLN(debug, "客户端收到 TTS 任务：" + tts_task_id);
+                    }
+
+                    
+                    // auth_fail
+                    if (type == "auth_fail")
+                    {
+                        String message = (const char *)parseRes["message"];
+                        Serial.println("连接服务失败，鉴权失败：" + message);
+                        Serial.println("请检测服务器配置中是否配置了鉴权参数。");
                     }
                 }
             }
