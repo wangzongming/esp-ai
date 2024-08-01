@@ -15,7 +15,7 @@ const createUUID = require("../utils/createUUID");
 const { tts_info, iat_info, llm_info, info } = require("../utils/log");
 
 function init_server() {
-    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb, auth } = G_config; 
+    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb, auth } = G_config;
     const wss = new WebSocket.Server({ port });
     wss.on('connection', async function connection(ws, req) {
         const device_id = createUUID();
@@ -61,18 +61,17 @@ function init_server() {
             run_audio_out_over_queue,
         })
 
-        devLog && log.info(`\n硬件连接成功：${device_id}`, ["bold"]);
-        devLog && log.info(`客户端版本号：v${client_version}\n`, ["bold"]);
+        devLog && log.t_info(`客户端连接成功：${device_id}`);
+        devLog && log.t_info(`客户端版本号：v${client_version}\n`);
 
         onDeviceConnect && onDeviceConnect({ ws, device_id, client_version });
 
         let started = false;
-        ws.on('message', async function (data) {
+        ws.on('message', async function (data) { 
             // 避免浪费性能, 否则播放会卡顿
             const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing, alert_ing, iat_end_queue } = G_devices.get(device_id);
             if (typeof data === "string") {
-                const { type, tts_task_id } = JSON.parse(data);
-                // console.log(JSON.parse(data));
+                const { type, tts_task_id, now, delayed } = JSON.parse(data); 
                 switch (type) {
                     case "start":
                         const { success: auth_success, message: auth_message } = await auth(client_params, "start_session");
@@ -152,6 +151,11 @@ function init_server() {
                         // LLM_FN(device_id, { text: "你好。" }) 
                         // LLM_FN(device_id, { text: "你好，帮我写一首现代诗，描写春色，模仿徐志摩的手笔。" }) 
                         break;
+                    case "round-trip-time":
+                        log.t_info(`------------------------------------------------------------------------------`)
+                        log.t_info(`客户端 ${device_id} 网络延时：${delayed}ms`)
+                        log.t_info(`------------------------------------------------------------------------------`)
+                        break;
                     case "client_out_audio_ing":
                         // if (alert_ing) return;
                         devLog && tts_info("-> 客户端音频流播放中");
@@ -172,8 +176,10 @@ function init_server() {
                         })
                         break;
                     case "play_audio_ws_conntceed":
+                        ws && ws.send(JSON.stringify({ type: "round-trip", now }));
+
                         // 播放ws连接成功语音
-                        await TTS_FN(device_id, {
+                        TTS_FN(device_id, {
                             text: `后台服务连接成功，呼喊小明同学就可以唤醒我。`,
                             reRecord: false,
                             pauseInputAudio: true,
@@ -237,15 +243,30 @@ function init_server() {
         // });
 
 
-        ws.on('close', () => {
-            devLog && console.log(`硬件设备断开连接: ${device_id}`);
+        ws.on('close', (code, reason) => {
+            devLog && log.info(``);
+            devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
+            devLog && log.info(``);
             G_devices.delete(device_id)
         });
+        ws.on('error', function (error) {
+            log.error(`WebSocket Client error: ${error.toString()}`);
+        });
     });
+    wss.on('error', function (error) {
+        log.error(`WebSocket server error: ${error.toString()}`);
+    });
+
+    const ips = getIPV4();
     log.info(`---------------------------------------------------`);
     log.info(`- Github  https://github.com/wangzongming/esp-ai`, ["bold"]);
     log.info(`- Website https://xiaomingio.top/esp-ai`, ["bold"]);
-    log.info(`- Server  ${getIPV4()}:${port}(copy to example.ino)`, ["bold"]);
+    log.info(`- Server Address: (Select the correct address to copy to example.ino)`, ["bold"]);
+    ips.forEach((ip)=>{ 
+        log.info(`  -> ${ip}:${port}`);
+    })
+    log.info(``);
+    log.info(`客户端未自动连接时，重新为客户端上电即可！`);
     log.info(`---------------------------------------------------`);
     return wss;
 }

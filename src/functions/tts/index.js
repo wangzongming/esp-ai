@@ -81,7 +81,7 @@ module.exports = (device_id, opts) => {
     if (!text) {
         return true;
     }
-    devLog && log.tts_info("");
+    devLog && log.info("");
     devLog && log.tts_info('=== 开始请求TTS: ', text, " ===");
 
     // 开始播放直接先让 esp32 暂停采集音频，不然处理不过来

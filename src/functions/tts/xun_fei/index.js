@@ -78,7 +78,7 @@ function TTS_FN({ text, devLog, api_key, logWSServer, tts_params_set, cb, log, t
         function send() {
             const business = {
                 "aue": "raw",
-                "auf": "audio/L16;rate=16000",
+                "auf": "audio/L16;rate=16000", 
                 "vcn": "aisbabyxu",
                 "tte": "UTF8",
                 volume: 80

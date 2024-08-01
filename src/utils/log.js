@@ -11,13 +11,18 @@ function info(text, styles = []) {
 function time() {
     return moment().format("HH:mm:ss");
 }
-
+function t_info(...text) {
+    console.log(`${time()} [Info] ${text.join(' ')}`.cyan);
+} 
+function t_red_info(...text) {
+    console.log(`${time()} [Info] ${text.join(' ')}`.magenta);
+} 
 function tts_info(...text){
     console.log(`${time()} [TTS] ${text.join(' ')}`.green);
 }
 
 function iat_info(...text){
-    console.log(`${time()} [IAT] ${text.join(' ')}`.blue);
+    console.log(`${time()} [IAT] ${text.join(' ')}`.white);
 }
 
 
@@ -35,6 +40,8 @@ function error(text, styles = []) {
 // cyan.bold
 module.exports = {
     info,
+    t_info,
+    t_red_info,
     error,
     tts_info,
     iat_info,

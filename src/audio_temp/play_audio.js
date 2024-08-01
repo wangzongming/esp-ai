@@ -40,7 +40,7 @@ function convertStream(inputStream) {
         .setFfmpegPath(ffmpegPath)
         .format('s16le')
         .audioFrequency(16000)
-        .audioChannels(1)
+        .audioChannels(1) 
         .on('error', (err) => {
             outputStream.emit('error', err);
         })
@@ -55,36 +55,46 @@ function convertStream(inputStream) {
 */
 function play_audio(url, client_ws, task_id) {
     return new Promise((resolve, reject) => {
-        let real_url = "";
-        if (isHttpUrl(url)) {
-            real_url = url;
-        } else {
-            // real_url = path.join(__dirname, `${url}`);
-            log.error("play_audio 不支持本地地址！")
-        }
-
-        client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: task_id || "any_audio" }));
-
-        const inputStream = urlToStream(url);
-        const outputStream = convertStream(inputStream);
-
-        let isFirst = true;
-        outputStream.on('data', (audio) => {
-            let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
-            isFirst = false;
-            for (let i = 0; i < audio.length; i += c_l) {
-                const end = Math.min(i + c_l, audio.length);
-                const chunk = audio.slice(i, end);
-                client_ws.send(chunk);
+        try { 
+            let real_url = "";
+            if (isHttpUrl(url)) {
+                real_url = url;
+            } else {
+                // real_url = path.join(__dirname, `${url}`);
+                log.error("play_audio 不支持本地地址！")
             }
-        });
-        outputStream.on('end', () => {
-            resolve(true);
-        });
-        outputStream.on('error', (err) => {
-            log.error(`Stream error: ${err.message}`);
-            reject(err)
-        });
+
+            client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: task_id || "any_audio" }));
+
+            const inputStream = urlToStream(url);
+            const outputStream = convertStream(inputStream);
+ 
+            let isFirst = true;
+            outputStream.on('data', (audio) => {
+                let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
+                isFirst = false;
+                for (let i = 0; i < audio.length; i += c_l) {
+                    const end = Math.min(i + c_l, audio.length);
+                    const chunk = audio.slice(i, end); 
+                    if (!(Buffer.isBuffer(chunk))) {
+                        log.t_info(`跳过无效 chunk: ${i}`)
+                    } else {
+                        // console.log(i)
+                        client_ws.send(chunk);
+                    } 
+                }
+            });
+            outputStream.on('end', () => {
+                resolve(true);
+            });
+            outputStream.on('error', (err) => {
+                log.error(`Stream error: ${err.message}`);
+                reject(err)
+            });
+        } catch (err) {
+            log.error("音频播放失败：", err);
+            reject(err);
+        }
     });
 }
 module.exports = play_audio;

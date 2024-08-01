@@ -132,7 +132,7 @@ module.exports = (device_id, opts) => {
     let LLM_FN = null;
 
 
-    devLog && log.llm_info("");
+    devLog && log.info("");
     devLog && log.llm_info('=== 开始请求 LLM 输入: ', text, " ===");
     if (!api_key[llm_server]) {
         log.error(`请先配置好 ${llm_server} 服务的 api_key`);
