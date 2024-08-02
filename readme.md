@@ -81,15 +81,16 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
 ```
 ### Client
-Download the dependency on the release page and burn it to the development board, see details: <a src="https://xiaomingio.top/esp-ai/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF">Client Install</a>
+Download the dependency on the release page and burn it to the development board, see details: [Client Install](https://xiaomingio.top/esp-ai/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF)
 
 # 🔨 Inject Soul into Your Robot with Just a Few Lines of Code
 
 Below are the `Node.js` and `Arduino` codes you need to write if you only require dialogue functionality.
 
-<img src="./imgs/arduino.png" />
-<img src="./imgs/nodejs.png" />
-
+<!-- <img src="./imgs/arduino.png" /> -->
+<!-- <img src="./imgs/nodejs.png" /> -->
+<img src="https://xiaomingio.top/esp-ai/images/arduino.png" />
+<img src="https://xiaomingio.top/esp-ai/images/nodejs.png" />
 
 # 🏪 Discussion Group
 QQ Discussion Group: 854445223
