@@ -100,12 +100,13 @@ QQ 交流群: 854445223
 
 
 
-## 🤝 Contributing [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+## 🤝 贡献 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
-Let's build a better `esp-ai` together.
+让我们一起打造一个更好的 `esp-ai`。
 
-We warmly invite contributions from everyone. Feel free to share your ideas through [Pull Requests](https://github.com/wangzongming/esp-ai/pulls) or [GitHub Issues](https://github.com/wangzongming/esp-ai//issues).
- 
+我们热忱欢迎大家踊跃投稿。请随时通过[Pull Requests](https://github.com/wangzongming/esp-ai/pulls)或[GitHub Issues](https://github.com/wangzongming/esp-ai//issues)分享您的想法。
+
+
 <table>
 <tr>
   <td> 
@@ -139,9 +140,10 @@ We warmly invite contributions from everyone. Feel free to share your ideas thro
 </table>
 
 # 🌍 Star 地理分布
+ 
 <a href="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map?repo_id=820274347&activity=stars" target="_blank" style="display: block" align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=dark" width="721" height="auto">
-    <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="721" height="auto">
+    <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="100%" height="auto">
   </picture>
 </a> 
