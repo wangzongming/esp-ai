@@ -15,7 +15,7 @@ const createUUID = require("../utils/createUUID");
 const { tts_info, iat_info, llm_info, info } = require("../utils/log");
 
 function init_server() {
-    const { port, devLog, onDeviceConnect, f_reply, onIATEndcb, auth } = G_config;
+    const { port, devLog, onDeviceConnect, f_reply, connected_reply, onIATEndcb, auth } = G_config;
     const wss = new WebSocket.Server({ port });
     wss.on('connection', async function connection(ws, req) {
         const device_id = createUUID();
@@ -67,11 +67,11 @@ function init_server() {
         onDeviceConnect && onDeviceConnect({ ws, device_id, client_version });
 
         let started = false;
-        ws.on('message', async function (data) { 
+        ws.on('message', async function (data) {
             // 避免浪费性能, 否则播放会卡顿
             const { send_pcm, iat_server_connected, tts_list = [], iat_ws, llm_ws, first_session, iat_end_frame_timer, client_out_audio_ing, alert_ing, iat_end_queue } = G_devices.get(device_id);
             if (typeof data === "string") {
-                const { type, tts_task_id, now, delayed } = JSON.parse(data); 
+                const { type, tts_task_id, stc_time } = JSON.parse(data);
                 switch (type) {
                     case "start":
                         const { success: auth_success, message: auth_message } = await auth(client_params, "start_session");
@@ -144,17 +144,12 @@ function init_server() {
                             add_audio_out_over_queue("warning_tone", () => {
                                 start_iat();
                             })
-                            await play_temp("du.pcm", ws);
+                            await play_temp("du.pcm", ws, 0.8, 24);
                         }
 
                         // ============= LLM 测试 =============
                         // LLM_FN(device_id, { text: "你好。" }) 
                         // LLM_FN(device_id, { text: "你好，帮我写一首现代诗，描写春色，模仿徐志摩的手笔。" }) 
-                        break;
-                    case "round-trip-time":
-                        log.t_info(`------------------------------------------------------------------------------`)
-                        log.t_info(`客户端 ${device_id} 网络延时：${delayed}ms`)
-                        log.t_info(`------------------------------------------------------------------------------`)
                         break;
                     case "client_out_audio_ing":
                         // if (alert_ing) return;
@@ -176,17 +171,25 @@ function init_server() {
                         })
                         break;
                     case "play_audio_ws_conntceed":
-                        ws && ws.send(JSON.stringify({ type: "round-trip", now }));
+                        ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
 
                         // 播放ws连接成功语音
-                        TTS_FN(device_id, {
-                            text: `后台服务连接成功，呼喊小明同学就可以唤醒我。`,
+                        await TTS_FN(device_id, {
+                            text: connected_reply || `后台服务连接成功，呼喊小明同学就可以唤醒我。`,
                             reRecord: false,
                             pauseInputAudio: true,
                             onAudioOutOver: () => {
                                 ws && ws.send("session_end");
                             }
                         })
+                        break;
+                    case "cts_time":
+                        const net_delay = (+new Date() - (+stc_time)) / 2;
+                        log.t_info(`------------------------------------------------------------------------------`)
+                        log.t_info(`客户端 ${device_id} 网络延时：${net_delay}ms`)
+                        log.t_info(`------------------------------------------------------------------------------`)
+
+                        ws && ws.send(JSON.stringify({ type: "net_delay", net_delay }));
                         break;
                 }
             } else {
@@ -215,7 +218,7 @@ function init_server() {
         });
 
         // ============= 提示音测试 =============
-        // play_temp("du.pcm", ws);  
+        // play_temp("du.pcm", ws, 0.8, 24);   
         // play_audio("http://m10.music.126.net/20240723180659/13eabc0c9291dab9a836120bf3f609ea/ymusic/5353/0f0f/0358/d99739615f8e5153d77042092f07fd77.mp3", ws)
 
 
@@ -225,13 +228,13 @@ function init_server() {
 
         // ============= TTS 测试 =============  
         // await TTS_FN(device_id, {
-        //     text: "第一句，小明在的！",
+        //     text: "第一句，小明在的，萌娃音色要上线啦，哈哈哈哈！",
         //     reRecord: false,
         //     pauseInputAudio: true,
         //     onAudioOutOver: () => {
         //         console.log('第一句播放完毕的回调')
         //     }
-        // }); 
+        // });
 
         // await TTS_FN(device_id, {
         //     text: "第二句，萌娃音色要上线啦！",
@@ -239,6 +242,15 @@ function init_server() {
         //     pauseInputAudio: true,
         //     onAudioOutOver: () => {
         //         console.log('第二句播放完毕的回调')
+        //     }
+        // });
+
+        // await TTS_FN(device_id, {
+        //     text: "第三句！",
+        //     reRecord: false,
+        //     pauseInputAudio: true,
+        //     onAudioOutOver: () => {
+        //         console.log('第三句播放完毕的回调')
         //     }
         // });
 
@@ -262,7 +274,7 @@ function init_server() {
     log.info(`- Github  https://github.com/wangzongming/esp-ai`, ["bold"]);
     log.info(`- Website https://xiaomingio.top/esp-ai`, ["bold"]);
     log.info(`- Server Address: (Select the correct address to copy to example.ino)`, ["bold"]);
-    ips.forEach((ip)=>{ 
+    ips.forEach((ip) => {
         log.info(`  -> ${ip}:${port}`);
     })
     log.info(``);

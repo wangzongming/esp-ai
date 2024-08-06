@@ -98,7 +98,7 @@ QQ 交流群: 854445223
 
  
 # 🎥 案例视频
-[bilibili](https://www.bilibili.com/video/BV1xS421o7hi/#reply1505985392)
+[bilibili](https://www.bilibili.com/video/BV1gE421w7Dw/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b)
 
 
 

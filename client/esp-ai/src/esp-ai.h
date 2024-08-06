@@ -1,3 +1,9 @@
+/**
+ * 请注意保留版权
+ * @author 小明IO
+ * @github https://github.com/wangzongming/esp-ai
+ */
+
 #pragma once
 
 #include <string>
@@ -18,7 +24,7 @@ struct ESP_AI_i2s_config_mic
 {
     int bck_io_num;
     int ws_io_num;
-    int data_in_num; 
+    int data_in_num;
 };
 
 struct ESP_AI_i2s_config_speaker
@@ -90,11 +96,12 @@ public:
     void wakeUp();
     // 设置音量 0-100
     void setVolume(int volume);
+    void setWifiConfig(char wifi_name[20], char wifi_pwd[20]);
     /**
      * 接收到控制命令后的后调
      * command_id 命令id
      * data       其他数据
-     **/ 
+     **/
     void onEvent(void (*func)(String command_id, String data));
 
 private:
@@ -112,12 +119,11 @@ private:
     void adjustVolume(int16_t *buffer, size_t length, float volume);
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
-    bool microphone_inference_start(uint32_t n_samples); 
-    void microphone_inference_end(void); 
-    void capture_samples(void* arg);
-    static void capture_samples_wrapper(void* arg);
+    bool microphone_inference_start(uint32_t n_samples);
+    void microphone_inference_end(void);
+    void capture_samples(void *arg);
+    static void capture_samples_wrapper(void *arg);
 
     void audio_inference_callback(uint32_t n_bytes);
     int i2s_deinit(void);
 };
- 

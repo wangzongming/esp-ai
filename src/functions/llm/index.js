@@ -66,7 +66,7 @@ async function cb(device_id, { text, is_over, texts }) {
             add_audio_out_over_queue("warning_tone", () => { 
                 start_iat && start_iat();
             })
-            await play_temp("du.pcm", ws_client); 
+            await play_temp("du.pcm", ws_client, 0.8, 24); 
         })
         ttsText && await_out_tts_run();
 

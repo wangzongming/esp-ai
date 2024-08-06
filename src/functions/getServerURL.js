@@ -1,5 +1,6 @@
- /** 
- * @author xiaomingio 
+/** 
+ * 请注意保留版权
+ * @author 小明IO 
  * @github https://github.com/wangzongming/esp-ai  
  */
 const CryptoJS = require('crypto-js')

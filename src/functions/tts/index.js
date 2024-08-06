@@ -1,7 +1,8 @@
 /** 
-* @author xiaomingio 
-* @github https://github.com/wangzongming/esp-ai  
-*/
+ * 请注意保留版权
+ * @author 小明IO 
+ * @github https://github.com/wangzongming/esp-ai  
+ */
 const play_temp = require(`../../audio_temp/play_temp`);
 const log = require("../../utils/log");
 const createUUID = require("../../utils/createUUID");
@@ -30,31 +31,44 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
         ws.close && ws.close()
         tts_list.delete(tts_task_id)
 
-        add_audio_out_over_queue(tts_task_id, async () => {
+        async function overToDo(){
             const { ws: ws_client, start_iat } = G_devices.get(device_id);
-            if (reRecord) { 
-                add_audio_out_over_queue("warning_tone", () => { 
+            if (reRecord) {
+                add_audio_out_over_queue("warning_tone", () => {
                     start_iat && start_iat();
                     resolve(true);
                 })
-                await play_temp("du.pcm", ws_client); 
-            }else{ 
+                await play_temp("du.pcm", ws_client, 0.8, 24);
+            } else {
                 resolve(true);
             }
-        })
+        }
+        if(!audio.length){
+            overToDo();
+            ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
+        }else{
+            add_audio_out_over_queue(tts_task_id, overToDo)
+        } 
     }
+
 
     /**
      * 循环发送每个分片 
      */
     let isFirst = true;
     let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
-    for (let i = 0; i < audio.length; i += c_l) {
+    const alen = audio.length; 
+    // console.log('cb', is_over, alen);
+    for (let i = 0; i < alen; i += c_l) {
         isFirst = false;
         const end = Math.min(i + c_l, audio.length);
         // 切分缓冲区
         const chunk = audio.slice(i, end);
         ws_client.send(chunk);
+
+        if (is_over && i + c_l > alen) { 
+            ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
+        }  
     }
 
 }

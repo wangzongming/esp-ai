@@ -1,4 +1,8 @@
-
+/** 
+ * 请注意保留版权
+ * @author 小明IO 
+ * @github https://github.com/wangzongming/esp-ai  
+ */
 export type Config = {
     /**
      * 服务端口, 默认 8080
@@ -62,6 +66,12 @@ export type Config = {
         // 附加参数, 不管什么数据，都需要写为 string 类型，且不建议放较大的数据在这里
         data?: string;
     }[];
+
+    
+    /**
+     * 客户端连接服务后的回复
+    */
+    connected_reply?: string,
 
     /**
      * 被唤醒后的回复

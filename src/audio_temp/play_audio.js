@@ -1,3 +1,8 @@
+/** 
+ * 请注意保留版权
+ * @author 小明IO 
+ * @github https://github.com/wangzongming/esp-ai  
+ */
 
 const https = require('https');
 const http = require('http');
@@ -85,6 +90,7 @@ function play_audio(url, client_ws, task_id) {
                 }
             });
             outputStream.on('end', () => {
+                client_ws.send(JSON.stringify({ type: "tts_send_end", tts_task_id: task_id || "any_audio" }));
                 resolve(true);
             });
             outputStream.on('error', (err) => {

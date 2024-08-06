@@ -7,9 +7,9 @@ bool debug = true;
 // [必  填] wifi 配置： { wifi 账号， wifi 密码 }  注意：要用双引号！
 ESP_AI_wifi_config wifi_config = { "oldwang", "oldwang520" };
 // [必  填] 服务配置： { 服务IP， 服务端口, "请求参数，用多个参数用&号分割，最大256字节" }
-// ESP_AI_server_config server_config = { "192.168.3.3", 8080, "api-key=your_api_key&p2=test" };
+ESP_AI_server_config server_config = { "192.168.3.3", 8088, "api-key=your_api_key&p2=test" };
 // 免费测试服务器，带宽很差，仅可用于测试联通性。
-ESP_AI_server_config server_config = { "101.34.59.36", 8088, "api-key=free-test" };
+// ESP_AI_server_config server_config = { "101.34.59.36", 8088, "api-key=free-test" };
 
 // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
 ESP_AI_wake_up_config wake_up_config = { "edge_impulse", 0.95 };
@@ -20,7 +20,7 @@ ESP_AI_i2s_config_mic i2s_config_mic = { 4, 5, 6 };
 // [可留空] 扬声器引脚配置：{ bck_io_num, ws_io_num, data_in_num, 采样率 }
 ESP_AI_i2s_config_speaker i2s_config_speaker = { 16, 17, 15, 16000 };
 // [可留空] 音量调节配置：{ 输入引脚，输入最大值(1024|4096)，默认音量(0-1) }
-ESP_AI_volume_config volume_config = { 34, 4096, 0.5 };
+ESP_AI_volume_config volume_config = { 34, 4096, 0.4 };
 
 // 控制小灯演示
 int led_pin = 18;

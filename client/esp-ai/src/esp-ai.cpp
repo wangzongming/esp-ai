@@ -1,9 +1,19 @@
+/**
+ * 请注意保留版权
+ * @author 小明IO
+ * @github https://github.com/wangzongming/esp-ai
+ */
+
 #include "esp-ai.h"
 // 模型插件
 #include <xiao_ming_tong_xue_inferencing.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <Arduino_JSON.h>
+
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 13 // 大部分开发板默认 13
+#endif
 
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
@@ -48,7 +58,7 @@ ESP_AI_wifi_config default_wifi_config = {"oldwang", "oldwang520"};
 // { ip， port }
 ESP_AI_server_config default_server_config = {"192.168.1.5", 8080, ""};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
-ESP_AI_volume_config default_volume_config = {34, 4096, 0.5};
+ESP_AI_volume_config default_volume_config = {34, 4096, 0.4};
 
 bool ws_connected = false;
 // 当前 tts 任务 id
@@ -143,6 +153,14 @@ void ESP_AI::speaker_i2s_setup()
     config.pin_bck = i2s_config_speaker.bck_io_num;   // BCK
     config.pin_data = i2s_config_speaker.data_in_num; // DIN
     i2s.begin(config);
+
+    // void audioPlaybackCallback()
+    // {
+    //     // 音频播放完毕的处理逻辑
+    //     Serial.println("播放完毕");
+    // }
+    // // 在初始化时注册回调
+    // i2s.onPlaybackComplete(audioPlaybackCallback);
 }
 
 void ESP_AI::begin(ESP_AI_CONFIG config)
@@ -255,6 +273,38 @@ bool ESP_AI::wifiIsConnected()
 }
 
 /**
+ * 从新设置 WiFi 信息， 设置后会重新连接wifi
+ */
+void ESP_AI::setWifiConfig(char wifi_name[20], char wifi_pwd[20])
+{
+    WiFi.disconnect();
+    // 清除之前的连接状态, 给 Wi-Fi 模块一些时间来断开连接
+    WiFi.mode(WIFI_OFF);
+    delay(1000);
+
+    strncpy(wifi_config.wifi_name, wifi_name, sizeof(wifi_config.wifi_name) - 1);
+    wifi_config.wifi_name[sizeof(wifi_config.wifi_name) - 1] = '\0';
+    strncpy(wifi_config.wifi_pwd, wifi_pwd, sizeof(wifi_config.wifi_pwd) - 1);
+    wifi_config.wifi_pwd[sizeof(wifi_config.wifi_pwd) - 1] = '\0';
+
+    DEBUG_PRINTLN(debug, "==================== WIFI ====================");
+    DEBUG_PRINTLN(debug, "wifi name: " + String(wifi_config.wifi_name));
+    DEBUG_PRINTLN(debug, "wifi pwd: " + String(wifi_config.wifi_pwd));
+    WiFi.begin(wifi_config.wifi_name, wifi_config.wifi_pwd);
+    DEBUG_PRINT(debug, "connect wifi ing..");
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        DEBUG_PRINT(debug, ".");
+    }
+    DEBUG_PRINTLN(debug, "");
+    DEBUG_PRINT(debug, "IP address: ");
+    DEBUG_PRINTLN(debug, WiFi.localIP());
+    DEBUG_PRINTLN(debug, "===============================================");
+}
+
+/**
  * 返回本地IP
  * 调用案例： Serial.println(ESP_AI.localIP().c_str());
  */
@@ -278,7 +328,6 @@ long last_log_time = 0;
 void ESP_AI::loop()
 {
     webSocket.loop();
-    // Serial.print("-");
     int _cur_ctrl_val = analogRead(volume_config.input_pin);
     if (_cur_ctrl_val != cur_ctrl_val)
     {
@@ -288,8 +337,8 @@ void ESP_AI::loop()
         DEBUG_PRINTLN(debug, volume_config.volume);
     }
 
-    // DEBUG_PRINTLN(debug, start_ed);
     if (ws_connected && start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
+    // if (ws_connected && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
     {
         // DEBUG_PRINTLN(debug, can_voice);
         // buffer 准备好后就进行推理
@@ -327,7 +376,7 @@ void ESP_AI::loop()
                 if (debug)
                 {
                     Serial.println("");
-                    Serial.print("唤醒词识别得分：");
+                    Serial.print("[Info] -> 唤醒词识别得分：");
                     Serial.print(xmtx_val);
                     Serial.println("");
                 }
@@ -341,31 +390,29 @@ void ESP_AI::loop()
                 String sendData = JSON.stringify(data);
                 webSocket.sendTXT(sendData);
 
-                DEBUG_PRINTLN(debug, "开始录音");
+                DEBUG_PRINTLN(debug, "[Info] -> 开始录音");
             }
         }
     }
 
     // Complete or not
-    long cur_time = millis();
-    if (tts_task_id && is_send_server_audio_over == "0" && ((cur_time - last_get_audio_time) > audio_delay))
-    {
-        Serial.println("=== 发送播放结束标识到服务端 ===\n\n");
-        is_send_server_audio_over = "1";
-        // 恢复可以录音的状态
-        can_voice = "1";
-        // if(tts_task_id === "")
-        // start_ed = "0";
-        // 告诉服务端播放完毕
-        digitalWrite(LED_BUILTIN, LOW);
+    // long cur_time = millis();
+    // if (tts_task_id && is_send_server_audio_over == "0" && ((cur_time - last_get_audio_time) > audio_delay))
+    // {
+    //     DEBUG_PRINTLN(debug, "[Info] -> 发送播放结束标识到服务端\n");
+    //     is_send_server_audio_over = "1";
+    //     // 恢复可以录音的状态
+    //     can_voice = "1";
+    //     // 告诉服务端播放完毕
+    //     digitalWrite(LED_BUILTIN, LOW);
 
-        JSONVar data;
-        data["type"] = "client_out_audio_over";
-        data["tts_task_id"] = tts_task_id;
-        String sendData = JSON.stringify(data);
-        webSocket.sendTXT(sendData);
-        tts_task_id = "";
-    }
+    //     JSONVar data;
+    //     data["type"] = "client_out_audio_over";
+    //     data["tts_task_id"] = tts_task_id;
+    //     String sendData = JSON.stringify(data);
+    //     webSocket.sendTXT(sendData);
+    //     tts_task_id = "";
+    // }
 
     // ram test
     // if ((cur_time - last_log_time) > 1000)
@@ -413,7 +460,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             can_voice = "1";
             start_ed = "0";
             digitalWrite(LED_BUILTIN, LOW);
-            Serial.println("WebSocket Disconnected\n");
+            Serial.println("[Info] -> WebSocket Disconnected\n");
         }
         break;
     case WStype_CONNECTED:
@@ -421,12 +468,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         ws_connected = true;
         can_voice = "1";
         start_ed = "0";
-        Serial.println("\nWebSocket Connected");
+        Serial.println("\n[Info] -> WebSocket Connected");
 
-        long cur_time = millis();
         JSONVar data_1;
         data_1["type"] = "play_audio_ws_conntceed";
-        data_1["now"] = cur_time;
         String sendData = JSON.stringify(data_1);
         webSocket.sendTXT(sendData);
         break;
@@ -436,12 +481,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         if (strcmp((char *)payload, "start_voice") == 0)
         {
             can_voice = "1";
-            DEBUG_PRINTLN(debug, "继续采集音频");
+            DEBUG_PRINTLN(debug, "[Info] -> 继续采集音频");
         }
         else if (strcmp((char *)payload, "pause_voice") == 0)
         {
             can_voice = "0";
-            DEBUG_PRINTLN(debug, "暂停采集音频");
+            DEBUG_PRINTLN(debug, "[Info] -> 暂停采集音频");
         }
         // else if (strcmp((char *)payload, "iat_end") == 0)
         // {
@@ -452,7 +497,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             start_ed = "0";
             can_voice = "1";
             digitalWrite(LED_BUILTIN, LOW);
-            DEBUG_PRINTLN(debug, "\n会话结束\n");
+            DEBUG_PRINTLN(debug, "\n[Info] -> 会话结束\n");
         }
         else
         {
@@ -477,24 +522,28 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         data = (const char *)parseRes["data"];
                     }
 
-                    if (type == "round-trip")
+                    if (type == "stc_time")
                     {
-                        long cur_time = millis();
-                        long pre_now = parseRes["now"];
-                        long delayed = cur_time - pre_now;
-                        DEBUG_PRINTLN(debug, "\n网络延时：" + String(delayed) + "ms\n");
-
+                        String stc_time = parseRes["stc_time"];
                         JSONVar data_delayed;
-                        data_delayed["type"] = "round-trip-time";
-                        data_delayed["delayed"] = String(delayed);
+                        data_delayed["type"] = "cts_time";
+                        data_delayed["stc_time"] = stc_time;
                         String sendData = JSON.stringify(data_delayed);
                         webSocket.sendTXT(sendData);
+                    }
+
+                    if (type == "net_delay")
+                    {
+                        long net_delay = parseRes["net_delay"];
+                        DEBUG_PRINTLN(debug, "\n=======================================");
+                        DEBUG_PRINTLN(debug, "网络延时：" + String(net_delay) + "ms");
+                        DEBUG_PRINTLN(debug, "=======================================\n");
                     }
 
                     // user command
                     if (type == "instruct")
                     {
-                        DEBUG_PRINTLN(debug, "客户端收到用户指令：" + command_id + " --- " + data);
+                        DEBUG_PRINTLN(debug, "[instruct] -> 客户端收到用户指令：" + command_id + " --- " + data);
                         onEventCb(command_id, data);
                     }
 
@@ -502,7 +551,25 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     if (type == "play_audio")
                     {
                         tts_task_id = (const char *)parseRes["tts_task_id"];
-                        DEBUG_PRINTLN(debug, "\n客户端收到 TTS 任务：" + tts_task_id);
+                        DEBUG_PRINTLN(debug, "\n[TTS] -> 客户端收到 TTS 任务：" + tts_task_id);
+                    }
+
+                    if (type == "tts_send_end")
+                    {
+                        String end_tts_task_id = (const char *)parseRes["tts_task_id"];
+                        DEBUG_PRINTLN(debug, "\n[TTS] -> 客户端收到 TTS 任务结束：" + end_tts_task_id);
+
+                        // 这里其他给情况预留服务回调
+                        is_send_server_audio_over = "1";
+                        can_voice = "1";
+                        digitalWrite(LED_BUILTIN, LOW);
+                        JSONVar data;
+                        data["type"] = "client_out_audio_over";
+                        data["tts_task_id"] = tts_task_id;
+                        String sendData = JSON.stringify(data);
+                        DEBUG_PRINTLN(debug, "\n[TTS] -> 发送播放结束标识到服务端");
+                        webSocket.sendTXT(sendData);
+                        tts_task_id = ""; 
                     }
 
                     // auth_fail
@@ -516,7 +583,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             }
         }
 
-        Serial.printf("Received Text: %s\n", payload);
+        Serial.printf("::-> Received Text: %s\n", payload);
         break;
     case WStype_BIN:
     {
@@ -616,7 +683,7 @@ void ESP_AI::capture_samples(void *arg)
             // scale the data (otherwise the sound is too quiet)
             // for (int x = 0; x < i2s_bytes_to_read / 2; x++)
             for (int x = 0; x < i2s_bytes_to_read; x++)
-            { 
+            {
                 sampleBuffer[x] = (int16_t)(sampleBuffer[x]) * 8;
                 // sampleBuffer[x] = (int16_t)(sampleBuffer[x]);
             }

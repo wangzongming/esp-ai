@@ -1,11 +1,11 @@
- 
+/** 
+* 请注意保留版权
+* @author 小明IO 
+* @github https://github.com/wangzongming/esp-ai  
+*/
 const log = require("./utils/log");
 const package = require("../package.json");
 
-/** 
- * @author xiaomingio 
- * @github https://github.com/wangzongming/esp-ai  
- */
 global.G_config = {};
 const LOGO = `  
 
@@ -46,12 +46,13 @@ function main(config = {}) {
      * }]
     */
     global.G_devices = new Map();
-    
+
     const init_server = require("./functions/init_server")
     const _config = IS_DEV ? require("./config_dev") : require("./config")
 
     // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
     global.G_max_audio_chunk_size = 4096; // 这个值必须比正常值小，因为会导致服务处理不过来数据，特别是低配置服务... 
+
     // global.G_max_audio_chunk_size = 1024;
 
     global.G_ws_server = null;
@@ -59,7 +60,7 @@ function main(config = {}) {
 
     // IAT 静默时间
     global.G_vad_eos = G_config.vad_eos || 2500;
- 
+
     G_ws_server = init_server();
 }
 
