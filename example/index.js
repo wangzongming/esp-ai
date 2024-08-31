@@ -1,73 +1,62 @@
 const espAi = require("esp-ai"); 
 
-// 详情配置项见： https://xiaomingio.top/esp-ai/server.html
+
+// 详情配置项见： https://espai.fun/server.html
 const config = {
-    port: 8080,
-    // llm_server: "dashscope",
-    api_key: {
-        // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
-        xun_fei: {
-            appid: "5200d300",
+    gen_client_config: ()=>({
+        iat_server: "xun_fei",
+        // iat_server: "esp-ai-plugin-iat-example",
+        iat_config: {
+            // 讯飞：https://console.xfyun.cn/services/iat  。打开网址后，右上角三个字段复制进来即可。
+            appid: "xxx",
             apiSecret: "xxx",
-            apiKey: "xx",
-            llm: "v4.0",
-        },
-        // 阿里积灵（千问等）： https://dashscope.console.aliyun.com/apiKey
-        // 积灵主要是提供llm（推荐使用这个llm服务）
-        dashscope: {
-            apiKey: "sk-xx",
-            // LLM 版本
-            llm: "qwen-turbo",
+            apiKey: "xxx",
+            // 静默时间，多少时间检测不到说话就算结束，单位 ms
+            vad_eos: 1500,
         },
 
+        llm_server: "xun_fei", 
+        llm_config: { 
+            appid: "xxx",
+            apiSecret: "xxx",
+            apiKey: "xxx",
+            llm: "v4.0", 
+        },
 
-        // 火山引擎（豆包等）：https://console.volcengine.com/speech/service/8?AppID=6359932705
-        volcengine: {
-            // 火山引擎的TTS与LLM使用不同的key，所以需要分别配置
-            tts: {
-                // 服务接口认证信息
-                appid: "xxx",
-                accessToken: "xxx",
+        tts_server: "xun_fei", 
+        tts_config: { 
+            appid: "xxx",
+            apiSecret: "xxx",
+            apiKey: "xxx", 
+        },
+
+        /**
+         * 意图表：当用户唤醒 小明同学 后，小明同学可以做下面的任务
+        */
+        intention: [
+            {
+                // 关键词
+                key: ["帮我开灯", "开灯", "打开灯"],
+                // 向客户端发送的指令
+                instruct: "device_open_001",
+                message: "开啦！还有什么需要帮助的吗？"
             },
-
-            // 暂不支持 llm
-            llm: {
-                // 获取地址：https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint?current=1&pageSize=10
-                model: "ep-xxx",// 每个模型都有一个id
-                // 获取地址：https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey
-                apiKey: "32dacfe4xxx",
+            {
+                // 关键词
+                key: ["帮我关灯", "关灯", "关闭灯"],
+                // 向客户端发送的指令
+                instruct: "device_close_001",
+                message: "关啦！还有什么需要帮助的吗？"
+            },
+            {
+                // 关键词
+                key: ["退下吧", "退下"],
+                // 内置的睡眠指令
+                instruct: "__sleep__",
+                message: "我先退下了，有需要再叫我。"
             }
-        }, 
-    },
-    /**
-     * 客户端鉴权, 客户端首次连接与每一次调用接口都会进行回调。
-     * 返回 success: false, 如 Promise.resolve({ success: false, message:"ak无效" }) 可使客户端鉴权失败
-     * 返回 success: true,  如 Promise.resolve({ success: true }) 可使客户端鉴权成功
-     * @param {object} params 参数为客户端中配置的参数， 这里会解析为字面量对象，开发者直接使用 key 方式引用即可。
-     * @param {string} scene 什么场景下的鉴权, "connect" 连接时， "start_session" 开始会话时
-     */
-    auth: async (params, scene) => {
-        // console.log(scene, params);
-        return { success: true }
-    },
-    tts_params_set: (params) => {
-
-        /** 阿里积灵 **/
-        // 说话人列表见：https://console.xfyun.cn/services/tts  
-        // params.model = : "sambert-zhimiao-emo-v1" 
-
-        /** 讯飞 **/
-        // 说话人列表见：https://help.aliyun.com/zh/dashscope/developer-reference/model-list-old-version?spm=a2c4g.11186623.0.0.5fbe490eBdtzX0
-        // params.vcn = "aisbabyxu";
-
-        /** 火山引擎 **/
-        // 说话人列表见：https://www.volcengine.com/docs/6561/97465
-        // params.voice_type = "BV051_streaming"
-        // params.voice_type = "BV021_streaming"  
-
-        // 改完后一定要返回出去
-        return params;
-    },
+        ],
+    }), 
 };
 
 espAi(config);

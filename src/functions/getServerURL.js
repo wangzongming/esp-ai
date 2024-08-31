@@ -1,22 +1,41 @@
-/** 
- * 请注意保留版权
- * @author 小明IO 
- * @github https://github.com/wangzongming/esp-ai  
+/**
+ * Copyright (c) 2024 小明IO
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Commercial use of this software requires prior written authorization from the Licensor.
+ * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
+ * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
+ * 
+ * @author 小明IO   
+ * @email  1746809408@qq.com
+ * @github https://github.com/wangzongming/esp-ai
+ * @websit https://espai.fun
  */
 const CryptoJS = require('crypto-js')
 
 /**
  * @param {"IAT" | "TTS" | "LLM" } type 服务类型
 */
-function getServerURL(type) {
-    const { iat_server, llm_server, tts_server } = G_config;
+function getServerURL(type, config) { 
+    const { iat_server, llm_server, tts_server } = config; 
     switch (type) {
         case "IAT":
-            return getServersURL[iat_server](type);
+            return getServersURL[iat_server](type, config);
         case "TTS":
-            return getServersURL[tts_server](type);
+            return getServersURL[tts_server](type, config);
         case "LLM":
-            return getServersURL[llm_server](type);
+            return getServersURL[llm_server](type, config);
         default:
             break;
     }
@@ -26,13 +45,11 @@ const getServersURL = {
     xun_fei,
     bai_du,
 }
-function xun_fei(type) {
-    const { iat_server, api_key } = G_config;
-
+function xun_fei(type, _config) { 
+    const { apiSecret, apiKey, llm = "v3.5" } = _config;
     let url = "";
     // 获取当前时间 RFC1123格式
-    const date = (new Date().toUTCString())
-    const { apiKey, apiSecret, llm = "v3.5" } = api_key[iat_server];
+    const date = (new Date().toUTCString()) 
     const config = {
         // IAT
         hostUrl: "wss://iat-api.xfyun.cn/v2/iat",

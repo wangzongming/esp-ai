@@ -3,10 +3,16 @@ ESP_AI    KEYWORD1
  
  
 #function and method (KEYWORD2)
-begin    KEYWORD2
-loop    KEYWORD2 
+begin      KEYWORD2
+loop       KEYWORD2 
 onEvent    KEYWORD2 
+onError    KEYWORD2
+onAPInfo   KEYWORD2
+onConnectedWifi   KEYWORD2
+onNetStatus KEYWORD2
 wifiIsConnected    KEYWORD2 
+setWifiConfig    KEYWORD2 
+wakeUp     KEYWORD2 
 localIP    KEYWORD2 
  
  

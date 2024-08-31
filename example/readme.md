@@ -14,3 +14,5 @@ yarn add esp-ai@latest
 
 # 客户端依赖更新
 自行到仓库下载依赖包
+
+客户端 Flash size 使用 16mb 测试， 小于这个设置可能会报错

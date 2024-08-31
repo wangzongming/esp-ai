@@ -48,30 +48,31 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 
 - [中文网站](https://espai.fun/)
 - [English](https://espai.fun/en)
-
 # ✨ Features
 
-- [x] Customizable offline voice wake-up
-- [x] IAT(ASR) ➡️ LLM/RAG ➡️ TTS
-- [x] User command recognition (home appliance control, singing, etc.)
-- [x] Configurable
-- [x] Plugin-based
-- [x] The service and client have a one-to-many relationship
-- [x] Server authentication
-- [x] Streaming data interaction 
-- [x] Ready to use
-
-
+- ✔️ Customizable offline wake words with multiple built-in wake-up methods (voice, button, serial port, Tianwen ASRPro)
+- ✔️ Complete conversation chain: IAT (ASR) ➡️ LLM/RAG ➡️ TTS
+- ✔️ Fast response algorithms for TTS/LLM, designed to balance service cost while providing the quickest response time
+- ✔️ Supports conversation interruption
+- ✔️ Recognizes user commands (appliance control, singing, etc.) and can dynamically respond based on context
+- ✔️ Configurable
+- ✔️ Plugin-based, allowing integration with any LLM/TTS/IAT using plugins
+- ✔️ One-to-many relationship between service and clients, with independent configuration for each client (hardware)
+- ✔️ Connection supports authentication
+- ✔️ Full-chain streaming data interaction
+- ✔️ Developer platform offers: free services, visual configuration, etc.
+- ✔️ Client configuration webpage provided
+- ✔️ Easily handles high concurrency scenarios (requires Nginx for load balancing)
+- ✔️ Ready to use out of the box
 
 # 🧐 Next Steps
 
-- [ ] 🤔 Provide a no-code access solution
-- [ ] 🤔 Integrate AI into user intent inference (e.g., "turn off the light" and "quickly turn on the light" will both be recognized as the "turn on the light" command)
-- [ ] 🤔 Offer free and paid services
-- [ ] 🤔 Online generation of wake words
-- [ ] 🤔 Methods for writing plugins in other languages (to avoid only using Node.js to develop plugins)
-- [ ] 🤔 OTA
-- [ ] 🤔 Provide a dedicated development board (to avoid current complex wiring
+- [ ] 🤔 Improve accuracy of built-in offline wake-up (currently recommended to use Tianwen ASRPro)
+- [ ] 🤔 Incorporate AI into user intent inference (e.g., "Turn off the light quickly" and "Turn on the light quickly" will both be recognized as "Turn on the light" command)
+- [ ] 🤔 Online wake word generation
+- [ ] 🤔 Client OTA support
+- [ ] 🤔 Develop plugins in other languages (to avoid relying solely on Node.js for plugin development)
+- [ ] 🤔 Provide a dedicated development board (to avoid current complex wiring)
 
 # 📦 Install
 
@@ -91,6 +92,14 @@ Below are the `Node.js` and `Arduino` codes you need to write if you only requir
 <!-- <img src="./imgs/nodejs.png" /> -->
 <img src="https://espai.fun/images/arduino.png" />
 <img src="https://espai.fun/images/nodejs.png" />
+
+# 📜 Commercial Use
+
+For commercial use, please purchase a commercial license. For more details, see [Commercial License](./COMMERCIAL_LICENSE.md).  
+The commercial license is granted per unit of **Company Name + Product Name + Version**, for example: "Shenzhen XXX Company Smart Doll V1.0".  
+The commercial license fee for a single product version is 10,000 RMB, payable in a one-time payment.  
+
+License inquiry/report address: [https://espai.fun/commercial-license.html](https://espai.fun/commercial-license.html).
 
 # 🏪 Discussion Group
 QQ Discussion Group: 854445223

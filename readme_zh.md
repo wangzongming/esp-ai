@@ -53,22 +53,25 @@
 
 # ✨ 特性
 
-- [x] 可定制的离线语音唤醒
-- [x] IAT(ASR) ➡️ LLM/RAG ➡️ TTS
-- [x] 用户指令识别(家电控制、唱歌等)
-- [x] 配置化
-- [x] 插件化
-- [x] 服务与客户端为一对多关系
-- [x] 服务端鉴权 
-- [x] 流式数据交互 
-- [x] 开箱即用
+- ✔️ 可定制的离线语音唤醒词，且内置多种唤醒方式（语音、按钮、串口、天问asrpro）
+- ✔️ 完整对话链接 IAT(ASR) ➡️ LLM/RAG ➡️ TTS
+- ✔️ TTS/LLM 都做了快速响应算法，在考虑服务费用的基础上尽力以最快速度响应用户
+- ✔️ 支持会话打断
+- ✔️ 用户指令识别(家电控制、唱歌等)，并且可以根据上下文动态响应指令
+- ✔️ 配置化
+- ✔️ 插件化，可以利用插件接入任何LLM/TTS/IAT
+- ✔️ 服务与客户端为一对多关系，并且可以为每一个客户端(硬件)独立分配一套配置
+- ✔️ 连接支持鉴权 
+- ✔️ 全链流式数据交互 
+- ✔️ 开发者平台提供：免费服务、可视化配置 ... 
+- ✔️ 客户端配网页面提供
+- ✔️ 轻松应付大并发场景(需配合Nginx做负载均衡) 
+- ✔️ 开箱即用
 
 # 🧐 下一步 
 
-- [ ] 🤔 唤醒精准度提升
-- [ ] 🤔 提供无代码接入方案
-- [ ] 🤔 用户意图推理过程加入AI（如： 帮我关灯、快开灯，都将识别为: "开灯" 指令）
-- [ ] 🤔 提供免费测试服务
+- [ ] 🤔 内置离线唤醒精准度提升(目前建议使用天问asrpro) 
+- [ ] 🤔 用户意图推理过程加入AI（如： 帮我关灯、快开灯，都将识别为: "开灯" 指令） 
 - [ ] 🤔 唤醒词在线生成
 - [ ] 🤔 客户端 OTA 支持
 - [ ] 🤔 其他语言编写插件的方法（避免只能使用nodejs进行开发插件）
@@ -78,7 +81,7 @@
 
 ### 服务端
 ```bash
-docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
+docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:2.0.0
 ```
 ### 客户端
 在发布页面下载依赖后烧录到开发板中即可，详情见：[客户端安装](https://espai.fun/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF)
@@ -86,12 +89,16 @@ docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name 
 # 🔨 仅几行代码为您的机器人注入灵魂
 
 下面分别展示在只需要对话的情况下，你需要写的`Node.js`和`Arduino`代码。
-
-<!-- <img src="./imgs/arduino.png" />
-<img src="./imgs/nodejs.png" /> -->
-
+ 
 <img src="https://espai.fun/images/arduino.png" />
 <img src="https://espai.fun/images/nodejs.png" />
+
+# 📜 商业使用
+商业使用请购买商业授权，详情见 [商业授权](./COMMERCIAL_LICENSE.md)  
+商用授权单位为 公司名称+产品名称+版本 , 例如： 深圳XXX公司智能玩偶V1.0。  
+单个产品版本的商业许可费用为 10000 人民币，需一次性支付。   
+
+授权查询/举报地址：见 https://espai.fun/commercial-license.html
 
 # 🏪 交流群
 QQ 交流群: 854445223
