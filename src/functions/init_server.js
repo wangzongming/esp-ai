@@ -60,14 +60,76 @@ function init_server() {
                 add_audio_out_over_queue: add_audio_out_over_queue_hoc(audio_queue),
                 run_audio_out_over_queue: run_audio_out_over_queue_hoc(audio_queue),
                 clear_audio_out_over_queue: clear_audio_out_over_queue_hoc(audio_queue),
-                error_catch: error_catch_hoc(ws)
+                error_catch: error_catch_hoc(ws),
+                
+                // ing...
+                // tts_buffer_chunk_queue: [],
+                // tts_buffer_chunk_queue_run: (args) => {
+                //     const { session_id, send_end_flag, session_id_buffer, is_over, text_is_over } = args;
+                //     const { ws: client_ws, tts_buffer_chunk_queue: buffer_queue, session_id: now_session_id, tts_buffer_chunk_queue_run } = G_devices.get(device_id);
+                //     if (buffer_queue.length > 0) {
+                //         console.log('text_is_over:', text_is_over, is_over);
+                //         if (session_id && now_session_id !== session_id) {
+                //             return;
+                //         }
+
+                //         const send_chunk = buffer_queue.shift();
+                //         G_devices.set(device_id, {
+                //             ...G_devices.get(device_id),
+                //             // tts_buffer_chunk_send_ing: true,
+                //             tts_buffer_chunk_queue: buffer_queue,
+                //         })
+
+                //         const real_chunk = Buffer.concat([session_id_buffer, send_chunk]);
+                //         console.log('b_len:', real_chunk.length)
+                //         client_ws.send(real_chunk, (err) => {
+
+                //             if (err) {
+                //                 console.log(err);
+                //                 log.error('发送数据出错:' + err);
+                //             } 
+                //             const { tts_buffer_chunk_queue_detection_timer, check_buffered_amount } = G_devices.get(device_id);
+                //             if (check_buffered_amount === null) {
+                //                 G_devices.set(device_id, {
+                //                     ...G_devices.get(device_id),
+                //                     check_buffered_amount: setInterval(() => {
+                //                         console.log('bufferedAmount:', client_ws.bufferedAmount);
+                //                         if (client_ws.bufferedAmount <= G_max_buffered_amount) {
+                //                             tts_buffer_chunk_queue_run(args);
+                //                         }
+                //                     }, 5),
+                //                 })
+                //             }
+
+
+                //             if (text_is_over && is_over) {
+                //                 clearTimeout(tts_buffer_chunk_queue_detection_timer);
+                //                 G_devices.set(device_id, {
+                //                     ...G_devices.get(device_id),
+                //                     tts_buffer_chunk_queue_detection_timer: setTimeout(() => {
+                //                         clearInterval(check_buffered_amount);
+                //                         // if (is_over) {
+                //                         const { tts_buffer_chunk_queue } = G_devices.get(device_id);
+                //                         if (tts_buffer_chunk_queue.length === 0) {
+                //                             console.log('真正结束----')
+                //                             // 真正结束
+                //                             send_end_flag();
+                //                         }
+                //                         // }
+                //                     }, 300),
+                //                 })
+
+                //             }
+                //         });
+                //     }
+                // }
             });
 
             onDeviceConnect && onDeviceConnect({ ws, device_id, client_version });
 
             ws.on('message', async function (data) {
                 const comm_args = { device_id };
-                try { 
+                try {
                     if (typeof data === "string") {
                         const { type, tts_task_id, stc_time, session_id, sid, text } = JSON.parse(data);
                         comm_args.session_id = session_id;
@@ -77,7 +139,7 @@ function init_server() {
                         comm_args.type = type;
                         comm_args.text = text;
                         switch (type) {
-                            case "start":
+                            case "start": 
                                 start(comm_args);
                                 break;
                             case "client_out_audio_ing":

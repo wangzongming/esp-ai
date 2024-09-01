@@ -77,7 +77,8 @@ function main(config = {}) {
         const _config = IS_DEV ? require("./config_dev") : require("./config")
         // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
         global.G_max_audio_chunk_size = 2048;  
-
+        global.G_max_buffered_amount = 1024 * 4;  
+        
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };
 

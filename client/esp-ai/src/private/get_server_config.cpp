@@ -34,7 +34,7 @@ bool ESP_AI::get_server_config()
     String loc_api_key = get_local_data("api_key");
     if (loc_api_key == "")
     {
-        DEBUG_PRINTLN(debug, "[Info] api_key 为空，需要自行配置服务IP与端口。");
+        DEBUG_PRINTLN(debug, ("[Info] api_key 为空，需要自行配置服务IP与端口。"));
         return true;
     }
     DEBUG_PRINTLN(debug, "[Info] api_key：" + loc_api_key);

@@ -36,8 +36,8 @@ void ESP_AI::wakeUp()
         data["type"] = "start";
         String sendData = JSON.stringify(data);
         webSocket.sendTXT(sendData);
-        DEBUG_PRINTLN(debug, "[Info] -> 开始录音");
+        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
     }else{
-        Serial.println("[Error] -> 请先连接服务器");
+        Serial.println(F("[Error] -> 请先连接服务器"));
     }
 }

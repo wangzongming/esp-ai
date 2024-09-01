@@ -39,7 +39,7 @@ bool ESP_AI::setWifiConfig(char wifi_name[60], char wifi_pwd[60], char api_key[6
     strncpy(wifi_config.wifi_pwd, wifi_pwd, sizeof(wifi_config.wifi_pwd) - 1);
     wifi_config.wifi_pwd[sizeof(wifi_config.wifi_pwd) - 1] = '\0';
 
-    DEBUG_PRINTLN(debug, "==================== 调用方法设置信息 ====================");
+    DEBUG_PRINTLN(debug, ("==================== 调用方法设置信息 ===================="));
     DEBUG_PRINTLN(debug, "wifi name: " + String(wifi_config.wifi_name));
     DEBUG_PRINTLN(debug, "wifi pwd: " + String(wifi_config.wifi_pwd));
     WiFi.begin(wifi_config.wifi_name, wifi_config.wifi_pwd);
@@ -57,7 +57,7 @@ bool ESP_AI::setWifiConfig(char wifi_name[60], char wifi_pwd[60], char api_key[6
     // 连接失败并且没有存储wifi信息就重启板子
     if (WiFi.status() != WL_CONNECTED)
     {
-        DEBUG_PRINTLN(debug, "设置 WIF 连接失败");
+        DEBUG_PRINTLN(debug, ("设置 WIF 连接失败"));
         String loc_wifi_name = get_local_data("wifi_name");
         String loc_wifi_pwd = get_local_data("wifi_pwd");
         WiFi.begin(loc_wifi_name, loc_wifi_pwd);
@@ -72,22 +72,22 @@ bool ESP_AI::setWifiConfig(char wifi_name[60], char wifi_pwd[60], char api_key[6
                 net_status = "0_ing";
                 onNetStatusCb("0_ing");
             }
-            
+
             connect_count++;
             delay(500);
             DEBUG_PRINT(debug, ".");
         }
         if (WiFi.status() != WL_CONNECTED)
         {
-            DEBUG_PRINTLN(debug, "设置 WIFI 连接失败，重启板子");
+            DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败，重启板子"));
             ESP.restart();
         }
         return false;
     }
     DEBUG_PRINTLN(debug, "");
-    DEBUG_PRINT(debug, "IP address: ");
+    DEBUG_PRINT(debug, F("IP address: "));
     DEBUG_PRINTLN(debug, WiFi.localIP());
-    DEBUG_PRINTLN(debug, "===============================================");
+    DEBUG_PRINTLN(debug, ("==============================================="));
     // 持久保存， 这一步都是可选的
     if (String(wifi_name).length() > 0)
     {

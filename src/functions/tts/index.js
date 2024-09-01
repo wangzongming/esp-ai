@@ -40,6 +40,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
         const { ws: ws_client, tts_list, add_audio_out_over_queue, session_id: now_session_id } = G_devices.get(device_id);
         if (session_id && session_id !== now_session_id) return;
 
+
         onTTScb && onTTScb({ device_id, is_over, audio, ws: ws_client });
         if (!resolve) {
             log.error('TTS 插件中，调用 cb 时 resolve 参数不能为空');
@@ -84,14 +85,17 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             }
         }
 
-        let isFirst = true;
-        let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
- 
-        const alen = audio.length; 
+        // let c_l = G_max_audio_chunk_size * 2;
+        let c_l = G_max_audio_chunk_size;
+        // let c_l = 512;
+        const alen = audio.length;
         for (let i = 0; i < audio.length; i += c_l) {
+            // if(i > 10){
+            //     c_l = G_max_audio_chunk_size / 2;
+            // }
             const { session_id: now_session_id } = G_devices.get(device_id);
             if (session_id && now_session_id !== session_id) {
-                log.t_info("用户终止流") 
+                log.t_info("用户终止流")
                 break;
             }
 
@@ -106,13 +110,47 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             const _session_id = session_id ? `${session_id}` : "0000";
             const sessionIdBuffer = Buffer.from(_session_id, 'utf-8');
             const combinedBuffer = Buffer.concat([sessionIdBuffer, chunk]);
-  
-            ws_client.send(combinedBuffer); 
+            // console.log(combinedBuffer.length)
+            ws_client.send(combinedBuffer);
             if (is_over && (end >= alen)) {
                 ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
                 send_end_flag();
             }
-        } 
+        }
+
+
+        // ing...  
+        // session_id
+        // const _session_id = session_id ? `${session_id}` : "0000";
+        // const session_id_buffer = Buffer.from(_session_id, 'utf-8');
+        // let c_l = G_max_audio_chunk_size * 2;
+        // for (let i = 0; i < audio.length; i += c_l) { 
+        //     const { tts_buffer_chunk_queue, tts_buffer_chunk_queue_run, tts_buffer_chunk_send_ing, session_id: now_session_id } = G_devices.get(device_id);
+        //     if (session_id && now_session_id !== session_id) {
+        //         G_devices.set(device_id, {
+        //             ...G_devices.get(device_id),
+        //             tts_buffer_chunk_queue: []
+        //         })
+        //         break;
+        //     }
+
+        //     const end = Math.min(i + c_l, audio.length);
+        //     const chunk = audio.slice(i, end);
+        //     if (!(Buffer.isBuffer(chunk))) {
+        //         log.t_info(`跳过无效 chunk: ${i}`);
+        //         continue;
+        //     } 
+        //     tts_buffer_chunk_queue.push(chunk); 
+        //     G_devices.set(device_id, {
+        //         ...G_devices.get(device_id),
+        //         tts_buffer_chunk_queue: tts_buffer_chunk_queue
+        //     }) 
+
+        //     if (ws_client.bufferedAmount < G_max_buffered_amount) {  
+        //         tts_buffer_chunk_queue_run({ session_id, send_end_flag, session_id_buffer, is_over, text_is_over });
+        //     }
+        // }
+
     } catch (err) {
         console.log(err);
         log.error(`TTS 回调错误： ${err}`)

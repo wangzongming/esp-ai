@@ -75,10 +75,10 @@ function convertStream(inputStream, seek = 60, endCb) {
             .audioFrequency(16000)
             .audioChannels(1)
             .on('error', (err) => {
-                console.log("流写入出错：", err);
+                console.log("流写入停止：", err);
             })
             .on('progress', function (progress) {
-                console.log(`进度 ${progress?.timemark} ${progress?.targetSize}/${progress?.currentKbps}`);
+                // console.log(`进度 ${progress?.timemark} ${progress?.targetSize}/${progress?.currentKbps}`);
             })
             .on('end', () => {
                 console.log('音频转换完成');

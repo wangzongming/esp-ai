@@ -68,14 +68,14 @@ async function fn({ device_id }) {
         ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" })); 
         
         // 播放ws连接成功语音
-        connected_reply && TTS_FN(device_id, {
-            // text: connected_reply || `后台服务连接成功`,
+        connected_reply && TTS_FN(device_id, { 
             text: connected_reply,
             reRecord: false,
             pauseInputAudio: true,
             onAudioOutOver: () => {
                 ws && ws.send("session_end");
-            }
+            },
+            text_is_over: true, 
         })
     } catch (err) {
         console.log(err);

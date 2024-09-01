@@ -102,7 +102,7 @@ struct ESP_AI_wifi_config
     char wifi_name[60];
     char wifi_pwd[60]; 
     // 热点名字
-    char ap_name[60];
+    char ap_name[30];
     // 自定义页面
     char *html_str; 
 }; 
@@ -111,7 +111,7 @@ struct ESP_AI_server_config
 {
     char ip[16];
     int port;
-    char params[256];
+    char params[200];
 };
 
 struct ESP_AI_CONFIG
@@ -171,8 +171,7 @@ extern ESP_AI_volume_config default_volume_config;
     if (debug)                  \
     {                           \
         Serial.println(x);      \
-    }
-
+    } 
 
 /** Audio buffers, pointers and selectors */
 typedef struct

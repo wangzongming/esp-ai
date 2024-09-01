@@ -33,16 +33,16 @@ void ESP_AI::set_config()
     String ext1 = server.arg("ext1");
     String ext2 = server.arg("ext2");
 
-    DEBUG_PRINTLN(debug, "================== Set Config ====================");
+    DEBUG_PRINTLN(debug, ( "================== Set Config ===================="));
     DEBUG_PRINTLN(debug, "设置 wifi_name：" + wifi_name);
     DEBUG_PRINTLN(debug, "设置 wifi_pwd：" + wifi_pwd);
     DEBUG_PRINTLN(debug, "设置 api_key：" + api_key);
     DEBUG_PRINTLN(debug, "设置 ext1：" + ext1);
     DEBUG_PRINTLN(debug, "设置 ext2：" + ext2);
-    DEBUG_PRINTLN(debug, "===================================================");
+    DEBUG_PRINTLN(debug, ("==================================================="));
 
     WiFi.begin(wifi_name, wifi_pwd);
-    DEBUG_PRINT(debug, "connect wifi ing..");
+    DEBUG_PRINT(debug, F("connect wifi ing.."));
     int connect_count = 0;
     // 10s 连不上Wifi的话就判定失败
     int try_count = 20;
@@ -55,7 +55,7 @@ void ESP_AI::set_config()
     DEBUG_PRINTLN(debug, "");
     if (WiFi.status() != WL_CONNECTED)
     {
-        DEBUG_PRINTLN(debug, "设置 WIFI 连接失败");
+        DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败"));
         ESP.restart();
         web_server_setCrossOrigin();
         String json_response = "{\"success\":false,\"message\":\"wifi连接失败，请检查账号密码\"}";

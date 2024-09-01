@@ -40,7 +40,7 @@ async function fn({ device_id }) {
             tts_list = [], iat_ws, llm_ws, client_params,
             first_session, client_out_audio_ing, iat_server_connect_ing, clear_audio_out_over_queue,
             user_config: { f_reply },
-            play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek
+            play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek, check_buffered_amount
         } = G_devices.get(device_id);
         if (auth) {
             const { success: auth_success, message: auth_message } = await auth(client_params, "start_session");
@@ -54,7 +54,7 @@ async function fn({ device_id }) {
         if (iat_server_connect_ing || iat_server_connected || client_out_audio_ing) {
             devLog && t_info("打断会话");
             try {
-
+                // clearInterval(check_buffered_amount);
                 const end_time = Date.now(); // 结束时间
                 const play_time = end_time - start_audio_time; // 播放时间
                 play_audio_ing && play_audio_on_end && play_audio_on_end({
@@ -124,7 +124,10 @@ async function fn({ device_id }) {
             play_audio_ing: null,
             start_audio_time: null,
             play_audio_on_end: null,
-            play_audio_seek: 0
+            play_audio_seek: 0,
+ 
+            // tts_buffer_chunk_queue: [],
+            // check_buffered_amount: null
         })
         const start_iat = (connect_cb) => {
             G_devices.set(device_id, {
@@ -143,9 +146,11 @@ async function fn({ device_id }) {
 
         if (first_session) {
             TTS_FN(device_id, {
-                text: f_reply || "您好",
+                text: f_reply || "您好", 
+                pauseInputAudio: true,
+                text_is_over: true,
                 reRecord: true,
-                pauseInputAudio: true
+                // need_record: true, 
             });
         } else {
             start_iat(async () => {

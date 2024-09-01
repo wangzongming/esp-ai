@@ -45,7 +45,7 @@ function fn({ device_id, data }) {
     try {
         const { devLog, onIATEndcb } = G_config;
         const { started, send_pcm, iat_server_connected, iat_end_frame_timer, iat_end_queue, user_config } = G_devices.get(device_id);
-
+        // console.log("---", started, data.length)
         if (started && data && data.length && send_pcm && iat_server_connected) {
             // 发送数据 
             send_pcm(data);

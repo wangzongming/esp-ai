@@ -139,7 +139,7 @@ function extractBeforeLastPunctuation(str, isLast, index) {
     if (lastIndex == null) return {};
 
     const res = str.substring(0, lastIndex + 1);
-    const min_len = index === 1 ? 20 : Math.min(index * 50, 500);
+    const min_len = index === 1 ? 10 : Math.min(index * 50, 500);
     if ((res.length < min_len) && !isLast) {
         return {}
     }

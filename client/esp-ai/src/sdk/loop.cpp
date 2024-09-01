@@ -56,11 +56,11 @@ void ESP_AI::loop()
         if (onNetStatusCb != nullptr && net_status == "2" && net_status != "0")
         {
             net_status = "0";
-            onNetStatusCb("0"); 
-            DEBUG_PRINTLN(debug, "WIFI 异常断开，将自动重启板子");
+            onNetStatusCb("0");
+            DEBUG_PRINTLN(debug, ("WIFI 异常断开，将自动重启板子"));
             ESP.restart();
             delay(3000);
-        } 
+        }
     }
 
     int _cur_ctrl_val = analogRead(volume_config.input_pin);
@@ -71,6 +71,8 @@ void ESP_AI::loop()
         DEBUG_PRINTLN(debug, volume_config.volume);
     }
 
+    bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
+
     // if (ws_connected && start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
     // {
     //     if (inference.buf_ready != 0 && can_voice == "1")
@@ -79,12 +81,9 @@ void ESP_AI::loop()
     //     }
     // }
 
-    bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
     // 内置语音唤醒优化 ing...
-    // if (ws_connected && start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
     if (is_use_edge_impulse && ws_connected)
     {
-        // if (inference.buf_ready != 0 && can_voice == "1")
         if (inference.buf_ready != 0)
         {
             wakeup_inference();
@@ -96,7 +95,7 @@ void ESP_AI::loop()
         String command = Serial.readStringUntil('\n');
         if (command == String(wake_up_config.str))
         {
-            DEBUG_PRINTLN(debug, "收到串口数据, 唤醒成功");
+            DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
             wakeUp();
         }
     }
@@ -114,7 +113,7 @@ void ESP_AI::loop()
                 if (prev_state != reading)
                 {
                     prev_state = reading;
-                    DEBUG_PRINTLN(debug, "按下了按钮, 唤醒成功");
+                    DEBUG_PRINTLN(debug, ("按下了按钮, 唤醒成功"));
                     wakeUp();
                 }
             }
@@ -131,7 +130,7 @@ void ESP_AI::loop()
         String clear_str = cleanString(command);
         if (clear_str == String(wake_up_config.str))
         {
-            DEBUG_PRINTLN(debug, "收到串口数据, 唤醒成功");
+            DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
             wakeUp();
         }
         delay(3);

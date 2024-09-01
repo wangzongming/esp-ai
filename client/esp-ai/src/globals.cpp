@@ -62,6 +62,7 @@ int16_t mic_sampleBuffer[mic_sample_buffer_size];
 
 String wake_up_scheme = "edge_impulse";
 
+
 // 生成34位uiud
 String generateUUID()
 {
@@ -89,11 +90,8 @@ String generateUUID()
     for (int i = 0; i < 12; i++)
     {
         uuid += String(random(0, 16), HEX);
-    }
-
-    // 使字符串的每个字符为大写
-    uuid.toUpperCase();
-
+    } 
+    uuid.toUpperCase(); 
     return uuid;
 }
 

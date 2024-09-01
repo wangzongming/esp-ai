@@ -20,7 +20,7 @@ void setup()
   // [必  填] 是否调试模式， 会输出更多信息
   bool debug = true;
   // [必  填] wifi 配置： { wifi 账号， wifi 密码, "热点名字" } 可不设置，连不上wifi时会打开热点：ESP-AI，连接wifi后打开地址： 192.168.4.1 进行配网(控制台会输出地址，或者在ap回调中也能拿到信息)
-  ESP_AI_wifi_config wifi_config = {};
+  ESP_AI_wifi_config wifi_config = {"", "", "ESP-AI"};
   // 自定义配网页面
   char html_str[] = "HTML content";
   wifi_config.html_str = (char *)malloc(strlen(html_str) + 1);

@@ -61,6 +61,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             pinMode(wake_up_config.pin, INPUT);
         }
     }
+    if(wake_up_scheme == "edge_impulse"){
+        Serial.println("[Error] edge_impulse 唤醒方案在 ESP-AI v2.0.0 中暂未发布，预计2.2.x中进行发布，请先使用其它唤醒方案！");
+        return;
+    }
 
     // led 指示灯
     pinMode(LED_BUILTIN, OUTPUT);
@@ -86,7 +90,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     String loc_api_key = get_local_data("api_key");
     String loc_ext1 = get_local_data("ext1");
     String loc_ext2 = get_local_data("ext2");
-    DEBUG_PRINTLN(debug, "==================== Local Data ====================");
+    DEBUG_PRINTLN(debug, ("==================== Local Data ===================="));
     DEBUG_PRINTLN(debug, "loc_is_ready: " + loc_is_ready);
     if (loc_is_ready != "ok")
     {
@@ -107,7 +111,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "loc_api_key: " + loc_api_key);
     DEBUG_PRINTLN(debug, "loc_ext1: " + loc_ext1);
     DEBUG_PRINTLN(debug, "loc_ext2: " + loc_ext2);
-    DEBUG_PRINTLN(debug, "=====================================================");
+    DEBUG_PRINTLN(debug, ("====================================================="));
 
     // 启动热点，用于配网
     if (loc_wifi_name == "" && wifi_config.wifi_name == "")
@@ -129,7 +133,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         return;
     }
 
-    DEBUG_PRINTLN(debug, "==================== Connect WIFI ====================");
+    DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
     String _wifi_pwd = loc_wifi_pwd;
     if (_wifi_name == "")
@@ -144,7 +148,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "wifi name: " + _wifi_name);
     DEBUG_PRINTLN(debug, "wifi pwd: " + _wifi_pwd);
     WiFi.begin(_wifi_name, _wifi_pwd);
-    DEBUG_PRINT(debug, "connect wifi ing..");
+    DEBUG_PRINT(debug, F("connect wifi ing.."));
 
     int connect_count = 0;
     // 10s 连不上Wifi的话
@@ -162,7 +166,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         }
         if (connect_count > try_count)
         {
-            DEBUG_PRINTLN(debug, "\n连接WIFI失败，请重新配网" );
+            DEBUG_PRINTLN(debug, ("\n连接WIFI失败，请重新配网"));
             // 重新配网 
             WiFi.mode(WIFI_AP);
             String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
@@ -201,7 +205,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     WiFi.setSleep(false);
 
     DEBUG_PRINTLN(debug, "");
-    DEBUG_PRINT(debug, "wifi 连接成功，设备 IP 地址: ");
+    DEBUG_PRINT(debug, F("wifi 连接成功，设备 IP 地址: "));
     DEBUG_PRINTLN(debug, WiFi.localIP());
     String ip_str = WiFi.localIP().toString(); 
     if (onConnectedWifiCb != nullptr)
@@ -209,20 +213,20 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         onConnectedWifiCb(ip_str);
     }
 
-    DEBUG_PRINTLN(debug, "===============================================");
+    DEBUG_PRINTLN(debug, ("==============================================="));
 
     if (wake_up_scheme == "edge_impulse")
     {
-        DEBUG_PRINTLN(debug, "=================== Edge Impulse ================");
+        DEBUG_PRINTLN(debug, ("=================== Edge Impulse ================"));
         wakeup_init();
-        DEBUG_PRINTLN(debug, "===============================================");
+        DEBUG_PRINTLN(debug, ("==============================================="));
     }
     else
     {
         // 其他情况也正常初始化麦克风，需要上传音频给 IAT
         if (mic_i2s_init(16000))
         {
-            DEBUG_PRINTLN(debug, "[Error] Failed to start I2S!");
+            DEBUG_PRINTLN(debug, ("[Error] Failed to start I2S!"));
         }
     }
  
