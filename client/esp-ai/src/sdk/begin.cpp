@@ -234,8 +234,9 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     
     bool get_server_success = get_server_config(); 
     if(get_server_success == false){
+        DEBUG_PRINTLN(debug, ("[Error] 服务配置获取失败!"));
         return;
-    }
+    } 
 
     // 为方便更改，在局域网也建立服务
     web_server_init();  

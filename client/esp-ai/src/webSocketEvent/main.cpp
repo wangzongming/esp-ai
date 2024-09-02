@@ -199,7 +199,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         if (is_send_server_audio_over != "0")
         {
             is_send_server_audio_over = "0";
-        } 
+        }
 
         // 提取 session_id
         char sessionIdString[5];
@@ -227,7 +227,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
         // Serial.print("length===");
-        Serial.println(audioLength);
+        // Serial.println(audioLength);
         adjustVolume((int16_t *)audioData, audioLength, volume_config.volume);
         i2s.write(audioData, audioLength);
         break;
@@ -237,6 +237,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         break;
     case WStype_PONG:
         Serial.println("Pong");
+        break;
+    case WStype_ERROR:
+        Serial.println("[Error] 服务 WebSocket 连接错误");
         break;
     }
 }

@@ -31,15 +31,18 @@ async function fn({ device_id }) {
     try {
 
         const { devLog, gen_client_config } = G_config;
-        const { ws, client_params, client_version } = G_devices.get(device_id); 
+        const { ws, client_params, client_version, error_catch } = G_devices.get(device_id);
         const user_config = await gen_client_config({ client_params, ws }) || {};
-        if (!user_config.iat_server || !user_config.iat_config) {
+        if (!user_config.iat_server || !user_config.iat_config) { 
+            error_catch("IAT", "100", `请配置 iat_server、iat_config 参数。`);
             return log.error(`请配置 iat_server、iat_config 参数。`);
         }
-        if (!user_config.llm_server || !user_config.llm_config) {
+        if (!user_config.llm_server || !user_config.llm_config) { 
+            error_catch("LLM", "200", `请配置 llm_server、llm_config 参数。`);
             return log.error(`请配置 llm_server、llm_config 参数。`);
         }
-        if (!user_config.tts_server || !user_config.tts_config) {
+        if (!user_config.tts_server || !user_config.tts_config) { 
+            error_catch("TTS", "300", `请配置 tts_server、tts_config 参数。`);
             return log.error(`请配置 tts_server、tts_config 参数。`)
         }
         devLog && log.info(`---------------------------------------------------`);
@@ -60,22 +63,22 @@ async function fn({ device_id }) {
                 connected_reply: "后台服务连接成功",
                 ...user_config,
             },
-        }) 
+        })
 
         const TTS_FN = require(`../tts`);
         const { user_config: { connected_reply } } = G_devices.get(device_id);
 
-        ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" })); 
-        
+        ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
+
         // 播放ws连接成功语音
-        connected_reply && TTS_FN(device_id, { 
+        connected_reply && TTS_FN(device_id, {
             text: connected_reply,
             reRecord: false,
             pauseInputAudio: true,
             onAudioOutOver: () => {
                 ws && ws.send("session_end");
             },
-            text_is_over: true, 
+            text_is_over: true,
         })
     } catch (err) {
         console.log(err);
