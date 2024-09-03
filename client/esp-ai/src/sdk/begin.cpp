@@ -142,7 +142,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
     if (_wifi_pwd == "")
     {
-        _wifi_name = wifi_config.wifi_pwd;
+        _wifi_pwd = wifi_config.wifi_pwd;
     }
 
     DEBUG_PRINTLN(debug, "wifi name: " + _wifi_name);

@@ -22,3 +22,5 @@ build
 
 .vscode/
 _del/
+
+client/esp-ai/examples/test

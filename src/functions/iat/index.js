@@ -113,7 +113,8 @@ async function cb({ device_id, text }) {
                         }));
                         message && await TTS_FN(device_id, {
                             text: message,
-                            reRecord: true,
+                            // reRecord: true,
+                            reRecord: false,
                             pauseInputAudio: true,
                             need_record: true,
                         });

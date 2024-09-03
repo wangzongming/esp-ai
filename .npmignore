@@ -8,3 +8,5 @@ src/config_gen.js
 package-lock.json
 pre-version-log.md  
 readme_privce.md
+
+client/esp-ai/examples/test
