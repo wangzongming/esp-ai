@@ -251,4 +251,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             "&" + server_config.params);
 
     webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	webSocket.setReconnectInterval(3000);
+	webSocket.enableHeartbeat(10000, 15000, 0);
 }

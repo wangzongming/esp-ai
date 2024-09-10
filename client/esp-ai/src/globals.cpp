@@ -25,7 +25,7 @@
 
 #include "globals.h"
 
-String ESP_AI_VERSION = "2.0.0";
+String ESP_AI_VERSION = "2.0.2";
 String start_ed = "0";
 String can_voice = "1";
 String is_send_server_audio_over = "1";
