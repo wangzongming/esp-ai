@@ -162,3 +162,16 @@ QQ 交流群: 854445223
     <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="100%" height="auto">
   </picture>
 </a> 
+
+
+# 引用
+如果本项目有帮助到您的研究，请引用我们：
+
+    @software{ESP-AI,
+        title        = {{ESP-AI}},
+        author       = {小明IO},
+        year         = 2024,
+        journal      = {GitHub repository},
+        publisher    = {GitHub},
+        howpublished = {\url{https://github.com/wangzongming/esp-ai}}
+    }

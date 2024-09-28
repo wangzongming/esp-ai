@@ -159,3 +159,15 @@ We warmly invite contributions from everyone. Feel free to share your ideas thro
     <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="100%" height="auto">
   </picture>
 </a> 
+
+# quote
+If this project has helped your research, please cite us:
+
+    @software{ESP-AI,
+        title        = {{ESP-AI}},
+        author       = {小明IO},
+        year         = 2024,
+        journal      = {GitHub repository},
+        publisher    = {GitHub},
+        howpublished = {\url{https://github.com/wangzongming/esp-ai}}
+    }
