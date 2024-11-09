@@ -28,7 +28,8 @@ const getServerURL = require("../../getServerURL");
 
 /**
  * 讯飞语音识别  
- * @param {String}      device_id           设备ID    
+ * @param {String}      device_id           设备ID  
+ * @param {String}      session_id          会话ID   
  * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
  * @param {Object}      iat_config          用户配置的 apikey 等信息   
  * @param {String}      iat_server          用户配置的 iat 服务 
@@ -46,18 +47,31 @@ const getServerURL = require("../../getServerURL");
  * 
  *  
 */
-function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
     try {
         const { appid, apiSecret, apiKey, ...other_config } = iat_config;
         if (!apiKey) return log.error(`请配给 IAT 配置 apiKey 参数。`)
         if (!apiSecret) return log.error(`请配给 IAT 配置 apiSecret 参数。`)
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
 
+        // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
+        let shouldClose = false;
+
+        // 长时间无反应时应该自动关闭
+        // let close_connect_timer = null;
+
         // console.log('开始连接 IAT 服务...')
         const iatResult = [];
         connectServerBeforeCb();
         const iat_ws = new WebSocket(getServerURL("IAT", { iat_server, llm_server, tts_server, appid, apiSecret, apiKey }))
-        logWSServer(iat_ws);
+        logWSServer({
+            close: () => {
+                shouldClose = true;
+                log.t_red_info('框架调用 IAT 关闭:' + session_id);
+                // clearTimeout(close_connect_timer);
+                iat_ws.close() 
+            }
+        });
 
         // 讯飞 IAT 帧定义
         const XF_IAT_FRAME = {
@@ -68,25 +82,23 @@ function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tt
         let iat_server_connected = false;
         let iat_status = XF_IAT_FRAME.STATUS_FIRST_FRAME;
 
-
-
-        // 长时间无反应时应该自动关闭
-        let close_connect_timer = null;
         // 连接建立完毕，读取数据进行识别
         iat_ws.on('open', (event) => {
-            devLog && log.iat_info("-> 讯飞 IAT 服务连接成功!")
+            if(shouldClose) return;
+            devLog && log.iat_info("-> 讯飞 IAT 服务连接成功: " + session_id)
             iat_server_connected = true;
             connectServerCb(true);
 
-            clearTimeout(close_connect_timer);
-            close_connect_timer = setTimeout(() => {
-                serverTimeOutCb();
-            }, 5000);
+            // clearTimeout(close_connect_timer);
+            // close_connect_timer = setTimeout(() => {
+            //     // serverTimeOutCb();
+            // }, 8000);
         })
 
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
-            clearTimeout(close_connect_timer);
+            if(shouldClose) return;
+            // clearTimeout(close_connect_timer);
             if (iat_server_connected && send_pcm) {
                 iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
                 send_pcm("");
@@ -96,7 +108,8 @@ function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tt
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
         iat_ws.on('message', (data, err) => {
-            clearTimeout(close_connect_timer);
+            if(shouldClose) return;
+            // clearTimeout(close_connect_timer);
             if (err) {
                 log.iat_info(`err:${err}`)
                 return
@@ -149,21 +162,23 @@ function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tt
                         })
                     })
                 }
-            })
+            })  
             devLog && log.iat_info(str)
         })
 
         // 资源释放
         iat_ws.on('close', () => {
-            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭")
-            clearTimeout(close_connect_timer);
+            if(shouldClose) return;
+            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭：", session_id)
+            // clearTimeout(close_connect_timer);
             iat_server_connected = false;
             connectServerCb(false);
         })
 
         // 建连错误
         iat_ws.on('error', (err) => {
-            clearTimeout(close_connect_timer);
+            if(shouldClose) return;
+            // clearTimeout(close_connect_timer);
             iatServerErrorCb(err);
             iat_server_connected = false;
             connectServerCb(false);
@@ -171,14 +186,17 @@ function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tt
 
 
         function send_pcm(data) {
+            if(shouldClose) return;
             if (!iat_server_connected) return;
             let frame = "";
             let frameDataSection = {
                 "status": iat_status,
-                // 这里的帧率一定要和 inmp441 终端对上
+                // 这里的帧率一定要和 inmp441 对上
                 "format": "audio/L16;rate=16000",
                 "audio": data.toString('base64'),
-                "encoding": "raw"
+                "encoding": "raw",
+                // "encoding": "lame", // mp3
+                
             }
             switch (iat_status) {
                 case XF_IAT_FRAME.STATUS_FIRST_FRAME:
@@ -217,6 +235,7 @@ function IAT_FN({ device_id, log, devLog, iat_config, iat_server, llm_server, tt
 
         logSendAudio(send_pcm)
     } catch (err) {
+        connectServerCb(false);
         console.log(err);
         log.error("讯飞 IAT 插件错误：", err)
     }

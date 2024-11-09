@@ -28,7 +28,7 @@
 // #include "freertos/FreeRTOS.h"
 // #include "freertos/task.h"
 
-// 如果内存有限，请删除此宏以节省10K RAM
+// // 如果内存有限，请删除此宏以节省10K RAM
 // #define EIDSP_QUANTIZE_FILTERBANK 0
 // int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
 // long last_wakeup_time = 0;
@@ -94,8 +94,8 @@ void ESP_AI::wakeup_inference()
 //         float noise = result.classification[0].value;
 //         float unknown = result.classification[1].value;
 //         float xmtx = result.classification[2].value;
-//         // ei_printf("=> 得分: ");
-//         // ei_printf_float(xmtx);
+//         ei_printf("=> 得分: ");
+//         ei_printf_float(xmtx);
 //         // ei_printf("  noise: ");
 //         // ei_printf_float(noise);
 //         // ei_printf("  unknown: ");
@@ -134,13 +134,13 @@ void ESP_AI::wakeup_inference()
 //             last_wakeup_time = millis();
 
 //             // 开始录音
-//             digitalWrite(LED_BUILTIN, HIGH);
+//             // digitalWrite(LED_BUILTIN, HIGH);
 //             start_ed = "1";
 
 //             JSONVar data;
 //             data["type"] = "start";
 //             String sendData = JSON.stringify(data);
-//             webSocket.sendTXT(sendData);
+//             esp_ai_webSocket.sendTXT(sendData);
 
 //             DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
 //         }
@@ -250,8 +250,8 @@ void ESP_AI::capture_samples(void *arg)
     //     // 发送给服务端
     //     if (start_ed == "1" && can_voice == "1" && tts_task_id == "")
     //     {
-    //         // if (webSocket.isConnected()) { }
-    //         webSocket.sendBIN((uint8_t *)mic_sampleBuffer, bytes_read);
+    //         // if (esp_ai_webSocket.isConnected()) { }
+    //         esp_ai_webSocket.sendBIN((uint8_t *)mic_sampleBuffer, bytes_read);
     //     }
 
     //     if (bytes_read <= 0)

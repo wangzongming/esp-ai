@@ -1,1 +1,1 @@
-symlink-dir ./esp-ai C://Users/jonas/Documents/Arduino/libraries/esp-ai
+symlink-dir ./esp-ai C://Users/admin/Documents/Arduino/libraries/esp-ai-pro

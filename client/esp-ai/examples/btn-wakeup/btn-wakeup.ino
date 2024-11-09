@@ -1,7 +1,7 @@
 
 /**
 * 本案例演示 使用按钮唤醒 ESP-AI 然后与之对话。也就是某个引脚高/低电平时唤醒或者打断会话
-* 注意：配置值要用双引号！
+* 注意：配置值要用双引号！ 
 *
 * 三角按钮 | s3
 *-----------
@@ -37,13 +37,13 @@ void setup() {
   ESP_AI_server_config server_config = { };  
 
   // [必  填] 唤醒方案： { 方案, 语音唤醒用的阈值(本方案忽略即可), 引脚IO }
-  ESP_AI_wake_up_config wake_up_config = { "pin_high", 1, 10 };  // 如果按钮按下是低电平，那使用 low_high 即可 
+  ESP_AI_wake_up_config wake_up_config = { "pin_high", 1, 10 };  // 如果按钮按下是低电平，那使用 pin_low 即可 
 
   // 需要放到 begin 前面，否则可能监听不到一些数据
   esp_ai.onError(on_error);
   esp_ai.onNetStatus(on_net_status);
 
-  esp_ai.begin({ debug, wifi_config, server_config, wake_up_config, volume_config });
+  esp_ai.begin({ debug, wifi_config, server_config, wake_up_config });
 
 }
 

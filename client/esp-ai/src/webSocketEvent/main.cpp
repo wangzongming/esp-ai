@@ -35,9 +35,11 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             can_voice = "1";
             start_ed = "0";
             session_id = "";
-            digitalWrite(LED_BUILTIN, LOW);
-            Serial.println("[Info] -> WebSocket Disconnected\n");
+            // digitalWrite(LED_BUILTIN, LOW);
+            Serial.println("\n\n[Info] -> ESP-AI 服务连接成功\n\n");
 
+            // 内置状态处理
+            status_change("2");
             // 设备状态回调
             if (onNetStatusCb != nullptr)
             {
@@ -52,13 +54,15 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         can_voice = "1";
         start_ed = "0";
         session_id = "";
-        Serial.println("\n[Info] -> WebSocket Connected");
+        Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
 
         JSONVar data_1;
         data_1["type"] = "play_audio_ws_conntceed";
         String sendData = JSON.stringify(data_1);
-        webSocket.sendTXT(sendData);
+        esp_ai_webSocket.sendTXT(sendData);
 
+        // 内置状态处理
+        status_change("3");
         // 设备状态回调
         if (onNetStatusCb != nullptr)
         {
@@ -83,7 +87,8 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             start_ed = "0";
             can_voice = "1";
             session_id = "";
-            digitalWrite(LED_BUILTIN, LOW);
+            esp_ai_dec.end();
+            // digitalWrite(LED_BUILTIN, LOW);
             DEBUG_PRINTLN(debug, ("\n[Info] -> 会话结束\n"));
         }
         else
@@ -114,10 +119,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     data_delayed["type"] = "cts_time";
                     data_delayed["stc_time"] = stc_time;
                     String sendData = JSON.stringify(data_delayed);
-                    webSocket.sendTXT(sendData);
+                    esp_ai_webSocket.sendTXT(sendData);
                 }
 
-                if (type == "net_delay")
+                else if (type == "net_delay")
                 {
                     long net_delay = parseRes["net_delay"];
                     DEBUG_PRINTLN(debug, ("\n======================================="));
@@ -126,7 +131,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
 
                 // user command
-                if (type == "instruct")
+                else if (type == "instruct")
                 {
                     DEBUG_PRINTLN(debug, "[instruct] -> 客户端收到用户指令：" + command_id + " --- " + data);
                     if (onEventCb != nullptr)
@@ -136,20 +141,39 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
 
                 // tts task log
-                if (type == "play_audio")
+                else if (type == "play_audio")
                 {
+                    esp_ai_dec.begin();
                     tts_task_id = (const char *)parseRes["tts_task_id"];
                     String now_session_id = (const char *)parseRes["session_id"];
                     DEBUG_PRINTLN(debug, "\n[TTS] -> TTS 任务：" + tts_task_id + " 所属会话：" + now_session_id);
                 }
 
-                if (type == "session_start")
+                else if (type == "i2s_out_begin")
+                {
+                    esp_ai_dec.begin();
+                }
+                else if (type == "i2s_out_end")
+                {
+                    esp_ai_dec.end();
+                }
+
+                else if (type == "session_start")
                 {
                     String now_session_id = (const char *)parseRes["session_id"];
                     DEBUG_PRINTLN(debug, "\n[Info] -> 会话开始：" + now_session_id);
                     session_id = now_session_id;
                 }
-                if (type == "tts_send_end")
+
+                else if (type == "session_stop")
+                {
+                    // 这里仅仅是停止，并不能结束录音
+                    DEBUG_PRINTLN(debug, "\n[Info] -> 会话停止");
+                    session_id = "";
+                    esp_ai_dec.end();
+                }
+
+                else if (type == "tts_send_end")
                 {
                     String end_tts_task_id = (const char *)parseRes["tts_task_id"];
                     DEBUG_PRINTLN(debug, "\n[TTS] -> 客户端收到 TTS 任务结束：" + end_tts_task_id);
@@ -157,20 +181,21 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     // 这里其他给情况预留服务回调
                     is_send_server_audio_over = "1";
                     can_voice = "1";
-                    digitalWrite(LED_BUILTIN, LOW);
+                    // digitalWrite(LED_BUILTIN, LOW);
                     JSONVar data;
                     data["type"] = "client_out_audio_over";
                     data["tts_task_id"] = end_tts_task_id;
                     data["session_id"] = session_id;
                     String sendData = JSON.stringify(data);
                     DEBUG_PRINTLN(debug, ("\n[TTS] -> 发送播放结束标识到服务端"));
-                    webSocket.sendTXT(sendData);
+                    esp_ai_webSocket.sendTXT(sendData);
                     tts_task_id = "";
                 }
 
-                if (type == "auth_fail")
+                else if (type == "auth_fail")
                 {
                     String message = (const char *)parseRes["message"];
+                    String code = (const char *)parseRes["code"];
                     Serial.println("[Error] -> 连接服务失败，鉴权失败：" + message);
                     Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。"));
                     if (onErrorCb != nullptr)
@@ -178,7 +203,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         onErrorCb("002", "auth", message);
                     }
                 }
-                if (type == "error")
+                else if (type == "error")
                 {
                     String at_pos = (const char *)parseRes["at"];
                     String message = (const char *)parseRes["message"];
@@ -189,10 +214,56 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         onErrorCb(code, at_pos, message);
                     }
                 }
+
+                else if (type == "session_status")
+                {
+                    String status = (const char *)parseRes["status"];
+                    DEBUG_PRINTLN(debug, "[Info] -> 会话状态：" + status);
+                    // 内置状态处理
+                    status_change(status);
+                    if (onSessionStatusCb != nullptr)
+                    {
+                        onSessionStatusCb(status);
+                    }
+                }
+                else if (type == "set_wifi_config")
+                {
+                    String wifi_name = (const char *)parseRes["configs"]["wifi_name"];
+                    String wifi_pwd = (const char *)parseRes["configs"]["wifi_pwd"];
+                    String api_key = (const char *)parseRes["configs"]["api_key"];
+                    String ext1 = (const char *)parseRes["configs"]["ext1"];
+                    String ext2 = (const char *)parseRes["configs"]["ext2"];
+                    String ext3 = (const char *)parseRes["configs"]["ext3"];
+                    String ext4 = (const char *)parseRes["configs"]["ext4"];
+                    String ext5 = (const char *)parseRes["configs"]["ext5"];
+                    bool is_ok = setWifiConfig(wifi_name, wifi_pwd, api_key, ext1, ext2, ext3, ext4, ext5);
+
+                    JSONVar set_wifi_config_res;
+                    set_wifi_config_res["type"] = "set_wifi_config_res";
+                    set_wifi_config_res["success"] = is_ok;
+                    String sendData = JSON.stringify(data);
+                    DEBUG_PRINTLN(debug, F("\n[TTS] -> 发送设置WiFi参数结果到服务端"));
+                    esp_ai_webSocket.sendTXT(sendData);
+                }
+
+                else if (type == "restart")
+                {
+                    ESP.restart();
+                }
+
+                else if (type == "set_local_data")
+                {
+                    String field = (const char *)parseRes["field"];
+                    String value = (const char *)parseRes["value"];
+                    set_local_data(field, value);
+                }
             }
         }
 
-        Serial.printf("::-> Received Text: %s\n", payload);
+        if (debug)
+        {
+            Serial.printf("[Info] -> Received Text: %s\n", payload);
+        }
         break;
     case WStype_BIN:
     {
@@ -215,7 +286,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             data["sid"] = sid;
             String sendData = JSON.stringify(data);
             DEBUG_PRINTLN(debug, ("\n[TTS] -> 发送LLM播放结束标识到服务端"));
-            webSocket.sendTXT(sendData);
+            esp_ai_webSocket.sendTXT(sendData);
             return;
         }
 
@@ -226,18 +297,16 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // 提取音频数据
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
-        // Serial.print("length===");
-        // Serial.println(audioLength);
-        adjustVolume((int16_t *)audioData, audioLength, volume_config.volume);
-        i2s.write(audioData, audioLength);
+
+        esp_ai_dec.write(audioData, audioLength);
         break;
     }
-    case WStype_PING:
-        Serial.println("Ping");
-        break;
-    case WStype_PONG:
-        Serial.println("Pong");
-        break;
+    // case WStype_PING:
+    //     Serial.println("Ping");
+    //     break;
+    // case WStype_PONG:
+    //     Serial.println("Pong");
+    //     break;
     case WStype_ERROR:
         Serial.println("[Error] 服务 WebSocket 连接错误");
         break;

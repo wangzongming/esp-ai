@@ -1,7 +1,7 @@
 #include <esp-ai.h>
 
 /**
- * 本案例演示 自定义方式唤醒：例如用 按钮唤醒小明同学
+ * 本案例演示 自定义方式唤醒：例如用 按钮唤醒小明同学 
  *
  * 按钮接线
  * Btn  s3
@@ -27,7 +27,7 @@ void setup()
   bool debug = true;
   // [必  填] wifi 配置： { wifi 账号， wifi 密码, "热点名字" } 可不设置，连不上wifi时会打开热点：ESP-AI，连接wifi后打开地址： 192.168.4.1 进行配网(控制台会输出地址，或者在ap回调中也能拿到信息)
   ESP_AI_wifi_config wifi_config = {"", "", "ESP-AI"};
-  // [可 填] 服务配置： { 服务IP， 服务端口, "[可选] 请求参数 }
+  // [可 填] 服务配置： { 服务协议, 服务IP， 服务端口, "[可选] 请求参数 }
   ESP_AI_server_config server_config = {};
   // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
   ESP_AI_wake_up_config wake_up_config = {"diy"};

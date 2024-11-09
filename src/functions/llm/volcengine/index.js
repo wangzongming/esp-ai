@@ -35,7 +35,9 @@ const log = require("../../../utils/log");
  * @param {String}      llm_server          用户配置的 llm 服务 
  * @param {String}      tts_server          用户配置的 tts 服务 
  * @param {String}      text                对话文本
- * @param {Function}    cb                  LLM 服务返回音频数据时调用，eg: cb({ text, texts })
+ * @param {Function}    connectServerBeforeCb 连接 LLM 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
+ * @param {Function}    connectServerCb     连接 LLM 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
+ * @param {Function}    cb                  LLM 服务返回音频数据时调用，eg: cb({ count_text, text, texts })
  * @param {Function}    llmServerErrorCb    与 LLM 服务之间发生错误时调用，并且传入错误说明，eg: llmServerErrorCb("意外错误")
  * @param {Function}    llm_params_set      用户配置的设置 LLM 参数的函数
  * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> {  中断逻辑... } })
@@ -46,7 +48,7 @@ const log = require("../../../utils/log");
 */
 // 避免每个用户重复创建对象
 const device_open_obj = {};
-function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer }) {
+function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
     try {
         const { apiKey, epId, ...other_config } = llm_config;
         if (!apiKey) return log.error(`请配给 LLM 配置 apiKey 参数。`)
@@ -63,6 +65,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
 
         let openai = device_open_obj[device_id];
         if (!device_open_obj[device_id]) {
+            connectServerBeforeCb();
             openai = new OpenAI({
                 apiKey: apiKey,
                 baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
@@ -83,8 +86,10 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     model: epId,
                     stream: true,
                 });
+                connectServerCb(true);
                 logWSServer({
                     close: () => {
+                        connectServerCb(false);
                         stream.controller.abort()
                         shouldClose = true;  
                     }
@@ -95,18 +100,18 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     // console.log('LLM 输出 ：', chunk_text);
                     devLog === 2 && log.llm_info('LLM 输出 ：', chunk_text);
                     texts["count_text"] += chunk_text;
-                    cb({ text, texts })
+                    cb({ text, texts, chunk_text: chunk_text })
                 }
                 // process.stdout.write('\n');
-
+                
                 if (shouldClose) return;
                 cb({
                     text,
                     is_over: true,
                     texts,
-                    shouldClose
+                    shouldClose, 
                 })
-
+                connectServerCb(false);
                 // devLog && log.llm_info('\n===\n', httpResponse, '\n===\n')
                 devLog && log.llm_info('===')
                 devLog && log.llm_info(texts["count_text"])
@@ -115,6 +120,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
             } catch (error) {
                 console.log(error);
                 llmServerErrorCb("火山 LLM 报错: " + error)
+                connectServerCb(false);
             }
 
         }
@@ -124,6 +130,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
     } catch (err) {
         console.log(err);
         log.error("火山引擎 LLM 插件错误：", err)
+        connectServerCb(false);
     }
 
 

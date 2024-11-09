@@ -26,6 +26,7 @@
 void ESP_AI::speaker_i2s_setup()
 {
     AudioLogger::instance().begin(Serial, AudioLogger::Info);
+    // AudioLogger::instance().begin(Serial, AudioLogger::Debug);
     DEBUG_PRINT(debug, F("扬声器采样率："));
     DEBUG_PRINTLN(debug, i2s_config_speaker.sample_rate);
     DEBUG_PRINTLN(debug, "");
@@ -47,4 +48,8 @@ void ESP_AI::speaker_i2s_setup()
     config.pin_bck = i2s_config_speaker.bck_io_num;   // BCK
     config.pin_data = i2s_config_speaker.data_in_num; // DIN
     i2s.begin(config); 
+
+    esp_ai_dec.begin();
+    esp_ai_volume.begin(config); // we need to provide the bits_per_sample and channels
+    esp_ai_volume.setVolume(volume_config.volume);
 }

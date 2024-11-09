@@ -24,22 +24,18 @@
  */
 
 const fs = require('fs');
-const path = require('path'); 
 
 /**
  * @volumeFactor 调整音量的系数，0.5 表示减半
  * @abit         PCM 数据是 16 位 (2 字节) 小端格式
  * */ 
-function play_temp(name, client_ws, volumeFactor = 1, abit = 2) { 
+function play_temp(filePath, client_ws, volumeFactor = 1, abit = 2) { 
     return new Promise((resolve, reject) => {
-        const filePath = path.join(__dirname, `${name}`);
         const readStream = fs.createReadStream(filePath);
-        let isFirst = true;
+        let isFirst = true; 
         client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: "warning_tone" }));
         readStream.on('data', (audio) => {  
-            const adjustedAudio = Buffer.alloc(audio.length);
-
-            //  PCM 数据是 16 位 (2 字节) 小端格式
+            const adjustedAudio = Buffer.alloc(audio.length); 
             for (let i = 0; i < audio.length; i += abit) {
                 const sample = audio.readInt16LE(i);
                 const adjustedSample = Math.floor(sample * volumeFactor);

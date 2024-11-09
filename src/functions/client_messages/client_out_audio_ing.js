@@ -29,6 +29,7 @@
 const { tts_info } = require("../../utils/log");
 async function fn({ device_id }) {
     const { devLog } = G_config;
+    if (!G_devices.get(device_id)) return;
     const { ws } = G_devices.get(device_id);
     ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
 

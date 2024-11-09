@@ -35,12 +35,14 @@ const getServerURL = require("../../getServerURL");
  * @param {String}      tts_server          用户配置的 tts 服务 
  * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
  * @param {Function}    tts_params_set      用户自定义传输给 TTS 服务的参数，eg: tts_params_set(参数体)
+ * @param {Function}    connectServerBeforeCb 连接 tts 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
+ * @param {Function}    connectServerCb     连接 tts 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
  * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> {  中断逻辑...  } })
  * @param {Function}    ttsServerErrorCb    与 TTS 服务之间发生错误时调用，并且传入错误说明，eg: ttsServerErrorCb("意外错误")
  * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
-function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, logWSServer, tts_params_set, cb, log, ttsServerErrorCb }) {
+function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
         const { appid, apiSecret, apiKey, ...other_config } = tts_config;
         if (!apiKey) return log.error(`请配给 TTS 配置 apiKey 参数。`)
@@ -48,6 +50,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
 
         return new Promise((resolve) => {
+            connectServerBeforeCb();
             const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, }));
 
             // 如果 ws 服务是个 WebSocket 对象，请调用这个方法。框架在适合的时候会调用 .close() 方法
@@ -55,6 +58,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
             // 连接建立完毕，读取数据进行识别
             ws.on('open', () => {
+                connectServerCb(true);
                 devLog && log.tts_info("-> 讯飞 TTS 服务连接成功！")
                 send()
             })
@@ -69,6 +73,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
                 if (res.code != 0) {
                     ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
+                    connectServerCb(false);
                     ws.close()
                     resolve(false);
                     return
@@ -76,7 +81,10 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
                 const audio = res.data.audio;
                 if (!audio) {
-                    ttsServerErrorCb(`tts错误：未返回音频流`)
+                    // 这种情况算结束
+                    cb({ is_over: true, audio: "", resolve: resolve, ws: ws });
+                    connectServerCb(false); 
+                    // ttsServerErrorCb(`tts错误：未返回音频流`)
                     resolve(false);
                     return
                 }
@@ -94,21 +102,28 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
             })
 
             // 资源释放, 某些服务需要在这里面调用一次 cb({ is_over: true })
-            // ws.on('close', () => { })
+            ws.on('close', () => { 
+                connectServerCb(false);
+            })
 
             // 连接错误
             ws.on('error', (err) => {
                 ttsServerErrorCb(`tts错误："websocket connect err: ${err}`)
+                connectServerCb(false);
                 resolve(false);
             })
             // 传输数据
             function send() {
                 const business = {
-                    volume: 80,
-                    ...other_config,
-                    "aue": "raw",
-                    "auf": "audio/L16;rate=16000",
+                    volume: 100,
                     "vcn": "aisbabyxu",
+                    ...other_config, 
+                    // pcm
+                    // "aue": "raw", 
+                    // mp3
+                    aue: "lame",
+                    sfl:1,  
+                    "auf": "audio/L16;rate=16000",
                     "tte": "UTF8",
                 }
                 const frame = {
@@ -129,6 +144,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
         })
     } catch (err) {
+        connectServerCb(false);
         log.error(`讯飞 TTS 错误： ${err}`)
     }
 }

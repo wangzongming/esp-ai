@@ -30,21 +30,36 @@
 #include <driver/i2s.h>
 #include <WiFi.h>
 #include <WebSocketsClient.h>
+
 // 音频流播放插件
 #include "AudioTools.h"
-#include <Arduino_JSON.h>
 
+// 使用 libhelix 对mp3编码
+// 要安装插件： https://github.com/pschatzmann/arduino-libhelix
+// 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行
+#include "AudioCodecs/CodecMP3Helix.h"   
+
+// 使用 LAME 对mp3编码  test...
+// 要安装插件： https://github.com/pschatzmann/arduino-liblame
+#include "AudioCodecs/CodecMP3LAME.h"  
+// #include "MP3EncoderLAME.h"
+
+#include <Arduino_JSON.h>
 #include <WebServer.h>
-#include <EEPROM.h>
+#include <EEPROM.h> 
+#include <Adafruit_NeoPixel.h>
 
 #ifndef LED_BUILTIN
-#define LED_BUILTIN 13 // 大部分开发板默认 13
+#define LED_BUILTIN 18 
 #endif
 
 // 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
+
+// test...
+// using namespace liblame;
 
 struct ESP_AI_i2s_config_mic
 {
@@ -95,6 +110,8 @@ struct ESP_AI_volume_config
     int max_val;
     // 音量 0-1，默认 0.5
     float volume;
+    // 是否启用电位器引脚
+    bool enable;
 };
 
 struct ESP_AI_wifi_config
@@ -103,15 +120,23 @@ struct ESP_AI_wifi_config
     char wifi_pwd[60]; 
     // 热点名字
     char ap_name[30];
-    // 自定义页面
-    char *html_str; 
+    // 自定义页面 
+    String  html_str; 
 }; 
 
 struct ESP_AI_server_config
 {
-    char ip[16];
+    // 协议： http | https
+    char protocol[50];
+    // 为 https 协议时，必须是 https://xx 地址
+    char ip[100];
+    // 为 https 协议时请设置为 443，或者您的 https 端口
     int port;
+    // 请求参数，使用 & 符号拼接，eg: name=小明IO&key=123456
     char params[200];
+    // 自定义服务路径，注意:后面不要加 /
+    // eg: /xxxApi
+    char path[100];
 };
 
 struct ESP_AI_CONFIG
@@ -133,12 +158,23 @@ struct ESP_AI_CONFIG
 };
 
 extern String net_status;
+extern String ap_connect_err;
 
-extern WebSocketsClient webSocket;
+extern WebSocketsClient esp_ai_webSocket;
+extern WebServer esp_ai_server;
 
 extern I2SStream i2s; 
+extern EncodedAudioStream esp_ai_dec; // Decoding stream 
+extern VolumeStream esp_ai_volume;
 
-extern WebServer server;
+// test... 
+// extern liblame::MP3EncoderLAME esp_ai_mp3_encoder; 
+// extern liblame::AudioInfo esp_ai_mp3_info; 
+// test...
+// extern uint8_t mp3_sampleBuffer[512];  
+// extern audio_tools::MP3EncoderLAME esp_ai_mp3_encoder;  
+// extern EncodedAudioStream esp_ai_out_stream;
+
 
 extern String ESP_AI_VERSION; 
 extern String start_ed; 
@@ -148,6 +184,7 @@ extern int cur_ctrl_val;
 extern bool ws_connected; 
 extern String session_id;
 extern String tts_task_id;
+extern int esp_ai_VAD_THRESHOLD;
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 extern ESP_AI_i2s_config_mic default_i2s_config_mic;
@@ -161,6 +198,8 @@ extern ESP_AI_wifi_config default_wifi_config;
 extern ESP_AI_server_config default_server_config;
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 extern ESP_AI_volume_config default_volume_config;
+
+extern Adafruit_NeoPixel esp_ai_pixels;
 
 #define DEBUG_PRINT(debug, x) \
     if (debug)                \
@@ -190,7 +229,7 @@ extern bool debug_nn; // Set this to true to see e.g. features generated from th
 extern bool record_status;
 
 // mic setting
-constexpr uint32_t mic_sample_buffer_size = 2048;  
+constexpr uint32_t mic_sample_buffer_size = 512;  
 extern int16_t mic_sampleBuffer[mic_sample_buffer_size];
 
 extern String wake_up_scheme;
@@ -210,6 +249,9 @@ typedef struct
     String api_key;   // 存储的 api_key
     String ext1;      // 备用1
     String ext2;      // 备用2
+    String ext3;      // 备用3
+    String ext4;      // 备用4
+    String ext5;      // 备用5
 } saved_info;
 String get_local_data(const String &field_name); 
 void set_local_data(String field_name, String new_value);

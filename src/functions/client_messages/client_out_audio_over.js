@@ -26,6 +26,7 @@
 const { tts_info } = require("../../utils/log");
 async function fn({ device_id, tts_task_id, session_id }) { 
     const { devLog } = G_config;
+    if (!G_devices.get(device_id)) return;
     const { ws, run_audio_out_over_queue } = G_devices.get(device_id); 
     devLog && tts_info("-> 客户端音频流播放完毕：", session_id, tts_task_id || "无任务ID");
     run_audio_out_over_queue(tts_task_id);

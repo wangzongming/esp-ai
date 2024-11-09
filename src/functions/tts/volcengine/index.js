@@ -38,15 +38,17 @@ const { v4: uuidv4 } = require('uuid');
  * @param {String}      llm_server          用户配置的 llm 服务 
  * @param {String}      tts_server          用户配置的 tts 服务 
  * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
+ * @param {Function}    connectServerBeforeCb 连接 tts 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
+ * @param {Function}    connectServerCb     连接 tts 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
  * @param {Function}    tts_params_set      用户自定义传输给 TTS 服务的参数，eg: tts_params_set(参数体)
  * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> { 中断逻辑...  }  })
  * @param {Function}    ttsServerErrorCb    与 TTS 服务之间发生错误时调用，并且传入错误说明，eg: ttsServerErrorCb("意外错误")
  * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
-function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb }) {
-    try { 
-        const { appid, accessToken, ...other_config } = tts_config;  
+function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
+    try {
+        const { appid, accessToken, appConfig, ...other_config } = tts_config;
         if (!accessToken) return log.error(`请配给 TTS 配置 accessToken 参数。`)
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
 
@@ -55,17 +57,18 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
         const default_header = Buffer.from([0x11, 0x10, 0x11, 0x00]);
         const audio_config = {
             voice_type: "BV001_streaming",
-            ...other_config,
-            encoding: "pcm",
-            rate: 16000, // 目前只支持16k
-            speed_ratio: 1.0, 
+            rate: 16000,  
+            speed_ratio: 1.0,
             pitch_ratio: 1.0,
+            ...other_config, 
+            encoding: "mp3", 
         }
         const request_json = {
             app: {
+                cluster: "volcano_tts",
+                ...appConfig,
                 appid: appid,
                 token: accessToken,
-                cluster: "volcano_tts"
             },
             user: {
                 uid: device_id
@@ -86,12 +89,14 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
             const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
             full_client_request.writeUInt32BE(payload_bytes.length, 4);
-
+            
+            connectServerBeforeCb();
             const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
             logWSServer(curTTSWs)
 
             // 连接建立完毕，读取数据进行识别
             curTTSWs.on('open', () => {
+                connectServerCb(true);
                 devLog && log.tts_info("-> 火山引擎 TTS 服务连接成功！")
                 send()
             })
@@ -132,8 +137,9 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                     console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
                     console.log(`               Error message: ${error_msg}`);
 
-                    ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
+                    ttsServerErrorCb(`火山 TTS 接口返回错误 ${res.code}: ${res.message} ${error_msg}`)
                     curTTSWs.close()
+                    connectServerCb(false);
                     resolve(false);
                     return
                 } else if (message_type === 0xc) {
@@ -146,7 +152,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                     log.tts_info("undefined message type!");
                     done = true;
                 }
- 
+
                 cb({
                     // 根据服务控制
                     is_over: done,
@@ -163,6 +169,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             // 连接错误
             curTTSWs.on('error', (err) => {
                 ttsServerErrorCb("websocket connect err: " + err)
+                connectServerCb(false);
                 resolve(false);
             })
             // 传输数据
@@ -172,6 +179,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
 
         })
     } catch (err) {
+        connectServerCb(false);
         log.error(`火山 TTS 错误： ${err}`)
     }
 }

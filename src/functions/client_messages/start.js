@@ -25,111 +25,60 @@
 
 /**
  * 开始会话
-*/
-const play_temp = require('../../audio_temp/play_temp')
-const createSessionId = require("../../utils/createSessionId");
+*/ 
 const { t_info, error } = require("../../utils/log");
+const isOutTimeErr = require("../../utils/isOutTimeErr");
+
 async function fn({ device_id }) {
     try {
         const IAT_FN = require(`../iat`);
         const TTS_FN = require(`../tts`);
+ 
+        if (!G_devices.get(device_id)) {
+            error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
+            return;
+        };
 
-        const { devLog, auth } = G_config;
+        const { auth } = G_config;
         const {
-            ws, iat_server_connected,
-            tts_list = [], iat_ws, llm_ws, client_params,
-            first_session, client_out_audio_ing, iat_server_connect_ing, clear_audio_out_over_queue,
-            user_config: { f_reply },
-            play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek, check_buffered_amount
+            ws, du,
+            client_params,
+            first_session, 
+            user_config: { f_reply }, 
         } = G_devices.get(device_id);
-        if (auth) {
-            const { success: auth_success, message: auth_message } = await auth(client_params, "start_session");
+        if (auth) { 
+            const { success: auth_success, message: auth_message, code: auth_code } = await auth({
+                ws,
+                client_params: client_params,
+                type: "start_session",
+                send_error_to_client: (code, message) => {
+                    ws.send(JSON.stringify({
+                        type: "error",
+                        message: message,
+                        code: code
+                    }));
+                }
+            });
             if (!auth_success) {
-                ws.send(JSON.stringify({ type: "auth_fail", message: `${auth_message || "-"}` }));
-                ws.close();
+                ws.send(JSON.stringify({
+                    type: "auth_fail",
+                    message: `${auth_message || "-"}`, 
+                    code: isOutTimeErr(auth_message) ? "007" : auth_code,
+                }));
+                // 防止大量失效用户重复请求
+                setTimeout(() => {
+                    ws.close(); 
+                }, 5000)
                 return;
             };
         }
 
-        if (iat_server_connect_ing || iat_server_connected || client_out_audio_ing) {
-            devLog && t_info("打断会话");
-            try {
-                // clearInterval(check_buffered_amount);
-                const end_time = Date.now(); // 结束时间
-                const play_time = end_time - start_audio_time; // 播放时间
-                play_audio_ing && play_audio_on_end && play_audio_on_end({
-                    start_time: start_audio_time,
-                    end_time: end_time,
-                    play_time: play_time / 1000,
-                    break_second: play_audio_seek + play_time / 1000,
-                    event: "user_break",
-                    seek: play_audio_seek
-                });
-                iat_ws && iat_ws.close && iat_ws.close()
-                llm_ws && llm_ws.close && llm_ws.close()
-            } catch (err) {
-                console.log(err);
-                error(`会话打断失败`);
-            }
-
-            // 清空正在播放的 tts 任务 
-            for (const [key, ttsWS] of tts_list) {
-                try {
-                    ttsWS && ttsWS.close && ttsWS.close();
-                } catch (err) {
-                    console.log(err);
-                    error(`TTS 队列关闭失败`);
-                }
-                tts_list.delete(key)
-            }
-
-            // 清空 tts 回调
-            clear_audio_out_over_queue();
-        };
-
-        const session_id = `${createSessionId()}`;
-        t_info("session ID: " + session_id)
-        ws.send(JSON.stringify({ type: "session_start", session_id }));
-        G_devices.set(device_id, {
-            ...G_devices.get(device_id),
-            session_id,
-            first_session: false,
-            iat_server_connected: false,
-            tts_list: new Map(),
-            await_out_tts: [],
-            await_out_tts_ing: false,
-            await_out_tts_run: async () => {
-                const { await_out_tts_ing } = G_devices.get(device_id);
-                if (await_out_tts_ing) return;
-                async function doTask() {
-                    const { await_out_tts } = G_devices.get(device_id);
-                    if (await_out_tts[0]) {
-                        await await_out_tts[0]();
-                        await_out_tts.shift()
-                        G_devices.set(device_id, {
-                            ...G_devices.get(device_id),
-                            await_out_tts,
-                        })
-                        await doTask();
-                        return;
-                    } else {
-                        G_devices.set(device_id, {
-                            ...G_devices.get(device_id),
-                            await_out_tts_ing: false,
-                        })
-                    }
-                }
-                await doTask();
-            },
-            play_audio_ing: null,
-            start_audio_time: null,
-            play_audio_on_end: null,
-            play_audio_seek: 0,
- 
-            // tts_buffer_chunk_queue: [],
-            // check_buffered_amount: null
-        })
+        
+        await G_Instance.stop(device_id, "打断会话时");  
+        await G_Instance.newSession(device_id);  
+          
         const start_iat = (connect_cb) => {
+            if (!G_devices.get(device_id)) return;
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 started: true,
@@ -138,6 +87,7 @@ async function fn({ device_id }) {
             ws && ws.send("start_voice");
             return IAT_FN(device_id, connect_cb);
         };
+        if (!G_devices.get(device_id)) return;
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
             started: true,
@@ -146,20 +96,19 @@ async function fn({ device_id }) {
 
         if (first_session) {
             TTS_FN(device_id, {
-                text: f_reply || "您好", 
+                text: f_reply || "您好",
                 pauseInputAudio: true,
-                text_is_over: true,
-                reRecord: true,
-                // need_record: true, 
+                text_is_over: true, 
+                need_record: true,
             });
         } else {
-            start_iat(async () => {
-                await play_temp("du.pcm", ws, 0.8, 24);
+            start_iat(async () => { 
+                await du();
             });
         }
     } catch (err) {
         console.log(err);
-        log.error(`start 消息错误： ${err}`)
+        error(`[${device_id}] start 消息错误： ${err}`)
     }
 
 }

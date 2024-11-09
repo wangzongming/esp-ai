@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -34,7 +34,6 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
         .communication_format = I2S_COMM_FORMAT_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
         .dma_buf_count = 8,
-        // .dma_buf_len = 1024,
         .dma_buf_len = 512,
         .use_apll = false,
         .tx_desc_auto_clear = false,
@@ -66,6 +65,16 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
     {
         Serial.println("[Error] Error in initializing dma buffer with 0");
     }
+
+    // mp3 编码器 begin
+    // esp_ai_mp3_info.channels = 1;
+    // esp_ai_mp3_info.sample_rate = sampling_rate;
+    // esp_ai_mp3_info.bits_per_sample = 16;
+    // // esp_ai_mp3_info.quality = 5;
+    // esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
+
+    // test...
+    // esp_ai_out_stream.begin();
 
     return int(ret);
 }

@@ -24,9 +24,10 @@
  */
 #include "setVolume.h" 
 
-void ESP_AI::setVolume(int volume)
+void ESP_AI::setVolume(float volume)
 {
     volume_config.volume = volume;
+    esp_ai_volume.setVolume(volume_config.volume);
 }
 
 

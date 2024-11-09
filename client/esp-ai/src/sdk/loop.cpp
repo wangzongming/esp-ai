@@ -25,7 +25,8 @@
  */
 #include "loop.h"
 
-int16_t diy_wakeup_sample_buffer[512];
+// int16_t diy_wakeup_sample_buffer[512];
+int16_t diy_wakeup_sample_buffer[2048];
 
 int btnClick = 0;
 long lastDebounceTime = 0;
@@ -48,12 +49,18 @@ String cleanString(String input)
 
 void ESP_AI::loop()
 {
-    server.handleClient();
-    webSocket.loop();
+    esp_ai_server.handleClient();
+    esp_ai_webSocket.loop();
+
     if (WiFi.status() != WL_CONNECTED)
     {
+
+        if (net_status == "2" && net_status != "0" && ap_connect_err != "1"){ 
+            // 内置状态处理
+            status_change("0");
+        }
         // 设备状态回调
-        if (onNetStatusCb != nullptr && net_status == "2" && net_status != "0")
+        if (onNetStatusCb != nullptr && net_status == "2" && net_status != "0" && ap_connect_err != "1")
         {
             net_status = "0";
             onNetStatusCb("0");
@@ -63,12 +70,16 @@ void ESP_AI::loop()
         }
     }
 
-    int _cur_ctrl_val = analogRead(volume_config.input_pin);
-    if (_cur_ctrl_val != cur_ctrl_val)
+    if (volume_config.enable)
     {
-        cur_ctrl_val = _cur_ctrl_val;
-        volume_config.volume = static_cast<float>(cur_ctrl_val) / volume_config.max_val;
-        DEBUG_PRINTLN(debug, volume_config.volume);
+        int _cur_ctrl_val = analogRead(volume_config.input_pin);
+        if (_cur_ctrl_val != cur_ctrl_val)
+        {
+            cur_ctrl_val = _cur_ctrl_val;
+            volume_config.volume = static_cast<float>(cur_ctrl_val) / volume_config.max_val;
+            esp_ai_volume.setVolume(volume_config.volume);
+            DEBUG_PRINTLN(debug, volume_config.volume);
+        }
     }
 
     bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
@@ -139,9 +150,52 @@ void ESP_AI::loop()
     if (ws_connected && start_ed == "1" && !is_use_edge_impulse && tts_task_id == "")
     {
         size_t diy_wakeup_bytes_read;
+
+        /**
+         * 讯飞 iat
+         * 建议每次发送音频间隔40ms，
+         * 每次发送音频字节数（即java示例demo中的frameSize）为一帧音频大小的整数倍。
+         * 未压缩的PCM格式，每次发送音频间隔40ms，每次发送音频字节数1280B；
+         *
+         * 听写支持识别60s之内的音频。
+         * 默认支持50路并发，如需更多并发可提交工单进行咨询
+         */
         i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
-        // adjustVolume((int16_t *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), 8);
-        webSocket.sendBIN((uint8_t *)diy_wakeup_sample_buffer, diy_wakeup_bytes_read);
+        esp_ai_webSocket.sendBIN((uint8_t *)diy_wakeup_sample_buffer, diy_wakeup_bytes_read);
         delay(3);
+
+        // Serial.print("发送大小：");
+        // Serial.println(sizeof(diy_wakeup_sample_buffer));
+
+        // 将音频编码为 mp3 发送 test...
+        // i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
+        // adjustVolume((uint16_t *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), 5);
+        // for (size_t i = 0; i < sizeof(diy_wakeup_sample_buffer) / 2; i++)
+        // // for (size_t i = 0; i < sizeof(diy_wakeup_sample_buffer); i++)
+        // {
+        //     // 调整音量
+        //     diy_wakeup_sample_buffer[i] = diy_wakeup_sample_buffer[i] * 128;
+        // }
+        // esp_ai_mp3_encoder.write(diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer));
+
+        // test...
+        // esp_ai_out_stream.write((uint8_t *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer));
+        // Serial.print("已经写入长度：");
+        // Serial.println(sizeof(mp3_sampleBuffer));
+
+        // ing...
+        // i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
+        // long sum = 0;
+        // for (int i = 0; i < diy_wakeup_bytes_read / 2; i++)
+        // {
+        //     sum += abs(diy_wakeup_sample_buffer[i]);
+        // }
+        // float average_energy = (float)sum / (diy_wakeup_bytes_read / 2);
+        // // 检测是否超过阈值
+        // if (average_energy > esp_ai_VAD_THRESHOLD)
+        // {
+        //     Serial.print("检测到说话：");
+        //     Serial.println(average_energy);
+        // }
     }
 }

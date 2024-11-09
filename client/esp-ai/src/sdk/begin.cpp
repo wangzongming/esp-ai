@@ -27,6 +27,26 @@
 
 void ESP_AI::begin(ESP_AI_CONFIG config)
 {
+    delay(1000);
+
+    if (psramFound())
+    {
+        Serial.println("[Info] PSRAM 检测成功!");
+        Serial.print("[Info] Total PSRAM: ");
+        Serial.println(ESP.getPsramSize());
+        Serial.print("[Info] Free PSRAM: ");
+        Serial.println(ESP.getFreePsram());
+    }
+    else
+    {
+        Serial.println("PSRAM 无效，请确保您使用的是 esp32s3 开发板，并且开启了【设置/PSRAM/OPI PSRAM】");
+        Serial.println("注意分区方案需要选择： 16MB Flash(3MB APP/9.9MB FATFS)");
+    }
+
+    Serial.print("[Info] 剩余运行内存:");
+    Serial.print(esp_get_free_heap_size() / 1024 / 1024);
+    Serial.println(" mb");
+
     if (config.i2s_config_mic.bck_io_num)
     {
         i2s_config_mic = config.i2s_config_mic;
@@ -35,7 +55,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         i2s_config_speaker = config.i2s_config_speaker;
     }
-    if (strcmp(config.wifi_config.wifi_name, "") != 0 || strcmp(config.wifi_config.ap_name, "") != 0 || strcmp(config.wifi_config.html_str, "") != 0)
+
+    if (strcmp(config.wifi_config.wifi_name, "") != 0 || strcmp(config.wifi_config.ap_name, "") != 0 || config.wifi_config.html_str != "")
     {
         wifi_config = config.wifi_config;
     }
@@ -61,14 +82,21 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             pinMode(wake_up_config.pin, INPUT);
         }
     }
-    if(wake_up_scheme == "edge_impulse"){
+    if (wake_up_scheme == "edge_impulse")
+    {
         Serial.println("[Error] edge_impulse 唤醒方案在 ESP-AI v2.0.0 中暂未发布，预计2.2.x中进行发布，请先使用其它唤醒方案！");
         return;
     }
 
     // led 指示灯
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    // pinMode(LED_BUILTIN, OUTPUT);
+    // digitalWrite(LED_BUILTIN, LOW);
+
+    // ws2812
+    esp_ai_pixels.begin();
+    esp_ai_pixels.setBrightness(100); // 亮度设置
+    esp_ai_pixels.clear();            // 将所有像素颜色设置为“off”
+    esp_ai_pixels.show();             // Initialize all pixels to 'off'
 
     // 初始化EEPROM，总容量为512字节
     EEPROM.begin(512);
@@ -76,6 +104,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 
     delay(1000);
 
+    // 内置状态处理
+    status_change("0");
     // 设备状态回调
     if (onNetStatusCb != nullptr)
     {
@@ -90,52 +120,39 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     String loc_api_key = get_local_data("api_key");
     String loc_ext1 = get_local_data("ext1");
     String loc_ext2 = get_local_data("ext2");
+    String loc_ext3 = get_local_data("ext3");
+    String loc_ext4 = get_local_data("ext4");
+    String loc_ext5 = get_local_data("ext5");
     DEBUG_PRINTLN(debug, ("==================== Local Data ===================="));
-    DEBUG_PRINTLN(debug, "loc_is_ready: " + loc_is_ready);
+    DEBUG_PRINTLN(debug, "[Info] loc_is_ready: " + loc_is_ready);
     if (loc_is_ready != "ok")
     {
-        // 始化 rom 中存在乱码
+        // 避免始化 rom 中存在乱码
         EEPROM.put(0, "");
         EEPROM.commit();
         String uuid = generateUUID();
         String init_ok = "ok";
         set_local_data("is_ready", init_ok);
         set_local_data("device_id", uuid);
-        DEBUG_PRINTLN(debug, "初始化 device_id：" + uuid);
+        DEBUG_PRINTLN(debug, "[Info] 初始化 device_id：" + uuid);
         loc_is_ready = init_ok;
         loc_device_id = uuid;
     }
-    DEBUG_PRINTLN(debug, "loc_device_id: " + loc_device_id);
-    DEBUG_PRINTLN(debug, "loc_wifi_name: " + loc_wifi_name);
-    DEBUG_PRINTLN(debug, "loc_wifi_pwd: " + loc_wifi_pwd);
-    DEBUG_PRINTLN(debug, "loc_api_key: " + loc_api_key);
-    DEBUG_PRINTLN(debug, "loc_ext1: " + loc_ext1);
-    DEBUG_PRINTLN(debug, "loc_ext2: " + loc_ext2);
+    DEBUG_PRINTLN(debug, "[Info] loc_device_id: " + loc_device_id);
+    DEBUG_PRINTLN(debug, "[Info] loc_wifi_name: " + loc_wifi_name);
+    DEBUG_PRINTLN(debug, "[Info] loc_wifi_pwd: " + loc_wifi_pwd);
+    DEBUG_PRINTLN(debug, "[Info] loc_api_key: " + loc_api_key);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext1: " + loc_ext1);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext2: " + loc_ext2);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext3: " + loc_ext3);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext4: " + loc_ext4);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext5: " + loc_ext5);
     DEBUG_PRINTLN(debug, ("====================================================="));
-
-    // 启动热点，用于配网
-    if (loc_wifi_name == "" && wifi_config.wifi_name == "")
-    { 
-        WiFi.mode(WIFI_AP);
-        String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
-        WiFi.softAP(ap_name);
-        IPAddress ip = WiFi.softAPIP();
-        String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-        String httpUrl = "http://" + ipStr;
-        DEBUG_PRINTLN(debug, "\nWIFI名称：" + ap_name);
-        DEBUG_PRINTLN(debug, "配网地址：" + httpUrl);
-        // 启动配网服务
-        web_server_init();
-        if (onAPInfoCb != nullptr)
-        {
-            onAPInfoCb(httpUrl, ipStr, ap_name);
-        }
-        return;
-    }
 
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
     String _wifi_pwd = loc_wifi_pwd;
+    ap_connect_err = "0";
     if (_wifi_name == "")
     {
         _wifi_name = wifi_config.wifi_name;
@@ -145,43 +162,85 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         _wifi_pwd = wifi_config.wifi_pwd;
     }
 
-    DEBUG_PRINTLN(debug, "wifi name: " + _wifi_name);
-    DEBUG_PRINTLN(debug, "wifi pwd: " + _wifi_pwd);
+    // 没有 wifi 信息时直接进入配网
+    if (_wifi_name == "")
+    {
+        DEBUG_PRINTLN(debug, ("\n[Info] 没有wifi信息，请配网"));
+        // 重新配网
+        WiFi.mode(WIFI_AP);
+        String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
+        WiFi.softAP(ap_name);
+        IPAddress ip = WiFi.softAPIP();
+        String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+        String httpUrl = "http://" + ipStr;
+        DEBUG_PRINTLN(debug, "[Info] WIFI名称：" + ap_name);
+        DEBUG_PRINTLN(debug, "[Info] 配网地址：" + httpUrl);
+        // 启动配网服务
+        web_server_init();
+        if (onAPInfoCb != nullptr)
+        {
+            onAPInfoCb(httpUrl, ipStr, ap_name);
+        }
+        // 内置状态处理
+        status_change("0_ap");
+        // 设备状态回调
+        if (onNetStatusCb != nullptr)
+        {
+            net_status = "0_ap";
+            onNetStatusCb("0_ap");
+        }
+        return;
+    }
+
+    DEBUG_PRINTLN(debug, "[Info] wifi name: " + _wifi_name);
+    DEBUG_PRINTLN(debug, "[Info] wifi pwd: " + _wifi_pwd);
     WiFi.begin(_wifi_name, _wifi_pwd);
-    DEBUG_PRINT(debug, F("connect wifi ing.."));
+    DEBUG_PRINT(debug, F("[Info] connect wifi ing.."));
 
     int connect_count = 0;
-    // 10s 连不上Wifi的话
-    int try_count = 20;
+    // 20s 连不上Wifi的话, 这里需要长一点时间。避免板子初始化时候来不及处理。
+    int try_count = 30;
     while (WiFi.status() != WL_CONNECTED && connect_count <= try_count)
     {
         connect_count++;
-        delay(500);
-        DEBUG_PRINT(debug, ".");
-        // 设备状态回调
+        // 内置状态处理
+        status_change("0_ing");
         if (onNetStatusCb != nullptr)
         {
             net_status = "0_ing";
             onNetStatusCb("0_ing");
         }
+        DEBUG_PRINT(debug, ".");
+        delay(250);
+        // 内置状态处理
+        status_change("0_ing_after");
+        // 设备状态回调
+        if (onNetStatusCb != nullptr)
+        {
+            net_status = "0_ing";
+            onNetStatusCb("0_ing_after");
+        }
+        delay(250);
         if (connect_count > try_count)
         {
-            DEBUG_PRINTLN(debug, ("\n连接WIFI失败，请重新配网"));
-            // 重新配网 
+            DEBUG_PRINTLN(debug, ("\n[Error] 连接WIFI失败，请重新配网"));
+            // 重新配网
             WiFi.mode(WIFI_AP);
             String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
             WiFi.softAP(ap_name);
             IPAddress ip = WiFi.softAPIP();
             String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
             String httpUrl = "http://" + ipStr;
-            DEBUG_PRINTLN(debug, "WIFI名称：" + ap_name);
-            DEBUG_PRINTLN(debug, "配网地址：" + httpUrl);
+            DEBUG_PRINTLN(debug, "[Info] WIFI名称：" + ap_name);
+            DEBUG_PRINTLN(debug, "[Info] 配网地址：" + httpUrl);
             // 启动配网服务
             web_server_init();
             if (onAPInfoCb != nullptr)
             {
                 onAPInfoCb(httpUrl, ipStr, ap_name);
             }
+            // 内置状态处理
+            status_change("0_ap");
             // 设备状态回调
             if (onNetStatusCb != nullptr)
             {
@@ -194,6 +253,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         return;
     }
+    // 内置状态处理
+    status_change("2");
     // 设备状态回调
     if (onNetStatusCb != nullptr)
     {
@@ -205,11 +266,12 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     WiFi.setSleep(false);
 
     DEBUG_PRINTLN(debug, "");
-    DEBUG_PRINT(debug, F("wifi 连接成功，设备 IP 地址: "));
-    DEBUG_PRINTLN(debug, WiFi.localIP());
-    String ip_str = WiFi.localIP().toString(); 
+    DEBUG_PRINT(debug, F("[Info] wifi 连接成功，设备 IP 地址: "));
+    DEBUG_PRINT(debug, WiFi.localIP());
+    DEBUG_PRINTLN(debug, F("(与硬件连接同一wifi方可访问)\n"));
+    String ip_str = WiFi.localIP().toString();
     if (onConnectedWifiCb != nullptr)
-    { 
+    {
         onConnectedWifiCb(ip_str);
     }
 
@@ -229,28 +291,59 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             DEBUG_PRINTLN(debug, ("[Error] Failed to start I2S!"));
         }
     }
- 
-    speaker_i2s_setup(); 
-    
-    bool get_server_success = get_server_config(); 
-    if(get_server_success == false){
-        DEBUG_PRINTLN(debug, ("[Error] 服务配置获取失败!"));
-        return;
-    } 
+
+    speaker_i2s_setup();
+
+    // 如果用户制定了服务地址，那就不使用开放平台了, 因为默认是 "node.espai.fun"
+    if (String(server_config.ip) != "node.espai.fun")
+    {
+        bool get_server_success = get_server_config();
+        if (get_server_success == false)
+        {
+            DEBUG_PRINTLN(debug, ("[Error] 服务配置获取失败!"));
+            return;
+        }
+    }
 
     // 为方便更改，在局域网也建立服务
-    web_server_init();  
-    webSocket.begin(
-        server_config.ip,
-        server_config.port,
-        "/?v=" + ESP_AI_VERSION +
-            "&device_id=" + loc_device_id +
-            "&api_key=" + loc_api_key +
-            "&ext1=" + loc_ext1 +
-            "&ext2=" + loc_ext2 +
-            "&" + server_config.params);
+    web_server_init();
 
-    webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	webSocket.setReconnectInterval(3000);
-	webSocket.enableHeartbeat(10000, 15000, 0);
+    // 获取硬件的定位信息
+    get_position();
+
+    // ws 服务
+    if (String(server_config.protocol) == "https")
+    {
+        esp_ai_webSocket.beginSSL(
+            server_config.ip,
+            server_config.port,
+            String(server_config.path) + "/?v=" + ESP_AI_VERSION +
+                "&device_id=" + loc_device_id +
+                "&api_key=" + loc_api_key +
+                "&ext1=" + loc_ext1 +
+                "&ext2=" + loc_ext2 +
+                "&ext3=" + loc_ext3 +
+                "&ext4=" + loc_ext4 +
+                "&ext5=" + loc_ext5 +
+                "&" + server_config.params);
+    }
+    else
+    {
+        esp_ai_webSocket.begin(
+            server_config.ip,
+            server_config.port,
+            String(server_config.path) + "/?v=" + ESP_AI_VERSION +
+                "&device_id=" + loc_device_id +
+                "&api_key=" + loc_api_key +
+                "&ext1=" + loc_ext1 +
+                "&ext2=" + loc_ext2 +
+                "&ext3=" + loc_ext3 +
+                "&ext4=" + loc_ext4 +
+                "&ext5=" + loc_ext5 +
+                "&" + server_config.params);
+    }
+
+    esp_ai_webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    esp_ai_webSocket.setReconnectInterval(3000);
+    esp_ai_webSocket.enableHeartbeat(5000, 10000, 0);
 }

@@ -23,16 +23,16 @@
  * @websit https://espai.fun
  */
  
-const play_temp = require(`../../audio_temp/play_temp`); 
 const { tts_info } = require("../../utils/log");
 async function fn({ device_id, session_id: r_session_id = '', sid = '' }) {
     const { devLog } = G_config;
-    const { session_id = '', ws: ws_client, start_iat } = G_devices.get(device_id);
-     
+    if (!G_devices.get(device_id)) return;
+    const { session_id = '', du, start_iat } = G_devices.get(device_id);
+
     devLog && tts_info(`-> 收到客户端[${device_id}] LLM 播放完毕, r_session_id: ${r_session_id} c_session_id: ${session_id} sid: ${sid}`);
     if (r_session_id === session_id && sid === "2000") {
-        start_iat(async () => {
-            await play_temp("du.pcm", ws_client, 0.8, 24);
+        start_iat(async () => { 
+            await du();
         });
     }
 }

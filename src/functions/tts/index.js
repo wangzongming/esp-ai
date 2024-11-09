@@ -21,11 +21,12 @@
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
- */
-const play_temp = require(`../../audio_temp/play_temp`);
+ */ 
 const log = require("../../utils/log");
-const delay = require("../../utils/delay");
+// const delay = require("../../utils/delay");
 const createUUID = require("../../utils/createUUID");
+
+let index = 0;
 
 /**
  * @param {Buffer}    is_over       是否完毕
@@ -37,14 +38,30 @@ const createUUID = require("../../utils/createUUID");
 async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecord, session_id, text_is_over, need_record }) {
     try {
         const { devLog, onTTScb } = G_config;
-        const { ws: ws_client, tts_list, add_audio_out_over_queue, session_id: now_session_id } = G_devices.get(device_id);
+        if (!G_devices.get(device_id)) return;
+        const {
+            ws: ws_client, tts_list, add_audio_out_over_queue, session_id: now_session_id, du
+        } = G_devices.get(device_id);
         if (session_id && session_id !== now_session_id) return;
 
 
-        onTTScb && onTTScb({ device_id, is_over, audio, ws: ws_client });
+        onTTScb && onTTScb({ 
+            device_id, 
+            is_over, 
+            audio, 
+            ws: ws_client,
+            instance: G_Instance,
+            sendToClient: ()=>  ws_client && ws_client.send(JSON.stringify({ 
+                type: "instruct", 
+                command_id: "on_tts_cb",
+                data: audio.toString('base64')
+            })) 
+         });
         if (!resolve) {
             log.error('TTS 插件中，调用 cb 时 resolve 参数不能为空');
         }
+
+        ws_client.isAlive = true;
 
         const send_end_flag = () => {
             if (text_is_over) {
@@ -52,6 +69,11 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
                 devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${sid}`);
                 const endFlagBuf = Buffer.from(sid, 'utf-8');
                 ws_client.send(endFlagBuf);
+
+                ws_client && ws_client.send(JSON.stringify({
+                    type: "session_status",
+                    status: "tts_real_end",
+                }));
             }
         }
         /**
@@ -60,19 +82,25 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
          * 3. 本任务完成
         */
         if (is_over) {
-            devLog && log.tts_info('-> TTS 转换完毕');
+            devLog && log.tts_info('-> TTS 转换完毕: ', audio.length);
             ws.close && ws.close()
             tts_list.delete(tts_task_id)
 
             async function overToDo() {
+                if (!G_devices.get(device_id)) return;
                 const { ws: ws_client, start_iat } = G_devices.get(device_id);
                 if (reRecord) {
                     add_audio_out_over_queue("warning_tone", () => {
                         start_iat && start_iat();
                         resolve(true);
-                    })
-                    await play_temp("du.pcm", ws_client, 0.8, 24);
+                    })  
+                    await du();  
                 } else {
+                    G_devices.set(device_id, {
+                        ...G_devices.get(device_id),
+                        stoped: true,
+                    })
+
                     resolve(true);
                 }
             }
@@ -85,15 +113,15 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             }
         }
 
-        // let c_l = G_max_audio_chunk_size * 2;
         let c_l = G_max_audio_chunk_size;
-        // let c_l = 512;
         const alen = audio.length;
         for (let i = 0; i < audio.length; i += c_l) {
-            // if(i > 10){
-            //     c_l = G_max_audio_chunk_size / 2;
+            if (!G_devices.get(device_id)) return;
+            // if (i === 0) {
+            //     c_l = c_l * 2;
             // }
-            const { session_id: now_session_id } = G_devices.get(device_id);
+            const { session_id: now_session_id, useed_flow } = G_devices.get(device_id);
+            // if(stoped) return;
             if (session_id && now_session_id !== session_id) {
                 log.t_info("用户终止流")
                 break;
@@ -110,50 +138,20 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             const _session_id = session_id ? `${session_id}` : "0000";
             const sessionIdBuffer = Buffer.from(_session_id, 'utf-8');
             const combinedBuffer = Buffer.concat([sessionIdBuffer, chunk]);
-            // console.log(combinedBuffer.length)
+            // console.log('chunk length', combinedBuffer.length)
             ws_client.send(combinedBuffer);
+ 
+
             if (is_over && (end >= alen)) {
                 ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
                 send_end_flag();
             }
+            index++;
         }
-
-
-        // ing...  
-        // session_id
-        // const _session_id = session_id ? `${session_id}` : "0000";
-        // const session_id_buffer = Buffer.from(_session_id, 'utf-8');
-        // let c_l = G_max_audio_chunk_size * 2;
-        // for (let i = 0; i < audio.length; i += c_l) { 
-        //     const { tts_buffer_chunk_queue, tts_buffer_chunk_queue_run, tts_buffer_chunk_send_ing, session_id: now_session_id } = G_devices.get(device_id);
-        //     if (session_id && now_session_id !== session_id) {
-        //         G_devices.set(device_id, {
-        //             ...G_devices.get(device_id),
-        //             tts_buffer_chunk_queue: []
-        //         })
-        //         break;
-        //     }
-
-        //     const end = Math.min(i + c_l, audio.length);
-        //     const chunk = audio.slice(i, end);
-        //     if (!(Buffer.isBuffer(chunk))) {
-        //         log.t_info(`跳过无效 chunk: ${i}`);
-        //         continue;
-        //     } 
-        //     tts_buffer_chunk_queue.push(chunk); 
-        //     G_devices.set(device_id, {
-        //         ...G_devices.get(device_id),
-        //         tts_buffer_chunk_queue: tts_buffer_chunk_queue
-        //     }) 
-
-        //     if (ws_client.bufferedAmount < G_max_buffered_amount) {  
-        //         tts_buffer_chunk_queue_run({ session_id, send_end_flag, session_id_buffer, is_over, text_is_over });
-        //     }
-        // }
-
+ 
     } catch (err) {
         console.log(err);
-        log.error(`TTS 回调错误： ${err}`)
+        log.error(`[${device_id}] TTS 回调错误： ${err}`)
     }
 
 
@@ -178,7 +176,7 @@ module.exports = (device_id, opts) => {
         const plugin = plugins.find(item => item.name == tts_server && item.type === "TTS")?.main;
 
         const TTS_FN = plugin || require(`./${tts_server}`);
-        if (!text) {
+        if (!text || !(`${text}`.replace(/\s/g, ''))) {
             return true;
         }
         devLog && log.info("");
@@ -186,6 +184,7 @@ module.exports = (device_id, opts) => {
 
         // 开始播放直接先让 esp32 暂停采集音频，不然处理不过来
         if (pauseInputAudio) {
+            if (!G_devices.get(device_id)) return;
             ws_client && ws_client.send("pause_voice");
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -196,13 +195,67 @@ module.exports = (device_id, opts) => {
         // 任务ID
         const tts_task_id = createUUID();
         onAudioOutOver && add_audio_out_over_queue(tts_task_id, onAudioOutOver)
-        onTTS && onTTS({ device_id, tts_task_id, ws: ws_client, text, text_is_over });
+        onTTS && onTTS({ 
+            device_id, tts_task_id, 
+            ws: ws_client, 
+            text, 
+            text_is_over,
+            instance: G_Instance,
+            sendToClient: ()=>  ws_client && ws_client.send(JSON.stringify({ 
+                type: "instruct", 
+                command_id: "on_tts",
+                data:  text
+            })) 
+        });
 
         /**
          * 记录 tts 服务对象
         */
         const logWSServer = (wsServer) => {
             tts_list.set(tts_task_id, wsServer)
+        }
+
+        /**
+         * 开始连接 tts 服务的回调
+         */
+        const connectServerBeforeCb = () => {
+            if (!G_devices.get(device_id)) return; 
+            // console.time("TTS 服务连接时间：")
+            G_devices.set(device_id, {
+                ...G_devices.get(device_id),
+                tts_server_connect_ing: true,
+            })
+        }
+
+        /**
+        * 连接 tts 服务后的回调
+        */
+        const connectServerCb = (connected) => { 
+            if (connected) {
+                if (!G_devices.get(device_id)) return;
+                // console.timeEnd("TTS 服务连接时间：")
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    tts_server_connected: true,
+                    tts_server_connect_ing: false,
+                })
+
+                ws_client && ws_client.send(JSON.stringify({
+                    type: "session_status",
+                    status: "tts_chunk_start",
+                }));
+            } else {
+                if (!G_devices.get(device_id)) return;
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    tts_server_connected: false,
+                    tts_server_connect_ing: false,
+                })
+                ws_client && ws_client.send(JSON.stringify({
+                    type: "session_status",
+                    status: "tts_chunk_end",
+                }));
+            }
         }
 
         /**
@@ -213,8 +266,7 @@ module.exports = (device_id, opts) => {
             tts_list.delete(tts_task_id)
             log.error(err)
         }
-
-
+  
         ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
         return TTS_FN({
             text,
@@ -226,7 +278,9 @@ module.exports = (device_id, opts) => {
             iat_server, llm_server, tts_server,
             cb: (arg) => cb({ ...arg, tts_task_id, device_id, reRecord, session_id, text_is_over, need_record }),
             logWSServer,
-            ttsServerErrorCb
+            ttsServerErrorCb,
+            connectServerBeforeCb,
+            connectServerCb,
         })
     } catch (err) {
         console.log(err);

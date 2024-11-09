@@ -32,3 +32,13 @@ void ESP_AI::onNetStatus(void (*func)(String status))
     onNetStatusCb = func;
 }
 
+
+// void ESP_AI::onNetStatus(std::function<void(String)> func) {
+//     onNetStatusCb = [func](String status) {
+//         func(status);  // Call the original function
+//         // Add additional logic here
+//         // For example, logging or updating other states
+//         Serial.println("---收到状态---------");
+//         Serial.println(status); 
+//     };
+// }

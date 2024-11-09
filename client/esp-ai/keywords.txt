@@ -10,10 +10,16 @@ onError    KEYWORD2
 onAPInfo   KEYWORD2
 onConnectedWifi   KEYWORD2
 onNetStatus KEYWORD2
+onPosition KEYWORD2
 wifiIsConnected    KEYWORD2 
 setWifiConfig    KEYWORD2 
 wakeUp     KEYWORD2 
 localIP    KEYWORD2 
+setLocalData KEYWORD2
+getLocalData KEYWORD2
+clear_config KEYWORD2
+stopSession KEYWORD2
+tts KEYWORD2
  
  
 #constant (LITERAL1)

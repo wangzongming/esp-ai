@@ -25,6 +25,7 @@
 
 const log = require("./utils/log");
 const package = require("../package.json");
+const EspAiInstance = require("./instance");
 
 global.G_config = {};
 const LOGO = `  
@@ -72,11 +73,15 @@ function main(config = {}) {
          * }]
         */
         global.G_devices = new Map();
+        const Instance = new EspAiInstance()
+        global.G_Instance = Instance;
 
         const init_server = require("./functions/init_server")
         const _config = IS_DEV ? require("./config_dev") : require("./config")
         // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
-        global.G_max_audio_chunk_size = 2048;  
+        // global.G_max_audio_chunk_size = 1024 * 2; // 2048 在对话里面是最合适的
+        global.G_max_audio_chunk_size = 1024; // mp3 格式  
+        // global.G_max_audio_chunk_size = 4096; 
         global.G_max_buffered_amount = 1024 * 4;  
         
         global.G_ws_server = null;
@@ -86,6 +91,8 @@ function main(config = {}) {
         log.info(`服务插件：${G_config.plugins ? G_config.plugins.map(item=> item.name).join(" | ") : "-"}`); 
  
         G_ws_server = init_server();
+
+        return Instance
     } catch (err) {
         console.log(err);
         log.error(`服务运行失败。`);

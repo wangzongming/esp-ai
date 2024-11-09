@@ -33,6 +33,8 @@ const config = {
     */
     devLog: 1,
 
+    llm_qa_number: 5,
+
     /**
      * 为了保证服务的灵活，所以 IAT/TTS/LLM 都需要分别配置key。 哪怕都用的讯飞，也需要分别配置。
      * IAT 语音识别服务、TTS服务、LLM 服务的提供方, 默认为 xun_fei

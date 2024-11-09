@@ -6,9 +6,72 @@
     <meta name='viewport'
         content='viewport-fit=cover,width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no' />
     <title>ESP-AI 配网</title>
+    <style>
+        #ssid {
+            border-radius: 3px;
+            font-size: 14px;
+            padding: 12px 12px;
+            box-sizing: border-box;
+            border: 1px solid #cfcfcf;
+            outline: none;
+            width: 100%;
+        }
+
+        #loading {
+            position: fixed;
+            z-index: 2;
+            top: 0px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
+            background-color: rgba(51, 51, 51, 0.8);
+            text-align: center;
+            color: #fff;
+            font-size: 22px;
+            transition: 0.3s;
+        }
+
+        #loading .icon {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #09aba2;
+            border-bottom: 16px solid #40cea5;
+            width: 120px;
+            height: 120px;
+            margin: auto;
+            position: absolute;
+            bottom: 0px;
+            top: 0px;
+            left: 0px;
+            right: 0px;
+            -webkit-animation: spin 2s linear infinite;
+            animation: spin 2s linear infinite;
+        }
+
+        @-webkit-keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+            }
+
+            100% {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 
-<body style='margin: 0;font-size: 16px; color: #333;height: 80vh;position: relative;font-family: 苹方,黑体;overflow: hidden;'> 
+<body
+    style='margin: 0;font-size: 16px; color: #333;height: 80vh;position: relative;font-family: 苹方,黑体;overflow: hidden;'>
     <div style='height: 100%;display: flex;flex-direction: column; justify-content: center;align-items: center;'
         id='wifi_setting_panel'>
         <div style='padding-bottom: 18px;text-align: center;'>
@@ -20,8 +83,9 @@
         </div>
 
         <div style='width: 100%;padding: 8px 24px;box-sizing: border-box;'>
-            <input id='ssid' name='ssid' type='text' placeholder='请输入WIFI账号，仅支持2.4GHZ频段WIFI'
-                style='border-radius: 3px;font-size:14px;padding: 12px 12px;box-sizing: border-box;border: 1px solid #cfcfcf;outline: none;width:100%;'>
+            <select id='ssid' style='background: #fff;padding-right: 20px;' placeholder='请选择 wifi'>
+                <option value='' id='scan-ing'>网络扫描中...</option>
+            </select>
         </div>
         <div style='width: 100%;padding: 8px 24px;box-sizing: border-box;'>
             <input id='password' name='password' type='text' placeholder='请输入WIFI密码'
@@ -32,44 +96,94 @@
                 style='border-radius: 3px;font-size:14px;padding: 12px 12px;box-sizing: border-box;border: 1px solid #cfcfcf;outline: none;width:100%;'>
         </div>
         <div style='width: 100%;text-align: right; padding: 6px 24px; padding-bottom: 32px; box-sizing: border-box;'>
-            <button id='submit-btn'  
+            <button id='submit-btn'
                 style='width:100% ; box-sizing: border-box; border-radius: 3px; padding: 16px 0px;border: none;color: #fff;background-color: transparent; color:#fff; background: linear-gradient(45deg, #40cea5, #09aba2); box-shadow: 0px 0px 3px #ccc;letter-spacing: 2px;'>连接WIFI</button>
-        </div> 
+        </div>
         <div style='font-size: 13px;position: fixed;bottom: 12px;color:#929292'>
             设备编码：<span id='device_id'> - </span>
-        </div> 
+        </div>
+    </div>
+    <div id='loading'>
+        <div class='icon'></div>
     </div>
 </body>
 
 </html>
 
 <script>
-    // var domain = 'http://192.168.4.1';
     var domain = ''; 
-
+    var scan_time = null;
     var loading = false;
     function myFetch(apiName, params, cb) {
         fetch(domain + apiName, { mode: 'cors' })
             .then(function (res) { return res.json() })
-            .then(function (data) { 
+            .then(function (data) {
                 cb && cb(data);
             })
     };
 
-    function refreshInfo() {
+    function get_config() {
         myFetch('/get_config', {}, function (res) {
             console.log('wifi信息：', res);
-            if (res.success) { 
+            document.querySelector('#loading').style.display = 'none';
+            if (res.success) {
                 var data = res.data;
                 document.querySelector('#ssid').value = data.wifi_name;
                 document.querySelector('#password').value = data.wifi_pwd;
-                document.querySelector('#api_key').value = data.api_key; 
-                document.querySelector('#device_id').innerHTML = data.device_id;  
+                document.querySelector('#api_key').value = data.api_key;
+                document.querySelector('#device_id').innerHTML = data.device_id;
             } else {
                 alert('获取配置失败, 请刷新页面重试');
             }
         });
-    };
+    }
+
+    function start_scan_ssids() {
+        myFetch('/start_scan_ssids', {}, function (res) {
+            if (res.success) {
+                setTimeout(function () {
+                    scan_time = setInterval(function () {
+                        scan_ssids();
+                    }, 1000);
+                }, 4000);
+            } else {
+                alert('启动网络扫描失败，请刷新页面重试');
+            }
+        });
+    }
+
+    function scan_ssids() {
+        console.log('获取 wifi');
+        myFetch('/scan_ssids', {}, function (res) {
+            if (res.success) {
+                var data = res.data || [];
+                if (data.length > 0) {
+                    document.querySelector('#scan-ing').innerHTML = '请选择wifi...';
+                };
+                var selectDom = document.getElementById('ssid');
+                var options = selectDom.getElementsByTagName('option') || [];
+                var optionsName = [];
+                for (var i = 0; i < options.length; i++) {
+                    optionsName.push(options[i].getAttribute('value'));
+                };
+                data.forEach(function (item) {
+                    if (item.ssid && !optionsName.includes(item.ssid)) {
+                        var option = document.createElement('option'); 
+                        option.innerText = item.ssid + '     ('+ (item.channel <= 14 ? '2.4GHz' : '5GHz') +' 信道：'+item.channel+')';
+                        option.setAttribute('value', item.ssid);   
+                        selectDom.appendChild(option);
+                    }
+                });
+                if (data.length) {
+                    get_config();
+                    clearInterval(scan_time);
+                };
+            } else {
+                alert('启动网络扫描失败，请刷新页面重试');
+            }
+        });
+    }
+
 
     function setWifiInfo() {
         if (loading) {
@@ -85,17 +199,19 @@
         if (!wifi_pwd) {
             alert('请输入 WIFI 密码哦~');
             return;
-        } 
+        }
         loading = true;
         document.querySelector('#submit-btn').innerHTML = '配网中...';
         clearTimeout(window.reloadTimer);
-        window.reloadTimer = setTimeout(function(){
-            alert('配网失败，即将重启设备，请刷新页面重新配网。');
-            window.location.reload();
-        }, 9000);
+        window.reloadTimer = setTimeout(function () {
+            alert('未知配网状态，即将重启设备');
+            setTimeout(function () {
+                window.location.reload();
+            }, 2000);
+        }, 20000);
         myFetch(
-            '/set_config?wifi_name=' + wifi_name + 
-            '&wifi_pwd=' + wifi_pwd +
+            '/set_config?wifi_name=' + encodeURIComponent(wifi_name) +
+            '&wifi_pwd=' + encodeURIComponent(wifi_pwd) +
             '&api_key=' + api_key,
             {},
             function (res) {
@@ -103,9 +219,10 @@
                 loading = false;
                 document.querySelector('#submit-btn').innerHTML = '连接WIFI';
                 if (res.success) {
-                    alert('配网成功，即将重启设备，关闭本页面即可。'); 
+                    alert(res.message);
+                    window.close();
                 } else {
-                    alert('配网失败，请检查账号密码是否正确');
+                    alert(res.message);
                 }
             }
         );
@@ -113,8 +230,8 @@
 
 
     window.onload = function () {
-        refreshInfo();
+        start_scan_ssids();
+        
         document.querySelector('#submit-btn').addEventListener('click', setWifiInfo);
     }
-</script> 
- 
+</script>

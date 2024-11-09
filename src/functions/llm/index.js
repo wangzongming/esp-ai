@@ -23,59 +23,75 @@
  * @websit https://espai.fun
  */
 
-const max_his = 20 * 1;
-const play_temp = require(`../../audio_temp/play_temp`);
 const log = require("../../utils/log");
 const delay = require("../../utils/delay");
 
 /**
  * 接下来的 session_id 都当前形参为准
 */
-async function cb(device_id, { text, is_over, texts, session_id, shouldClose }) {
+async function cb(device_id, { text, is_over, texts, chunk_text, session_id, shouldClose }) {
     try {
-        const { devLog, onLLMcb } = G_config;
+        const { devLog, onLLMcb, llm_qa_number } = G_config;
+        if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../tts`);
-        const {
-            llm_historys = [], ws: ws_client, start_iat, llm_ws, await_out_tts, await_out_tts_run, add_audio_out_over_queue,
-            // user_config: { llm_server }
-        } = G_devices.get(device_id);
+        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue, stoped } = G_devices.get(device_id);
+        // if(stoped) return;
         if (!texts.index) {
             texts.index = 0;
         }
-        onLLMcb && onLLMcb({ device_id, text, is_over, llm_historys, ws: ws_client });
+
+
+        onLLMcb && onLLMcb({
+            device_id,
+            text: chunk_text,
+            is_over, llm_historys, ws: ws_client,
+            instance: G_Instance,
+            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+                type: "instruct",
+                command_id: "on_llm_cb",
+                data: chunk_text
+            }))
+        });
+
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少 
-        const notPlayText = texts.count_text.substr(texts.all_text.length) 
+        const notPlayText = texts.count_text.substr(texts.all_text.length);
+
         if (is_over) {
             devLog && log.llm_info('-> LLM 推理完毕');
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0) 
-            
-            if (ttsText) {
-                await_out_tts.push(async () => {
-                    if(shouldClose) return;
-                    await TTS_FN(device_id, {
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0)
+
+            const textNowNull = ttsText.replace(/\s/g, '') !== "";
+            // console.log('llm 结束: ', textNowNull, ttsText);
+            if (textNowNull) {
+                // 添加音频播放任务
+                tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
+                    const tts_res = await TTS_FN(device_id, {
                         text: ttsText,
-                        reRecord: false,
                         pauseInputAudio: true,
                         session_id,
                         text_is_over: true,
                         need_record: true
                     })
+                    return tts_res;
                 })
                 texts.all_text += org_text;
-                await_out_tts_run();
-                G_devices.set(device_id, {
-                    ...G_devices.get(device_id),
-                    await_out_tts_ing: true
+            } else {
+                // 特殊结束任务
+                tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
+                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: 2000`);
+                    const endFlagBuf = Buffer.from("2000", 'utf-8');
+                    ws_client.send(endFlagBuf);
+
+                    ws_client && ws_client.send(JSON.stringify({
+                        type: "session_status",
+                        status: "tts_real_end",
+                    }));
+                    return true;
                 })
-            }else{  
-                devLog && log.tts_info(`-> 服务端发送LLM结束的标志流: 2000`);
-                const endFlagBuf = Buffer.from("2000", 'utf-8');
-                ws_client.send(endFlagBuf);
             }
- 
 
             // 所有 LLM 用下面的 key 为准
             llm_historys.push(
@@ -83,41 +99,47 @@ async function cb(device_id, { text, is_over, texts, session_id, shouldClose }) 
                 { "role": "assistant", "content": texts.all_text }
             );
 
-            llm_historys.length > max_his && llm_historys.shift();
+            if (llm_historys.length > (llm_qa_number * 2)) {
+                llm_historys.shift();
+                llm_historys.shift();
+            }
 
+            if (!G_devices.get(device_id)) return;
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 llm_historys,
-                llm_ws: null
+                llm_ws: null,
+                // llm 推理状态
+                llm_inference_ing: false
             })
+            ws_client && ws_client.send(JSON.stringify({
+                type: "session_status",
+                status: "llm_end",
+            }));
         }
         else {
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index)
             if (ttsText) {
-                // log.llm_info('客户端播放：', ttsText); 
+                // log.llm_info('客户端播放1：', ttsText);
                 texts.all_text += org_text;
                 texts.index += 1;
-                await_out_tts.push(async () => {
-                    await TTS_FN(device_id, {
+
+                // 添加任务
+                tts_buffer_chunk_queue.push(() => {
+                    return TTS_FN(device_id, {
                         text: ttsText,
-                        reRecord: false,
                         pauseInputAudio: true,
                         session_id,
                         text_is_over: false,
-                        need_record: true
+                        need_record: false
                     })
                 })
-                await_out_tts_run();
-                G_devices.set(device_id, {
-                    ...G_devices.get(device_id),
-                    await_out_tts_ing: true
-                })
-            } 
+            }
 
         }
     } catch (err) {
         console.log(err);
-        log.error(`LLM 回调错误： ${err}`)
+        log.error(`[${device_id}] LLM 回调错误： ${err}`)
     }
 
 
@@ -130,22 +152,43 @@ async function cb(device_id, { text, is_over, texts, session_id, shouldClose }) 
  *  2. 一些特殊符号不用念出来
 */
 function extractBeforeLastPunctuation(str, isLast, index) {
-    const matches = [...str.matchAll(/[\.,;!?)>"‘。、，；！？》）”’]/g)];
+    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
+    const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
+    const matches = [...str.matchAll(punctuationRegex)];
+ 
+    // const combinedRegex = /([.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?|[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F680}-\u{1F6C0}])/ug;
+    // const matches = [...str.matchAll(combinedRegex)];
+
     if (!isLast && matches.length === 0) return {};
     const notSpeek = /[\*|\\n]/g;
-
     // 获取最后一个匹配的标点符号的索引
     const lastIndex = matches[matches.length - 1]?.index;
-    if (lastIndex == null) return {};
+    if (lastIndex || lastIndex === 0) {
+        const res = str.substring(0, lastIndex + 1);
+        // 这里是否考虑提供配置让用户决策
+        // const min_len = index === 1 ? 10 : Math.min(index * 50, 500);
+        const min_len = index === 1 ? 10 : Math.min(index * 30, 300);
+        if ((res.length < min_len) && !isLast) {
+            return {}
+        }
+        let speak_text = res.length > 0 ? res.replace(notSpeek, '') : "";
+        return { speak_text, org_text: res }
+    } else {
+        if (!isLast) {
+            return {};
+        }
+        // 如果没有找到标点符号，并且是最后一段文字，则返回整个字符串
+        const notSpeak = /[\*|\\n]/g;
+        // 表情符号目前还没有好的方式去处理...
+        const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
 
-    const res = str.substring(0, lastIndex + 1);
-    const min_len = index === 1 ? 10 : Math.min(index * 50, 500);
-    if ((res.length < min_len) && !isLast) {
-        return {}
+        let speakText = str.replace(notSpeak, '').replace(emojiRegex, '');
+        return { speak_text: speakText, org_text: str };
     }
-    let speak_text = res.length > 0 ? res.replace(notSpeek, '') : "";
-    return { speak_text, org_text: res }
+
+
 }
+
 module.exports = (device_id, opts) => {
     try {
         const TTS_FN = require(`../tts`);
@@ -164,7 +207,17 @@ module.exports = (device_id, opts) => {
         devLog && log.llm_info('=== 开始请求 LLM 输入: ', text, " ===");
 
         LLM_FN = plugin || require(`./${llm_server}`);
-        onLLM && onLLM({ device_id, text, ws: ws_client });
+        onLLM && onLLM({
+            device_id,
+            text,
+            ws: ws_client,
+            instance: G_Instance,
+            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+                type: "instruct",
+                command_id: "on_llm",
+                data: text
+            }))
+        });
 
         /**
          * llm 服务发生错误时调用
@@ -194,6 +247,40 @@ module.exports = (device_id, opts) => {
             })
         }
 
+
+        /**
+         * 开始连接 llm 服务的回调
+        */
+        const connectServerBeforeCb = () => {
+            if (!G_devices.get(device_id)) return;
+            G_devices.set(device_id, {
+                ...G_devices.get(device_id),
+                llm_server_connect_ing: true,
+            })
+        }
+
+
+        /**
+         * 连接 llm 服务后的回调
+        */
+        const connectServerCb = (connected) => {
+            if (connected) {
+                if (!G_devices.get(device_id)) return;
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    llm_server_connected: true,
+                    llm_server_connect_ing: false,
+                })
+            } else {
+                if (!G_devices.get(device_id)) return;
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    llm_server_connected: false,
+                    llm_server_connect_ing: false,
+                })
+            }
+        }
+
         if (devLog) {
             llm_historys.length && log.llm_info(`----------------------对话记录---------------------------`)
             for (let i = 0; i < llm_historys.length; i++) {
@@ -215,6 +302,8 @@ module.exports = (device_id, opts) => {
             iat_server, llm_server, tts_server,
             logWSServer,
             llmServerErrorCb,
+            connectServerBeforeCb,
+            connectServerCb,
             cb: (args) => cb(device_id, { ...args, session_id })
         })
     } catch (err) {

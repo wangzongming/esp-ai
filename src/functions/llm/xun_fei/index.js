@@ -36,7 +36,9 @@ const log = require("../../../utils/log");
  * @param {String}      llm_server          用户配置的 llm 服务 
  * @param {String}      tts_server          用户配置的 tts 服务 
  * @param {String}      text                对话文本
- * @param {Function}    cb                  LLM 服务返回音频数据时调用，eg: cb({ text, texts })
+ * @param {Function}    connectServerBeforeCb 连接 LLM 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
+ * @param {Function}    connectServerCb     连接 LLM 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
+ * @param {Function}    cb                  LLM 服务返回音频数据时调用，eg: cb({  count_text, text, texts })
  * @param {Function}    llmServerErrorCb    与 LLM 服务之间发生错误时调用，并且传入错误说明，eg: llmServerErrorCb("意外错误")
  * @param {Function}    llm_params_set      用户配置的设置 LLM 参数的函数
  * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> { 中断逻辑... } })
@@ -45,7 +47,7 @@ const log = require("../../../utils/log");
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.llm_info("llm 专属信息")
  *  
 */
-function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_server, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer }) {
+function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_server, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
     try {
         const { llm, appid, apiSecret, apiKey, ...other_config } = llm_config;
         if (!apiKey) return log.error(`请配给 LLM 配置 apiKey 参数。`)
@@ -60,15 +62,17 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
             all_text: "",
             count_text: "",
         }
-
+        connectServerBeforeCb();
         const llm_ws = new WebSocket(getServerURL("LLM", { appid, apiSecret, apiKey, llm, iat_server, llm_server, tts_server, }));
         logWSServer({
             close: () => {
+                connectServerCb(false);
                 shouldClose = true;
                 llm_ws.close(1000, 'Normal closure');
             }
         })
         llm_ws.on('open', () => {
+            connectServerCb(true);
             devLog && log.llm_info("-> llm 服务连接成功！")
             texts["all_text"] = "";
             texts["count_text"] = "";
@@ -86,17 +90,20 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
             if (jsonData.header.code !== 0) {
                 llmServerErrorCb(device_id, "LLM 数据返回错误！")
                 log.llm_info('提问失败: ', JSON.stringify(jsonData))
+                connectServerCb(false);
                 return
             }
             const chunk_text = jsonData.payload.choices.text[0]["content"];
             devLog === 2 && log.llm_info('LLM 输出 ：', chunk_text);
+            // log.llm_info('LLM 输出 ：', chunk_text);
             texts["count_text"] += chunk_text;
 
             cb({
                 text,
                 is_over: jsonData.header.code === 0 && jsonData.header.status === 2,
                 texts,
-                shouldClose
+                shouldClose,
+                chunk_text: chunk_text 
             })
 
         })
@@ -105,10 +112,12 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
             if (shouldClose) return;
             // devLog && log.llm_info('\n===\n', texts["all_text"], '\n===\n')
             devLog && log.llm_info('LLM connect close!\n')
+            connectServerCb(false);
         })
 
         llm_ws.on('error', (err) => {
             llmServerErrorCb("llm websocket connect err: " + err)
+            connectServerCb(false);
         })
 
         function send() {
@@ -150,6 +159,7 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
     } catch (err) {
         console.log(err);
         log.error("讯飞 LLM 插件错误：", err)
+        connectServerCb(false);
     }
 
 }
