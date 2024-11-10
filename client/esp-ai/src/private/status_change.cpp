@@ -26,8 +26,8 @@
 
 void ESP_AI::status_change(String status)
 {
-    Serial.print("===================收到状态：");
-    Serial.println(status);
+    // Serial.print("===================收到状态：");
+    // Serial.println(status);
     if (status == "iat_start")
     {
         esp_ai_pixels.clear();
