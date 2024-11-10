@@ -21,7 +21,7 @@
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
- */ 
+ */
 const log = require("../../utils/log");
 // const delay = require("../../utils/delay");
 const createUUID = require("../../utils/createUUID");
@@ -35,7 +35,7 @@ let index = 0;
  * @param {WebSocket} ws            WebSocket 连接
  * @param {Function}  resolve       TTS 函数的 resolve 参数
 */
-async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecord, session_id, text_is_over, need_record }) {
+async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecord, session_id, text_is_over, need_record, frameOnTTScb, is_cache }) {
     try {
         const { devLog, onTTScb } = G_config;
         if (!G_devices.get(device_id)) return;
@@ -45,22 +45,23 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
         if (session_id && session_id !== now_session_id) return;
 
 
-        onTTScb && onTTScb({ 
-            device_id, 
-            is_over, 
-            audio, 
+        onTTScb && onTTScb({
+            device_id,
+            is_over,
+            audio,
             ws: ws_client,
             instance: G_Instance,
-            sendToClient: ()=>  ws_client && ws_client.send(JSON.stringify({ 
-                type: "instruct", 
+            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+                type: "instruct",
                 command_id: "on_tts_cb",
                 data: audio.toString('base64')
-            })) 
-         });
+            }))
+        });
+        frameOnTTScb && frameOnTTScb(audio, is_over);
+
         if (!resolve) {
             log.error('TTS 插件中，调用 cb 时 resolve 参数不能为空');
         }
-
         ws_client.isAlive = true;
 
         const send_end_flag = () => {
@@ -76,6 +77,10 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
                 }));
             }
         }
+        if(is_cache) {
+            send_end_flag();
+            return;
+        };
         /**
          * 1. TTS 转换完毕，并且发往客户端
          * 2. 客户端告知服务已经完成音频流播放
@@ -93,8 +98,8 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
                     add_audio_out_over_queue("warning_tone", () => {
                         start_iat && start_iat();
                         resolve(true);
-                    })  
-                    await du();  
+                    })
+                    await du();
                 } else {
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
@@ -140,7 +145,12 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             const combinedBuffer = Buffer.concat([sessionIdBuffer, chunk]);
             // console.log('chunk length', combinedBuffer.length)
             ws_client.send(combinedBuffer);
- 
+
+            // test... 
+            // G_devices.set(device_id, {
+            //     ...G_devices.get(device_id),
+            //     useed_flow: useed_flow + (combinedBuffer.length / 1024)
+            // })
 
             if (is_over && (end >= alen)) {
                 ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
@@ -148,7 +158,10 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             }
             index++;
         }
- 
+
+        // test... 
+        // const { useed_flow } = G_devices.get(device_id);
+        // console.log(`->>> 已发送：${useed_flow.toFixed(2)} kb`)
     } catch (err) {
         console.log(err);
         log.error(`[${device_id}] TTS 回调错误： ${err}`)
@@ -166,13 +179,15 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
  * @param {Boolean} session_id 会话id(这里绝不是从设备信息中取，设备信息会实时更新)
  * @param {Boolean} text_is_over 文本是否完整
  * @param {Boolean} need_record  是否需要重新识别，由客户端控制
+ * @param {Boolean} frameOnTTScb 上层要进行流监听时提供的回调
  * @return {Function} (pcm)=> Promise<Boolean>
+ * 
 */
 module.exports = (device_id, opts) => {
     try {
         const { devLog, plugins = [], tts_params_set, onTTS } = G_config;
         const { ws: ws_client, error_catch, tts_list, add_audio_out_over_queue, user_config: { iat_server, llm_server, tts_server, tts_config } } = G_devices.get(device_id);
-        const { text, pauseInputAudio, reRecord, onAudioOutOver, session_id, text_is_over = true, need_record = false } = opts;
+        const { text, pauseInputAudio, reRecord, onAudioOutOver, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache } = opts;
         const plugin = plugins.find(item => item.name == tts_server && item.type === "TTS")?.main;
 
         const TTS_FN = plugin || require(`./${tts_server}`);
@@ -195,18 +210,33 @@ module.exports = (device_id, opts) => {
         // 任务ID
         const tts_task_id = createUUID();
         onAudioOutOver && add_audio_out_over_queue(tts_task_id, onAudioOutOver)
-        onTTS && onTTS({ 
-            device_id, tts_task_id, 
-            ws: ws_client, 
-            text, 
+        onTTS && onTTS({
+            device_id, tts_task_id,
+            ws: ws_client,
+            text,
             text_is_over,
             instance: G_Instance,
-            sendToClient: ()=>  ws_client && ws_client.send(JSON.stringify({ 
-                type: "instruct", 
+            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+                type: "instruct",
                 command_id: "on_tts",
-                data:  text
-            })) 
+                data: text
+            }))
         });
+
+
+        const tts_cache_key = `${device_id}_${text}`;
+        const cache_TTS = G_get_cahce_TTS(tts_cache_key);
+        if (cache_TTS && !is_cache) {
+            console.log('使用缓存 TTS ')
+            return ()=> new Promise((resolve)=>{
+                cb({
+                    audio: cache_TTS,
+                    is_over: true,
+                    tts_task_id, device_id, reRecord, session_id, text_is_over, need_record, frameOnTTScb
+                })
+                resolve(true);
+            });
+        }
 
         /**
          * 记录 tts 服务对象
@@ -219,7 +249,7 @@ module.exports = (device_id, opts) => {
          * 开始连接 tts 服务的回调
          */
         const connectServerBeforeCb = () => {
-            if (!G_devices.get(device_id)) return; 
+            if (!G_devices.get(device_id)) return;
             // console.time("TTS 服务连接时间：")
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -230,7 +260,7 @@ module.exports = (device_id, opts) => {
         /**
         * 连接 tts 服务后的回调
         */
-        const connectServerCb = (connected) => { 
+        const connectServerCb = (connected) => {
             if (connected) {
                 if (!G_devices.get(device_id)) return;
                 // console.timeEnd("TTS 服务连接时间：")
@@ -266,7 +296,7 @@ module.exports = (device_id, opts) => {
             tts_list.delete(tts_task_id)
             log.error(err)
         }
-  
+
         ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
         return TTS_FN({
             text,
@@ -276,7 +306,7 @@ module.exports = (device_id, opts) => {
             tts_params_set,
             log,
             iat_server, llm_server, tts_server,
-            cb: (arg) => cb({ ...arg, tts_task_id, device_id, reRecord, session_id, text_is_over, need_record }),
+            cb: (arg) => cb({ ...arg, tts_task_id, device_id, reRecord, session_id, text_is_over, need_record, frameOnTTScb, is_cache }),
             logWSServer,
             ttsServerErrorCb,
             connectServerBeforeCb,

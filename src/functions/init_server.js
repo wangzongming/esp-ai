@@ -89,6 +89,8 @@ function init_server() {
                 tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id),
                 // 已输出流量 kb
                 useed_flow: 0,
+                // 是否处于 IAT 预备状态
+                iat_readiness: false
             });
 
             ws.isAlive = true;
@@ -147,7 +149,7 @@ function init_server() {
             });
 
             ws.on("pong", function () {
-                console.log("收到 pong")
+                // console.log("收到 pong")
                 this.isAlive = true;
             });
 

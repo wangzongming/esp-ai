@@ -25,7 +25,7 @@
 
 /**
  * 开始会话
-*/ 
+*/
 const { t_info, error } = require("../../utils/log");
 const isOutTimeErr = require("../../utils/isOutTimeErr");
 
@@ -33,7 +33,7 @@ async function fn({ device_id }) {
     try {
         const IAT_FN = require(`../iat`);
         const TTS_FN = require(`../tts`);
- 
+
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
             return;
@@ -43,10 +43,10 @@ async function fn({ device_id }) {
         const {
             ws, du,
             client_params,
-            first_session, 
-            user_config: { f_reply }, 
+            first_session,
+            user_config: { f_reply },
         } = G_devices.get(device_id);
-        if (auth) { 
+        if (auth) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
                 ws,
                 client_params: client_params,
@@ -62,21 +62,21 @@ async function fn({ device_id }) {
             if (!auth_success) {
                 ws.send(JSON.stringify({
                     type: "auth_fail",
-                    message: `${auth_message || "-"}`, 
+                    message: `${auth_message || "-"}`,
                     code: isOutTimeErr(auth_message) ? "007" : auth_code,
                 }));
                 // 防止大量失效用户重复请求
                 setTimeout(() => {
-                    ws.close(); 
+                    ws.close();
                 }, 5000)
                 return;
             };
         }
 
-        
-        await G_Instance.stop(device_id, "打断会话时");  
-        await G_Instance.newSession(device_id);  
-          
+
+        await G_Instance.stop(device_id, "打断会话时");
+        await G_Instance.newSession(device_id);
+
         const start_iat = (connect_cb) => {
             if (!G_devices.get(device_id)) return;
             G_devices.set(device_id, {
@@ -98,13 +98,19 @@ async function fn({ device_id }) {
             TTS_FN(device_id, {
                 text: f_reply || "您好",
                 pauseInputAudio: true,
-                text_is_over: true, 
+                text_is_over: true,
                 need_record: true,
             });
         } else {
-            start_iat(async () => { 
-                await du();
-            });
+            // start_iat(async () => { 
+            //     await du();
+            // });
+
+            G_devices.set(device_id, {
+                ...G_devices.get(device_id),
+                iat_readiness: true
+            })
+            await du(); 
         }
     } catch (err) {
         console.log(err);

@@ -31,9 +31,15 @@ async function fn({ device_id, session_id: r_session_id = '', sid = '' }) {
 
     devLog && tts_info(`-> 收到客户端[${device_id}] LLM 播放完毕, r_session_id: ${r_session_id} c_session_id: ${session_id} sid: ${sid}`);
     if (r_session_id === session_id && sid === "2000") {
-        start_iat(async () => { 
-            await du();
-        });
+        // start_iat(async () => { 
+        //     await du();
+        // }); 
+ 
+        G_devices.set(device_id, {
+            ...G_devices.get(device_id),
+            iat_readiness: true
+        })
+        await du(); 
     }
 }
 

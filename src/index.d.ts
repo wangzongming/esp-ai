@@ -106,6 +106,14 @@ export interface Config {
     */
     iatDu?: string;
 
+ 
+    /**
+     * 缓存 TTS 数量，根据自己的服务器能力来设置。 设置为 0 时，不开启 TTS 缓存
+     * 默认 1000
+    */
+    cache_TTS_number?: boolean;
+
+
     /**
      * llm 对话历史保留多少回合，一问一答为一回合，默认 5 回合，也就是 10 句问答
     */
@@ -235,7 +243,7 @@ export interface Config {
      *      esp_ai.onEvent(on_command);
      * }
     */
-    onIATcb?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: ()=> void }) => void;
+    onIATcb?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
 
     /**
     * iat 回调: 语音识别完毕的回调，可以在这里面发出最后一帧到语音识别服务器等操作，
@@ -265,8 +273,8 @@ export interface Config {
      *      esp_ai.onEvent(on_command);
      * }
     */
-    onTTS?: (arg: { device_id: string, tts_task_id: string, text: string, ws: WebSocket, sendToClient: ()=> void }) => void;
-    
+    onTTS?: (arg: { device_id: string, tts_task_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
+
     /**
      * TTS 转换完毕后的回调，注意：onTTScb是TTS转换后的回调，可以拿到音频流。onTTS是转换前的回调，只能拿到文字。
      * @param {string}   device_id       设备id
@@ -286,7 +294,7 @@ export interface Config {
      * }
      * 
     */
-    onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer, ws: WebSocket, sendToClient: ()=> void }) => void;
+    onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer, ws: WebSocket, sendToClient: () => void }) => void;
 
     /**
      * llm 服务调用前的回调 
@@ -306,8 +314,8 @@ export interface Config {
      *      esp_ai.onEvent(on_command);
      * }
      * 
-    */ 
-    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: ()=> void }) => void;
+    */
+    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
 
     /**
      * LLM 推理后的回调，拿到的文字是推理结果。
@@ -329,8 +337,8 @@ export interface Config {
      * }
      * 
     */
-    onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: ()=> void }) => void;
- 
+    onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void }) => void;
+
     /**
      * 插件
     */

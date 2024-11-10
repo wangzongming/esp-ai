@@ -63,7 +63,7 @@ async function cb({ device_id, text }) {
             ws_client && ws_client.send("session_end");
         }
     } catch (err) {
-        console.log(err);
+        console.log("IAT 回调错误：", err);
         log.error(`[${device_id}] IAT 回调错误： ${err}`)
     }
 }
@@ -224,7 +224,7 @@ module.exports = async (device_id, connected_cb) => {
             iatEndQueueCb
         })
     } catch (err) {
-        console.log(err);
+        console.log("IAT 错误：", err);
         log.error(`IAT 错误： ${err}`)
     }
 };

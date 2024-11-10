@@ -28,13 +28,14 @@
 */
 const { iat_info, error } = require("../../utils/log");
 
-// // 模拟音频测试压力 
+// 模拟音频测试压力 
 // const fs = require('fs');
 // const path = require('path');
-// // const writeStream = fs.createWriteStream(path.join(__dirname, './output.bin'));
-// const writeStream = fs.createWriteStream(path.join(__dirname, './output.mp3'));
+// const writeStream = fs.createWriteStream(path.join(__dirname, './output.bin'));
+// // const writeStream = fs.createWriteStream(path.join(__dirname, './output.mp3'));
+// const writeStream = fs.createWriteStream(path.join(__dirname, './output.pcm'));
 // let timer = null;
-// // let countSize = 0;
+// let countSize = 0;
 
 function fn({ device_id, data }) {
     // 压力测试数据摘取  

@@ -76,27 +76,37 @@ function main(config = {}) {
         const Instance = new EspAiInstance()
         global.G_Instance = Instance;
 
+
         const init_server = require("./functions/init_server")
         const _config = IS_DEV ? require("./config_dev") : require("./config")
         // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
         // global.G_max_audio_chunk_size = 1024 * 2; // 2048 在对话里面是最合适的
         global.G_max_audio_chunk_size = 1024; // mp3 格式  
         // global.G_max_audio_chunk_size = 4096; 
-        global.G_max_buffered_amount = 1024 * 4;  
-        
+        global.G_max_buffered_amount = 1024 * 4;
+
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };
 
+        // 缓存 TTS 下个版本在做 ing...
+        global.G_cahce_TTS = new Map();
+        global.G_cahce_TTS_number = (G_config.cache_TTS_number || G_config.cache_TTS_number === 0) ? G_config.cache_TTS_number : 1000; // 缓存 TTS 数量。
+        global.G_get_cahce_TTS = (text) => G_cahce_TTS.get(text);
+        global.G_set_cahce_TTS = (text, audio) => {
+            if (G_cahce_TTS.size > G_cahce_TTS_number) return;
+            G_cahce_TTS.set(text, audio);
+        };
+
         log.info(`服务端口：${G_config.port}`);
-        log.info(`服务插件：${G_config.plugins ? G_config.plugins.map(item=> item.name).join(" | ") : "-"}`); 
- 
+        log.info(`服务插件：${G_config.plugins ? G_config.plugins.map(item => item.name).join(" | ") : "-"}`);
+
         G_ws_server = init_server();
 
         return Instance
     } catch (err) {
         console.log(err);
         log.error(`服务运行失败。`);
-    } 
+    }
 }
 
 IS_DEV && main({});
