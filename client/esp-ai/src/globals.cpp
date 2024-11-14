@@ -47,24 +47,7 @@ WebSocketsClient esp_ai_webSocket;
 I2SStream i2s;
 VolumeStream esp_ai_volume(i2s);
 EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); // Decoding stream
-
-// test... 
-// // 上报音频字节流的实际代码
-// void dataCallback(uint8_t *mp3_data, size_t len)
-// {
-//     // Serial.print("mp3 音频生成：");
-//     // Serial.print(len);
-//     // Serial.println(" bytes");
-//     esp_ai_webSocket.sendBIN((uint8_t *)mp3_data, len);
-// }
-// liblame::MP3EncoderLAME esp_ai_mp3_encoder(dataCallback);
-// liblame::AudioInfo esp_ai_mp3_info;
-
-// test...
-// uint8_t mp3_sampleBuffer[512];  
-// audio_tools::MP3EncoderLAME esp_ai_mp3_encoder;  
-// EncodedAudioStream esp_ai_out_stream(&mp3_sampleBuffer, &esp_ai_mp3_encoder);
-
+ 
 WebServer esp_ai_server(80);
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }

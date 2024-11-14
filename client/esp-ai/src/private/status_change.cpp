@@ -49,7 +49,7 @@ void ESP_AI::status_change(String status)
     else if (status == "0_ing")
     {
         esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-        esp_ai_pixels.setBrightness(100); // 亮度设置
+        esp_ai_pixels.setBrightness(50); // 亮度设置
         esp_ai_pixels.show();
     }
     else if (status == "0_ing_after")
@@ -60,13 +60,13 @@ void ESP_AI::status_change(String status)
     else if (status == "0_ap")
     {
         esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
-        esp_ai_pixels.setBrightness(100); // 亮度设置
+        esp_ai_pixels.setBrightness(50); // 亮度设置
         esp_ai_pixels.show();
     }
     else if (status == "2")
     {
         esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-        esp_ai_pixels.setBrightness(100); // 亮度设置
+        esp_ai_pixels.setBrightness(50); // 亮度设置
         esp_ai_pixels.show();
     }
     else if (status == "3")

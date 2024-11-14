@@ -2,8 +2,7 @@
 <div align="center"> 
 <a name="readme-top"></a>
 
-<!-- ![logo.png](https://espai.fun/images/logo.png) -->
-![logo.png](https://xiaomingio.top/esp-ai/images/logo.png)
+![logo.png](https://espai.fun/images/logo.png)
 
 <h1>ESP-AI</h1>
 
@@ -27,9 +26,9 @@
 [download-image]: https://img.shields.io/npm/dm/esp-ai.svg?style=flat
 [bundlephobia-url]: https://bundlephobia.com/package/esp-ai 
    
-<!-- ![logo.png](./imgs/ESP-AI.png)  -->
-<!-- ![logo.png](https://espai.fun/images/ESP-AI.png) -->
-![logo.png](https://xiaomingio.top/esp-ai/images/ESP-AI.png)
+<!-- ![logo.png](./imgs/ESP-AI.png) -->
+
+![logo.png](https://espai.fun/images/ESP-AI.png)
 
 </div>
 
@@ -68,10 +67,8 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 
 # 🧐 Next Steps
 
-- [ ] 🤔 Improve accuracy of built-in offline wake-up (currently recommended to use Tianwen ASRPro)
-- [ ] 🤔 Incorporate AI into user intent inference (e.g., "Turn off the light quickly" and "Turn on the light quickly" will both be recognized as "Turn on the light" command)
-- [ ] 🤔 Online wake word generation
-- [ ] 🤔 Client OTA support
+- [ ] 🤔 Improve accuracy of built-in offline wake-up (currently recommended to use Tianwen ASRPro) 
+- [ ] 🤔 Online wake word generation 
 - [ ] 🤔 Develop plugins in other languages (to avoid relying solely on Node.js for plugin development)
 - [ ] 🤔 Provide a dedicated development board (to avoid current complex wiring)
 
@@ -91,12 +88,8 @@ Below are the `Node.js` and `Arduino` codes you need to write if you only requir
 
 <!-- <img src="./imgs/arduino.png" /> -->
 <!-- <img src="./imgs/nodejs.png" /> -->
-<!-- <img src="https://espai.fun/images/arduino.png" />
-<img src="https://espai.fun/images/nodejs.png" /> -->
-
-<img src="https://xiaomingio.top/esp-ai/images/arduino.png" />
-<img src="https://xiaomingio.top/esp-ai/images/nodejs.png" />
-
+<img src="https://espai.fun/images/arduino.png" />
+<img src="https://espai.fun/images/nodejs.png" />
 
 # 📜 Commercial Use
 
@@ -159,6 +152,7 @@ We warmly invite contributions from everyone. Feel free to share your ideas thro
     <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="100%" height="auto">
   </picture>
 </a> 
+
 
 # quote
 If this project has helped your research, please cite us:

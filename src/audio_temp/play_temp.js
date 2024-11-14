@@ -26,34 +26,18 @@
 const fs = require('fs');
 
 /**
- * @volumeFactor 调整音量的系数，0.5 表示减半
- * @abit         PCM 数据是 16 位 (2 字节) 小端格式
- * */ 
-function play_temp(filePath, client_ws, volumeFactor = 1, abit = 2) { 
+ * @volumeFactor 调整音量的系数，0.5 表示减半 
+ * */
+function play_temp(filePath, client_ws) {
     return new Promise((resolve, reject) => {
-        const readStream = fs.createReadStream(filePath);
-        let isFirst = true; 
+        const readStream = fs.createReadStream(filePath); 
         client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: "warning_tone" }));
-        readStream.on('data', (audio) => {  
-            const adjustedAudio = Buffer.alloc(audio.length); 
-            for (let i = 0; i < audio.length; i += abit) {
-                const sample = audio.readInt16LE(i);
-                const adjustedSample = Math.floor(sample * volumeFactor);
-                adjustedAudio.writeInt16LE(adjustedSample, i);
-            }
-
-            let c_l = isFirst ? G_max_audio_chunk_size * 2 : G_max_audio_chunk_size;
-            isFirst = false;
-            for (let i = 0; i < adjustedAudio.length; i += c_l) {
-                const end = Math.min(i + c_l, adjustedAudio.length);
-                const chunk = adjustedAudio.slice(i, end);
-                // 填充头信息: session_id   
-                const sessionIdBuffer = Buffer.from("0000", 'utf-8');
-                const combinedBuffer = Buffer.concat([sessionIdBuffer, chunk]);
-                client_ws.send(combinedBuffer); 
-            }
+        readStream.on('data', (audio) => { 
+            const sessionIdBuffer = Buffer.from("0000", 'utf-8');
+            const combinedBuffer = Buffer.concat([sessionIdBuffer, audio]);
+            client_ws.send(combinedBuffer); 
         });
-        readStream.on('end', () => { 
+        readStream.on('end', () => {
             const endFlagBuf = Buffer.from("2001", 'utf-8');
             client_ws.send(endFlagBuf);
             client_ws.send(JSON.stringify({ type: "tts_send_end", tts_task_id: "warning_tone" }));

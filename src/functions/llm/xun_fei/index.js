@@ -154,10 +154,10 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
                     }
                 }
             }
-            llm_ws.send(JSON.stringify(llm_params_set ? llm_params_set(frame) : frame))
+            llm_ws.send(JSON.stringify(llm_params_set ? llm_params_set({...frame}) : frame))
         }
     } catch (err) {
-        console.log(err);
+        console.log("讯飞 LLM 插件错误：",err);
         log.error("讯飞 LLM 插件错误：", err)
         connectServerCb(false);
     }

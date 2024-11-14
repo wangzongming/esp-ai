@@ -87,7 +87,7 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
                 "result_format": "message"
             }
         };
-        const body = JSON.stringify(llm_params_set ? llm_params_set(r_params) : r_params); 
+        const body = JSON.stringify(llm_params_set ? llm_params_set({...r_params}) : r_params); 
         const options = {
             method: 'POST',
             headers: headers

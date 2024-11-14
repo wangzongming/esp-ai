@@ -2,8 +2,7 @@
 <div align="center"> 
 <a name="readme-top"></a>
 
-<!-- ![logo.png](https://espai.fun/images/logo.png) -->
-![logo.png](https://xiaomingio.top/esp-ai/images/logo.png)
+![logo.png](https://espai.fun/images/logo.png)
 
 <h1>ESP-AI</h1>
 
@@ -29,8 +28,7 @@
    
 <!-- ![logo.png](./imgs/ESP-AI.png) -->
 
-<!-- ![logo.png](https://espai.fun/images/ESP-AI.png) -->
-![logo.png](https://xiaomingio.top/esp-ai/images/ESP-AI.png)
+![logo.png](https://espai.fun/images/ESP-AI.png)
 
 </div>
 
@@ -72,10 +70,8 @@
 
 # 🧐 下一步 
 
-- [ ] 🤔 内置离线唤醒精准度提升(目前建议使用天问asrpro) 
-- [ ] 🤔 用户意图推理过程加入AI（如： 帮我关灯、快开灯，都将识别为: "开灯" 指令） 
-- [ ] 🤔 唤醒词在线生成
-- [ ] 🤔 客户端 OTA 支持
+- [ ] 🤔 内置离线唤醒精准度提升(目前建议使用天问asrpro)  
+- [ ] 🤔 唤醒词在线生成 
 - [ ] 🤔 其他语言编写插件的方法（避免只能使用nodejs进行开发插件）
 - [ ] 🤔 提供专用开发板（避免当前的复杂接线）
 
@@ -91,18 +87,14 @@ docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name 
 # 🔨 仅几行代码为您的机器人注入灵魂
 
 下面分别展示在只需要对话的情况下，你需要写的`Node.js`和`Arduino`代码。
-<!--  
-<img src="https://espai.fun/images/arduino.png" />
-<img src="https://espai.fun/images/nodejs.png" /> -->
-
  
-<img src="https://xiaomingio.top/esp-ai/images/arduino.png" />
-<img src="https://xiaomingio.top/esp-ai/images/nodejs.png" />
-
+<img src="https://espai.fun/images/arduino.png" />
+<img src="https://espai.fun/images/nodejs.png" />
 
 # 📜 商业使用
 商业使用请购买商业授权，详情见 [商业授权](./COMMERCIAL_LICENSE.md)  
-商用授权单位为 公司名称+产品名称+版本 , 例如： 深圳XXX公司智能玩偶V1.0。   
+商用授权单位为 公司名称+产品名称+版本 , 例如： 深圳XXX公司智能玩偶V1.0。  
+单个产品版本的商业许可费用为 10000 人民币，需一次性支付。   
 
 授权查询/举报地址：见 https://espai.fun/commercial-license.html
 
@@ -162,7 +154,6 @@ QQ 交流群: 854445223
     <img alt="Star Geographical Distribution of wangzongming/esp-ai" src="https://next.ossinsight.io/widgets/official/analyze-repo-stars-map/thumbnail.png?repo_id=820274347&activity=stars&image_size=auto&color_scheme=light" width="100%" height="auto">
   </picture>
 </a> 
-
 
 # 引用
 如果本项目有帮助到您的研究，请引用我们：

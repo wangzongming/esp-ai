@@ -48,7 +48,7 @@ const { v4: uuidv4 } = require('uuid');
 */
 function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
-        const { appid, accessToken, appConfig, ...other_config } = tts_config;
+        const { appid, accessToken, appConfig = {}, is_clone, ...other_config } = tts_config;
         if (!accessToken) return log.error(`请配给 TTS 配置 accessToken 参数。`)
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
 
@@ -57,12 +57,20 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
         const default_header = Buffer.from([0x11, 0x10, 0x11, 0x00]);
         const audio_config = {
             voice_type: "BV001_streaming",
-            rate: 16000,  
+            rate: 16000,
             speed_ratio: 1.0,
             pitch_ratio: 1.0,
-            ...other_config, 
-            encoding: "mp3", 
+            ...other_config,
+            encoding: "mp3",
         }
+
+        // 复刻的音色有些参数不一样
+        if (is_clone) { 
+            audio_config["rate"] = 24000; // 大模型复刻必须 24k
+            appConfig.cluster = "volcano_icl"
+        }
+
+
         const request_json = {
             app: {
                 cluster: "volcano_tts",
@@ -81,7 +89,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                 operation: "submit"
             }
         };
-
+        
 
         return new Promise((resolve) => {
             const submit_request_json = JSON.parse(JSON.stringify(request_json));
@@ -89,7 +97,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
             const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
             full_client_request.writeUInt32BE(payload_bytes.length, 4);
-            
+
             connectServerBeforeCb();
             const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
             logWSServer(curTTSWs)

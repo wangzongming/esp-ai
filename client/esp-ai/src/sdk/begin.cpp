@@ -148,7 +148,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "[Info] loc_ext4: " + loc_ext4);
     DEBUG_PRINTLN(debug, "[Info] loc_ext5: " + loc_ext5);
     DEBUG_PRINTLN(debug, ("====================================================="));
-
+ 
+    
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
     String _wifi_pwd = loc_wifi_pwd;
@@ -165,6 +166,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 没有 wifi 信息时直接进入配网
     if (_wifi_name == "")
     {
+        delay(1000); 
         DEBUG_PRINTLN(debug, ("\n[Info] 没有wifi信息，请配网"));
         // 重新配网
         WiFi.mode(WIFI_AP);
@@ -190,10 +192,22 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             onNetStatusCb("0_ap");
         }
         return;
+    }else{ 
+        // 内置状态处理
+        status_change("0_ing");
+        DEBUG_PRINTLN(debug, "[Info] 为了保证wifi连接的顺利，所以请耐心等待 10 秒钟。");
+    
+        /**
+         * 重启设备时候如果路由设备还没有断开链路，小部分路由设备存在这个问题。
+         * 然后设备又重启完了 进入了连网状态 那一定连网失败
+         * 否则路由设备会认为是一个重复连接...
+        */
+        delay(10000); 
     }
 
     DEBUG_PRINTLN(debug, "[Info] wifi name: " + _wifi_name);
     DEBUG_PRINTLN(debug, "[Info] wifi pwd: " + _wifi_pwd);
+    WiFi.mode(WIFI_STA);
     WiFi.begin(_wifi_name, _wifi_pwd);
     DEBUG_PRINT(debug, F("[Info] connect wifi ing.."));
 
@@ -311,6 +325,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 获取硬件的定位信息
     get_position();
 
+    if(String(server_config.protocol) != "https" && String(server_config.protocol) != "http"){
+        DEBUG_PRINTLN(debug, ("[Error] 服务协议必须为 http 或者 https ！"));
+        return;
+    }
     // ws 服务
     if (String(server_config.protocol) == "https")
     {

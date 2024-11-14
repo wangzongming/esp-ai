@@ -166,15 +166,7 @@ extern WebServer esp_ai_server;
 extern I2SStream i2s; 
 extern EncodedAudioStream esp_ai_dec; // Decoding stream 
 extern VolumeStream esp_ai_volume;
-
-// test... 
-// extern liblame::MP3EncoderLAME esp_ai_mp3_encoder; 
-// extern liblame::AudioInfo esp_ai_mp3_info; 
-// test...
-// extern uint8_t mp3_sampleBuffer[512];  
-// extern audio_tools::MP3EncoderLAME esp_ai_mp3_encoder;  
-// extern EncodedAudioStream esp_ai_out_stream;
-
+ 
 
 extern String ESP_AI_VERSION; 
 extern String start_ed; 

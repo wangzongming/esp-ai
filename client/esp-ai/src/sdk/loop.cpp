@@ -163,39 +163,6 @@ void ESP_AI::loop()
         i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
         esp_ai_webSocket.sendBIN((uint8_t *)diy_wakeup_sample_buffer, diy_wakeup_bytes_read);
         delay(3);
-
-        // Serial.print("发送大小：");
-        // Serial.println(sizeof(diy_wakeup_sample_buffer));
-
-        // 将音频编码为 mp3 发送 test...
-        // i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
-        // adjustVolume((uint16_t *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), 5);
-        // for (size_t i = 0; i < sizeof(diy_wakeup_sample_buffer) / 2; i++)
-        // // for (size_t i = 0; i < sizeof(diy_wakeup_sample_buffer); i++)
-        // {
-        //     // 调整音量
-        //     diy_wakeup_sample_buffer[i] = diy_wakeup_sample_buffer[i] * 128;
-        // }
-        // esp_ai_mp3_encoder.write(diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer));
-
-        // test...
-        // esp_ai_out_stream.write((uint8_t *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer));
-        // Serial.print("已经写入长度：");
-        // Serial.println(sizeof(mp3_sampleBuffer));
-
-        // ing...
-        // i2s_read(MIC_i2s_num, (void *)diy_wakeup_sample_buffer, sizeof(diy_wakeup_sample_buffer), &diy_wakeup_bytes_read, portMAX_DELAY);
-        // long sum = 0;
-        // for (int i = 0; i < diy_wakeup_bytes_read / 2; i++)
-        // {
-        //     sum += abs(diy_wakeup_sample_buffer[i]);
-        // }
-        // float average_energy = (float)sum / (diy_wakeup_bytes_read / 2);
-        // // 检测是否超过阈值
-        // if (average_energy > esp_ai_VAD_THRESHOLD)
-        // {
-        //     Serial.print("检测到说话：");
-        //     Serial.println(average_energy);
-        // }
+ 
     }
 }

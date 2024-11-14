@@ -61,15 +61,17 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
             all_text: "",
             count_text: "",
             index: 0,
-        } 
+        }
 
         let openai = device_open_obj[device_id];
         if (!device_open_obj[device_id]) {
             connectServerBeforeCb();
-            openai = new OpenAI({
+            const params = {
+                ...other_config,
                 apiKey: apiKey,
                 baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
-            });
+            };  
+            openai = new OpenAI(llm_params_set ? llm_params_set({...params}) : params);
         }
 
 
@@ -91,7 +93,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     close: () => {
                         connectServerCb(false);
                         stream.controller.abort()
-                        shouldClose = true;  
+                        shouldClose = true;
                     }
                 })
                 for await (const part of stream) {
@@ -103,13 +105,13 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     cb({ text, texts, chunk_text: chunk_text })
                 }
                 // process.stdout.write('\n');
-                
+
                 if (shouldClose) return;
                 cb({
                     text,
                     is_over: true,
                     texts,
-                    shouldClose, 
+                    shouldClose,
                 })
                 connectServerCb(false);
                 // devLog && log.llm_info('\n===\n', httpResponse, '\n===\n')
