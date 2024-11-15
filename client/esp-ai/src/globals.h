@@ -166,6 +166,7 @@ extern WebServer esp_ai_server;
 extern I2SStream i2s; 
 extern EncodedAudioStream esp_ai_dec; // Decoding stream 
 extern VolumeStream esp_ai_volume;
+
  
 
 extern String ESP_AI_VERSION; 
@@ -247,3 +248,6 @@ typedef struct
 } saved_info;
 String get_local_data(const String &field_name); 
 void set_local_data(String field_name, String new_value);
+ 
+extern std::vector<int> digital_read_pins;
+extern std::vector<int> analog_read_pins;

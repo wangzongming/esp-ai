@@ -7,6 +7,8 @@ const client_out_audio_over = require("./client_out_audio_over")
 const client_receive_audio_over = require("./client_receive_audio_over")
 // const tts = require("./tts")
 const set_wifi_config_res = require("./set_wifi_config_res")
+const digitalRead = require("./digitalRead")
+const analogRead = require("./analogRead")
 
 module.exports = {
     audio,
@@ -17,5 +19,7 @@ module.exports = {
     client_out_audio_over,
     client_receive_audio_over,
     // tts,
-    set_wifi_config_res
+    set_wifi_config_res,
+    digitalRead,
+    analogRead
 }

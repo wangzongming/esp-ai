@@ -47,6 +47,13 @@ String cleanString(String input)
     return output;
 }
 
+// 延迟多久发网服务器
+int read_to_s_delay_time = 100;
+long prev_read_to_s_delay_time = millis();
+
+JSONVar digitalReadJSONData;
+JSONVar analogReadJSONData;
+
 void ESP_AI::loop()
 {
     esp_ai_server.handleClient();
@@ -55,7 +62,8 @@ void ESP_AI::loop()
     if (WiFi.status() != WL_CONNECTED)
     {
 
-        if (net_status == "2" && net_status != "0" && ap_connect_err != "1"){ 
+        if (net_status == "2" && net_status != "0" && ap_connect_err != "1")
+        {
             // 内置状态处理
             status_change("0");
         }
@@ -164,5 +172,33 @@ void ESP_AI::loop()
         esp_ai_webSocket.sendBIN((uint8_t *)diy_wakeup_sample_buffer, diy_wakeup_bytes_read);
         delay(3);
  
+    }
+
+    // 上报传感器数据
+    long curTime = millis();
+    if (curTime - prev_read_to_s_delay_time > read_to_s_delay_time)
+    { 
+        for (int i = 0; i < digital_read_pins.size(); i++)
+        {
+            int pin = digital_read_pins[i];
+            int reading = digitalRead(pin); 
+            digitalReadJSONData["type"] = "digitalRead"; 
+            digitalReadJSONData["pin"] = pin;
+            digitalReadJSONData["value"] = reading; 
+            String sendData = JSON.stringify(digitalReadJSONData); 
+            esp_ai_webSocket.sendTXT(sendData);
+        }
+        for (int i = 0; i < analog_read_pins.size(); i++)
+        {
+            int pin = analog_read_pins[i];
+            int reading = analogRead(pin); 
+            analogReadJSONData["type"] = "analogRead"; 
+            analogReadJSONData["pin"] = pin;
+            analogReadJSONData["value"] = reading; 
+            String sendData = JSON.stringify(analogReadJSONData); 
+            esp_ai_webSocket.sendTXT(sendData);
+        } 
+
+        prev_read_to_s_delay_time = curTime;
     }
 }

@@ -79,7 +79,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         wake_up_scheme = String(wake_up_config.wake_up_scheme);
         if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
         {
-            pinMode(wake_up_config.pin, INPUT);
+            pinMode(wake_up_config.pin, INPUT_PULLDOWN);
         }
     }
     if (wake_up_scheme == "edge_impulse")

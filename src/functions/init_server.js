@@ -30,7 +30,7 @@ const isOutTimeErr = require("../utils/isOutTimeErr");
 const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue");
 const {
     audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn,
-    client_out_audio_over, cts_time, client_receive_audio_over, set_wifi_config_res
+    client_out_audio_over, cts_time, client_receive_audio_over, set_wifi_config_res, digitalRead, analogRead
 } = require("../functions/client_messages");
 const { add_audio_out_over_queue_hoc, run_audio_out_over_queue_hoc, clear_audio_out_over_queue_hoc } = require("./device_fns/audio_out_over_queue")
 
@@ -90,19 +90,23 @@ function init_server() {
                 // 已输出流量 kb
                 useed_flow: 0,
                 // 是否处于 IAT 预备状态
-                iat_readiness: false
+                iat_readiness: false,
+                read_pin_cbs: new Map(), 
             });
 
             ws.isAlive = true;
             ws.device_id = device_id;
 
-            onDeviceConnect && onDeviceConnect({ ws, device_id, client_version });
+            onDeviceConnect && onDeviceConnect({
+                ws, device_id, client_version, client_params,
+                instance: G_Instance
+            });
 
             ws.on('message', async function (data) {
                 const comm_args = { device_id };
                 try {
                     if (typeof data === "string") {
-                        const { type, tts_task_id, stc_time, session_id, sid, text, success } = JSON.parse(data);
+                        const { type, tts_task_id, stc_time, session_id, sid, text, success, value, pin } = JSON.parse(data);
                         comm_args.session_id = session_id;
                         comm_args.tts_task_id = tts_task_id;
                         comm_args.sid = sid;
@@ -110,6 +114,8 @@ function init_server() {
                         comm_args.type = type;
                         comm_args.text = text;
                         comm_args.success = success;
+                        comm_args.value = value;
+                        comm_args.pin = pin; 
                         switch (type) {
                             case "start":
                                 start(comm_args);
@@ -134,6 +140,12 @@ function init_server() {
                                 break;
                             case "set_wifi_config_res":
                                 set_wifi_config_res(comm_args);
+                                break;
+                            case "digitalRead":
+                                digitalRead(comm_args);
+                                break;
+                            case "analogRead":
+                                analogRead(comm_args);
                                 break;
                         }
                     } else {
@@ -170,7 +182,7 @@ function init_server() {
                 if (!auth_success) {
                     ws.send(JSON.stringify({
                         type: "auth_fail",
-                        message: `${auth_message || "-"}`, 
+                        message: `${auth_message || "-"}`,
                         code: isOutTimeErr(auth_message) ? "007" : auth_code,
                     }));
                     // 防止大量失效用户重复请求

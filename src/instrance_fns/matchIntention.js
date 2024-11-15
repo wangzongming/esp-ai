@@ -54,7 +54,7 @@ async function matchIntention(device_id, text, reply) {
         }
     }
     if (task_info) {
-        const { instruct, message, data, __name__, music_server, on_end } = task_info;
+        const { instruct, message, data, pin, __name__, music_server, on_end } = task_info;
         if (typeof instruct === "function") {
             const resText = await instruct({
                 text,
@@ -91,6 +91,40 @@ async function matchIntention(device_id, text, reply) {
                     ws_client && ws_client.send("session_end");
                     devLog && console.log('\n\n === 会话结束 ===\n\n')
                     break;
+                case "__io_high__":
+                    !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
+
+                    // 所有 LLM 用下面的 key 为准
+                    llm_historys.push(
+                        { "role": "user", "content": text },
+                        { "role": "assistant", "content": message || "好的" }
+                    );
+                    G_Instance.digitalWrite(device_id, pin, "HIGH");
+                    await TTS_FN(device_id, {
+                        text: message || "好的",
+                        reRecord: false,
+                        need_record: false,
+                        pauseInputAudio: true
+                    });
+                    ws_client && ws_client.send("session_end");
+
+                    break;
+                case "__io_low__":
+                    !pin && log.error(`__io_low__ 指令必须配置 pin 数据`);
+                    // 所有 LLM 用下面的 key 为准
+                    llm_historys.push(
+                        { "role": "user", "content": text },
+                        { "role": "assistant", "content": message || "好的" }
+                    );
+                    G_Instance.digitalWrite(device_id, pin, "LOW");
+                    await TTS_FN(device_id, {
+                        text: message || "好的",
+                        reRecord: false,
+                        need_record: false,
+                        pauseInputAudio: true
+                    });
+                    ws_client && ws_client.send("session_end");
+                    break;
                 case "__play_music__":
 
                     // 所有 LLM 用下面的 key 为准
@@ -102,7 +136,7 @@ async function matchIntention(device_id, text, reply) {
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         llm_historys,
-                    }) 
+                    })
 
                     await TTS_FN(device_id, {
                         text: reply || message || "好的",

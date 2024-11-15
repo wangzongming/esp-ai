@@ -25,7 +25,7 @@
 
 #include "globals.h"
  
-String ESP_AI_VERSION = "2.11.5";
+String ESP_AI_VERSION = "2.13.6";
 String start_ed = "0";
 String can_voice = "1";
 String is_send_server_audio_over = "1";
@@ -48,6 +48,7 @@ I2SStream i2s;
 VolumeStream esp_ai_volume(i2s);
 EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); // Decoding stream
  
+
 WebServer esp_ai_server(80);
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
@@ -287,3 +288,6 @@ void set_local_data(String field_name, String new_value)
     // 确保数据被写入 EEPROM
     delay(100);
 }
+ 
+std::vector<int> digital_read_pins;
+std::vector<int> analog_read_pins; 

@@ -30,7 +30,6 @@ const isOutTimeErr = require("../../utils/isOutTimeErr");
 */
 async function fn({ device_id }) {
     try {
-
         const { devLog, gen_client_config } = G_config;
         const { ws, client_params, client_version, error_catch, tts_buffer_chunk_queue } = G_devices.get(device_id);
         const user_config = await gen_client_config({
@@ -93,45 +92,17 @@ async function fn({ device_id }) {
         })
 
         const TTS_FN = require(`../tts`);
-        const { user_config: { connected_reply } } = G_devices.get(device_id);
+        const { user_config: { connected_reply, intention = [] } } = G_devices.get(device_id);
 
         ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
 
-        // // 缓存必要的 TTS  ing...
-        // const reqTTS = [_user_config.f_reply, _user_config.sleep_reply, _user_config.connected_reply];
-        // if (user_config.intention && Array.isArray(user_config.intention)) {
-        //     user_config.intention.forEach((item) => {
-        //         reqTTS.push(item?.message)
-        //     })
-        // } 
-        // // 需要改为以音色为主键...
-        // for (const text of reqTTS) {
-        //     const tts_cache_key = `${device_id}_${text}`;
-        //     const cache_TTS = G_get_cahce_TTS(tts_cache_key);
-        //     if (!cache_TTS) {
-        //         devLog && log.t_info(`正在缓存 "${text}" TTS...`);
-        //         const sessionIdBuffer = Buffer.from("", 'utf-8');
-        //         G_set_cahce_TTS(tts_cache_key, sessionIdBuffer);
-
-        //         let combinedBuffer = sessionIdBuffer;
-        //         await TTS_FN(device_id, {
-        //             text: text,
-        //             reRecord: false,
-        //             pauseInputAudio: true,
-        //             text_is_over: true,
-        //             is_cache: true,
-        //             frameOnTTScb(bufferAudio, is_over) {
-        //                 // console.log(text, is_over, bufferAudio);
-        //                 combinedBuffer = Buffer.concat([combinedBuffer, bufferAudio]); 
-        //                 if (is_over) {
-        //                     devLog && log.t_info(`缓存 "${text}" TTS 完毕`);
-        //                     G_set_cahce_TTS(tts_cache_key, combinedBuffer);
-        //                 }
-        //             }
-        //         })
-        //     }
-        // }
-
+        intention.forEach(({ instruct, pin }) => {
+            if (instruct === "__io_high__" || instruct === "__io_low__") {
+                !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
+                G_Instance.pinMode(device_id, pin, "OUTPUT");
+            }
+        })
+ 
 
         // 播放ws连接成功语音
         if (connected_reply) {

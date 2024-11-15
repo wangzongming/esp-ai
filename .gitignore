@@ -19,7 +19,7 @@ example/index_copy.js
 
 # builds
 build 
-
+test-server
 .vscode/
 _del/
 

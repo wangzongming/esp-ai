@@ -106,7 +106,7 @@ export interface Config {
     */
     iatDu?: string;
 
- 
+
     /**
      * 缓存 TTS 数量，根据自己的服务器能力来设置。 设置为 0 时，不开启 TTS 缓存
      * 默认 1000
@@ -216,15 +216,18 @@ export interface Config {
     /**
      * 新设备连接服务的回调 
      * @param {string} device_id 设备id
-     * @param {string} client_version 客户端版本
-     * @param {WebSocket} ws 连接句柄，可使用 ws.send() 发送数据
+     * @param {string} client_version 客户端版本 
+     * @param {string} client_params  配网页面配置的客户端参数
+     * @param {string} instance       ESP-AI 实例
      */
-    onDeviceConnect?: (arg: { device_id: string, ws: WebSocket, client_version: string }) => void;
+    onDeviceConnect?: (arg: { device_id: string, client_version: string; client_params: Record<string, any>, instance: Instance }) => void;
 
     /**
      * 用户发出 iat 服务回调请求之前的回调
+     * @param {string} device_id      设备id
+     * @param {string} instance       ESP-AI 实例
     */
-    onIAT?: (arg: { device_id: string, ws: WebSocket, }) => void;
+    onIAT?: (arg: { device_id: string, ws: WebSocket, instance: Instance }) => void;
 
     /**
      * iat 回调: 语音识别过程中的回调
@@ -243,7 +246,7 @@ export interface Config {
      *      esp_ai.onEvent(on_command);
      * }
     */
-    onIATcb?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
+    onIATcb?: (arg: { device_id: string, text: string, ws: WebSocket, instance: Instance, sendToClient: () => void }) => void;
 
     /**
     * iat 回调: 语音识别完毕的回调，可以在这里面发出最后一帧到语音识别服务器等操作，
@@ -251,7 +254,7 @@ export interface Config {
     * @param {string} device_id 设备id
     * @param {string} text 语音转的文字 
    */
-    onIATEndcb?: (arg: { device_id: string, text: string, ws: WebSocket }) => void;
+    onIATEndcb?: (arg: { device_id: string, text: string, ws: WebSocket, instance: Instance }) => void;
 
 
 
@@ -273,7 +276,7 @@ export interface Config {
      *      esp_ai.onEvent(on_command);
      * }
     */
-    onTTS?: (arg: { device_id: string, tts_task_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
+    onTTS?: (arg: { device_id: string, tts_task_id: string, text: string, ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
      * TTS 转换完毕后的回调，注意：onTTScb是TTS转换后的回调，可以拿到音频流。onTTS是转换前的回调，只能拿到文字。
@@ -294,7 +297,7 @@ export interface Config {
      * }
      * 
     */
-    onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer, ws: WebSocket, sendToClient: () => void }) => void;
+    onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer, ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
      * llm 服务调用前的回调 
@@ -315,7 +318,7 @@ export interface Config {
      * }
      * 
     */
-    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void }) => void;
+    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
      * LLM 推理后的回调，拿到的文字是推理结果。
@@ -337,7 +340,7 @@ export interface Config {
      * }
      * 
     */
-    onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void }) => void;
+    onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
      * 插件
@@ -359,6 +362,9 @@ export interface Config {
         error?: () => void;
     }
 }
+
+type PinModeType = "OUTPUT" | "INPUT" | "INPUT_PULLUP" | "INPUT_PULLDOWN";
+type VoltageType = "LOW" | "HIGH";
 
 export interface Instance {
     /**
@@ -434,4 +440,39 @@ export interface Instance {
      * 获取设备是否正在播放音频, 注意：不是TTS, 而是 __play_music__ 指令触发的音频
     */
     isPlaying(device_id: string): boolean;
+
+    /**
+     * 设置引脚引脚模式。
+     * 功能和 Arduino 的 pinMode 一样
+    */
+    pinMode(device_id: string, pin: number, type: PinModeType): boolean;
+
+    /**
+     * 设置引脚电平
+     * 功能和 Arduino 的 digitalWrite 一样，使用前必须使用 pinMode 将引脚设置为 OUTPUT 模式。
+     * 将引脚电平设置为高电平或者低电平， 输出电压以开发板为准，如 esp32s3 开发板输出 3.3v 电压
+     * 使用场景：控制继电器闭合、点亮led等等
+    */
+    digitalWrite(device_id: string, pin: number, type: VoltageType): boolean;
+
+    /**
+     * 读取引脚电平
+     * 功能和 Arduino 的 digitalRead 一样，使用前必须使用 pinMode 将引脚设置为 INPUT 模式。 注意：本方法存在 100ms 的延时 
+     * 使用场景：读取按钮是否按下等等
+    */
+    digitalRead(device_id: string, pin: number, onChange: (val: VoltageType) => void): void;
+
+    /**
+     * 引脚模拟输出
+     * 功能和 Arduino 的 analogWrite 一样，使用前必须使用 pinMode 将引脚设置为 OUTPUT 模式。
+     * 使用场景：使用 PWM 控制电机转速、舵机角度 等等
+    */
+    analogWrite(device_id: string, pin: number, val: number): boolean;
+
+    /**
+     * 读取引脚模拟输入
+     * 功能和 Arduino 的 analogRead 一样。注意：本方法存在 100ms 的延时 
+     * 使用场景： 读取电位器的值等等
+    */
+    analogRead(device_id: string, pin: number, onChange: (val: number) => void): void;
 }

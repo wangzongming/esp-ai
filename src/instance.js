@@ -23,13 +23,18 @@
  * @websit https://espai.fun
  */
 
-const log = require("./utils/log");  
+const log = require("./utils/log");
 
 const matchIntention = require("./instrance_fns/matchIntention")
 const tts = require("./instrance_fns/tts")
 const stop = require("./instrance_fns/stop")
 const newSession = require("./instrance_fns/newSession")
 const isPlaying = require("./instrance_fns/isPlaying")
+const pinMode = require("./instrance_fns/pinMode")
+const digitalWrite = require("./instrance_fns/digitalWrite")
+const digitalRead = require("./instrance_fns/digitalRead")
+const analogWrite = require("./instrance_fns/analogWrite")
+const analogRead = require("./instrance_fns/analogRead")
 
 
 class EspAiInstance {
@@ -79,12 +84,17 @@ class EspAiInstance {
         }
     }
 
-    tts = tts; 
+    tts = tts;
     stop = stop;
-    newSession = newSession; 
+    newSession = newSession;
     matchIntention = matchIntention;
     isPlaying = isPlaying;
-    
+    pinMode = pinMode;
+    digitalWrite = digitalWrite;
+    digitalRead = digitalRead;
+    analogWrite = analogWrite;
+    analogRead = analogRead;
+
     /**
      *  重启设备
     */
@@ -120,6 +130,7 @@ class EspAiInstance {
             llm_historys,
         })
     }
+
     /**
      * 获取用户的上下文，在设置上下文时一般需要将当前上下文先存起来，否则切换回来时会丢失
      * @return llm_historys {"role": "user" | "assistant" | "system", "content":string}[]   

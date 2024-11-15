@@ -257,6 +257,38 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String value = (const char *)parseRes["value"];
                     set_local_data(field, value);
                 }
+                else if (type == "hardware-fns")
+                {
+                    int pin = (int)parseRes["pin"];
+                    String fn_name = (const char *)parseRes["fn_name"];
+                    String str_val = (const char *)parseRes["str_val"];
+                    int num_val = (int)parseRes["num_val"];
+
+                    if (fn_name == "pinMode")
+                    { 
+                        str_val == "OUTPUT" && (pinMode(pin, OUTPUT), true);
+                        str_val == "INPUT" && (pinMode(pin, INPUT), true);
+                        str_val == "INPUT_PULLUP" && (pinMode(pin, INPUT_PULLUP), true);
+                        str_val == "INPUT_PULLDOWN" && (pinMode(pin, INPUT_PULLDOWN), true); 
+                    }
+                    else if (fn_name == "digitalWrite")
+                    {
+                        str_val == "HIGH" && (digitalWrite(pin, HIGH), true);
+                        str_val == "LOW" && (digitalWrite(pin, LOW), true); 
+                    }
+                    else if (fn_name == "digitalRead")
+                    { 
+                        digital_read_pins.push_back(pin);
+                    }
+                    else if (fn_name == "analogWrite")
+                    {
+                        analogWrite(pin, num_val);
+                    }
+                    else if (fn_name == "analogRead")
+                    {
+                        analog_read_pins.push_back(pin);
+                    }
+                }
             }
         }
 
