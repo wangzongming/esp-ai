@@ -123,6 +123,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     String loc_ext3 = get_local_data("ext3");
     String loc_ext4 = get_local_data("ext4");
     String loc_ext5 = get_local_data("ext5");
+    String loc_ext6 = get_local_data("ext6");
+    String loc_ext7 = get_local_data("ext7");
     DEBUG_PRINTLN(debug, ("==================== Local Data ===================="));
     DEBUG_PRINTLN(debug, "[Info] loc_is_ready: " + loc_is_ready);
     if (loc_is_ready != "ok")
@@ -147,6 +149,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "[Info] loc_ext3: " + loc_ext3);
     DEBUG_PRINTLN(debug, "[Info] loc_ext4: " + loc_ext4);
     DEBUG_PRINTLN(debug, "[Info] loc_ext5: " + loc_ext5);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext6: " + loc_ext6);
+    DEBUG_PRINTLN(debug, "[Info] loc_ext7: " + loc_ext7);
     DEBUG_PRINTLN(debug, ("====================================================="));
  
     
@@ -307,9 +311,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     speaker_i2s_setup();
-
-    // 如果用户制定了服务地址，那就不使用开放平台了, 因为默认是 "node.espai.fun"
-    if (String(server_config.ip) != "node.espai.fun")
+     
+    if (String(server_config.ip) == "custom-made")
     {
         bool get_server_success = get_server_config();
         if (get_server_success == false)
@@ -329,6 +332,20 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         DEBUG_PRINTLN(debug, ("[Error] 服务协议必须为 http 或者 https ！"));
         return;
     }
+
+    
+    DEBUG_PRINTLN(debug, ("[Info] 开始连接后台服务，如果长时间无响应说明你的服务有问题。"));
+    DEBUG_PRINT(debug, ("[Info] 主机："));
+    DEBUG_PRINTLN(debug, server_config.ip); 
+    DEBUG_PRINT(debug, ("[Info] 协议："));
+    DEBUG_PRINTLN(debug, server_config.protocol); 
+    DEBUG_PRINT(debug, ("[Info] 端口："));
+    DEBUG_PRINTLN(debug, server_config.port); 
+    DEBUG_PRINT(debug, ("[Info] 路径："));
+    DEBUG_PRINTLN(debug, server_config.path); 
+    DEBUG_PRINT(debug, ("[Info] 参数："));
+    DEBUG_PRINTLN(debug, server_config.params); 
+
     // ws 服务
     if (String(server_config.protocol) == "https")
     {
@@ -343,6 +360,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
                 "&ext3=" + loc_ext3 +
                 "&ext4=" + loc_ext4 +
                 "&ext5=" + loc_ext5 +
+                "&ext6=" + loc_ext6 +
+                "&ext7=" + loc_ext7 +
                 "&" + server_config.params);
     }
     else
@@ -358,6 +377,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
                 "&ext3=" + loc_ext3 +
                 "&ext4=" + loc_ext4 +
                 "&ext5=" + loc_ext5 +
+                "&ext6=" + loc_ext6 +
+                "&ext7=" + loc_ext7 +
                 "&" + server_config.params);
     }
 

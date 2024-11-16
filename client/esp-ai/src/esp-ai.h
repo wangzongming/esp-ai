@@ -39,11 +39,11 @@ public:
     void setVolume(float volume);
 
     /**
-     * 手动设置 wifi账号/wifi密码/api_key/ext1/ext2/ext3/ext4/ext5 配置，设置后会重新连接wifi
+     * 手动设置 wifi账号/wifi密码/api_key/ext1/ext2/ext3/ext4/ext5/ext6/ext7 配置，设置后会重新连接wifi
      * 除了 wifi 账号和和密码外其他都是可选的，不改是传入空字符串即可
      * 设置成功会返回 true，失败返回 false
      */
-    bool setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5);
+    bool setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7);
 
     /**
      * 接收到控制命令后的后调
@@ -115,11 +115,11 @@ public:
      * "{\"success\":false,\"message\":\"设备绑定失败，重启设备试试呢。\"}"
      * "{\"success\":true,\"message\":\"设备激活成功，即将重启设备。\"}"
      */
-    void onBindDevice(String (*func)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5));
+    void onBindDevice(String (*func)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7));
 
     /**
      * 获取存储在芯片中的数据
-     * String ext1 = get_local_data("ext1");
+     * String ext1 = getLocalData("ext1");
      * 可读取的数据项 device_id |  wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5
      */
     String getLocalData(String field_name);
@@ -171,7 +171,7 @@ private:
     void (*onConnectedWifiCb)(String device_ip) = nullptr;
     void (*onSessionStatusCb)(String status) = nullptr;
     void (*onPositionCb)(String ip, String nation, String province, String city) = nullptr;
-    String (*onBindDeviceCb)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5) = nullptr;
+    String (*onBindDeviceCb)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7) = nullptr;
 
     void speaker_i2s_setup();
     void adjustVolume(int16_t *buffer, size_t length, float volume);

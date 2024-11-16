@@ -27,7 +27,7 @@
 /**
  * 重新设置 WiFi、api_key 信息， 设置后会重新连接wifi
  */
-bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5)
+bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7)
 {
     DEBUG_PRINTLN(debug, ("==================== 调用 setWifiConfig 方法设置信息 ===================="));
 
@@ -147,6 +147,14 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
     if (String(ext5).length() > 0)
     {
         set_local_data("ext5", String(ext5));
+    }
+    if (String(ext6).length() > 0)
+    {
+        set_local_data("ext6", String(ext6));
+    }
+    if (String(ext7).length() > 0)
+    {
+        set_local_data("ext7", String(ext7));
     }
     return true;
 }

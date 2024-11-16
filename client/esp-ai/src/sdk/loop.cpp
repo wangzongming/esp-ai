@@ -81,12 +81,13 @@ void ESP_AI::loop()
     if (volume_config.enable)
     {
         int _cur_ctrl_val = analogRead(volume_config.input_pin);
-        if (_cur_ctrl_val != cur_ctrl_val)
-        {
+        float _t = static_cast<float>(_cur_ctrl_val) / volume_config.max_val;
+        if (fabs(volume_config.volume - _t)  >= 0.2)
+        { 
             cur_ctrl_val = _cur_ctrl_val;
             volume_config.volume = static_cast<float>(cur_ctrl_val) / volume_config.max_val;
             esp_ai_volume.setVolume(volume_config.volume);
-            DEBUG_PRINTLN(debug, volume_config.volume);
+            // DEBUG_PRINTLN(debug, volume_config.volume);
         }
     }
 

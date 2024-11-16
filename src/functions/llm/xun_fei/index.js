@@ -137,8 +137,10 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
                             "v4.0": "4.0Ultra",
                             "v3.5": "generalv3.5",
                             "v3.1": "generalv3",
-                            "v2.1": "generalv2",
-                            "v1.1": "general",
+                            // "v2.1": "generalv2",
+                            "v1.1": "lite",
+                            "max-32k": "max-32k",
+                            "pro-128k": "pro-128k",
                         }[llm],
                     }
                 },

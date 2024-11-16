@@ -25,7 +25,7 @@
 
 #include "globals.h"
  
-String ESP_AI_VERSION = "2.13.6";
+String ESP_AI_VERSION = "2.15.6";
 String start_ed = "0";
 String can_voice = "1";
 String is_send_server_audio_over = "1";
@@ -47,8 +47,8 @@ WebSocketsClient esp_ai_webSocket;
 I2SStream i2s;
 VolumeStream esp_ai_volume(i2s);
 EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); // Decoding stream
- 
 
+ 
 WebServer esp_ai_server(80);
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
@@ -159,6 +159,8 @@ String get_local_data(const String &field_name = "")
     Info.ext3 = readStringFromEEPROM();
     Info.ext4 = readStringFromEEPROM();
     Info.ext5 = readStringFromEEPROM();
+    Info.ext6 = readStringFromEEPROM();
+    Info.ext7 = readStringFromEEPROM(); 
     // 如果指定了字段名，则返回对应的字段值
     if (field_name == "is_ready")
     {
@@ -200,6 +202,14 @@ String get_local_data(const String &field_name = "")
     {
         return Info.ext5;
     }
+    else if (field_name == "ext6")
+    {
+        return Info.ext6;
+    }
+    else if (field_name == "ext7")
+    {
+        return Info.ext7;
+    }
 
     return "";
 }
@@ -223,6 +233,8 @@ void set_local_data(String field_name, String new_value)
     current_info.ext3 = get_local_data("ext3");
     current_info.ext4 = get_local_data("ext4");
     current_info.ext5 = get_local_data("ext5");
+    current_info.ext6 = get_local_data("ext6");
+    current_info.ext7 = get_local_data("ext7");
 
     if (field_name == "is_ready")
     {
@@ -264,6 +276,14 @@ void set_local_data(String field_name, String new_value)
     {
         current_info.ext5 = new_value;
     }
+    else if (field_name == "ext6")
+    {
+        current_info.ext6 = new_value;
+    }
+    else if (field_name == "ext7")
+    {
+        current_info.ext7 = new_value;
+    }
     else
     {
         // 无效的字段名
@@ -273,20 +293,34 @@ void set_local_data(String field_name, String new_value)
 
     Serial.println("存储字段：" + field_name + "  值：" + new_value);
 
+    int is_ready_len = current_info.is_ready.length();
+    int device_id_len = current_info.device_id.length();
+    int wifi_name_len = current_info.wifi_name.length();
+    int wifi_pwd_len = current_info.wifi_pwd.length();
+    int api_key_len = current_info.api_key.length();
+    int ext1_len = current_info.ext1.length();
+    int ext2_len = current_info.ext2.length();
+    int ext3_len = current_info.ext3.length();
+    int ext4_len = current_info.ext4.length();
+    int ext5_len = current_info.ext5.length();
+    int ext6_len = current_info.ext6.length(); 
+
     // 保存更新后的数据到 EEPROM
     writeStringToEEPROM(0, current_info.is_ready);
-    writeStringToEEPROM(current_info.is_ready.length() + 1, current_info.device_id);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1, current_info.wifi_name);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1, current_info.wifi_pwd);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1, current_info.api_key);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1 + current_info.api_key.length() + 1, current_info.ext1);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1 + current_info.api_key.length() + 1 + current_info.ext1.length() + 1, current_info.ext2);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1 + current_info.api_key.length() + 1 + current_info.ext1.length() + 1 + current_info.ext2.length() + 1, current_info.ext3);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1 + current_info.api_key.length() + 1 + current_info.ext1.length() + 1 + current_info.ext2.length() + 1 + current_info.ext3.length() + 1, current_info.ext4);
-    writeStringToEEPROM(current_info.is_ready.length() + 1 + current_info.device_id.length() + 1 + current_info.wifi_name.length() + 1 + current_info.wifi_pwd.length() + 1 + current_info.api_key.length() + 1 + current_info.ext1.length() + 1 + current_info.ext2.length() + 1 + current_info.ext3.length() + 1 + current_info.ext4.length() + 1, current_info.ext5);
+    writeStringToEEPROM(is_ready_len + 1, current_info.device_id);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1, current_info.wifi_name);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1, current_info.wifi_pwd);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1, current_info.api_key);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1, current_info.ext1);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1, current_info.ext2);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1, current_info.ext3);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1, current_info.ext4);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1, current_info.ext5);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1, current_info.ext6);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1 +  ext6_len + 1, current_info.ext7);
     EEPROM.commit();
     // 确保数据被写入 EEPROM
-    delay(100);
+    delay(60);
 }
  
 std::vector<int> digital_read_pins;

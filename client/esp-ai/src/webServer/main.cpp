@@ -40,6 +40,8 @@ void ESP_AI::set_config()
     String ext3 = esp_ai_server.arg("ext3");
     String ext4 = esp_ai_server.arg("ext4");
     String ext5 = esp_ai_server.arg("ext5");
+    String ext6 = esp_ai_server.arg("ext6");
+    String ext7 = esp_ai_server.arg("ext7");
 
     DEBUG_PRINTLN(debug, ("================== Set Config ===================="));
     DEBUG_PRINTLN(debug, "设置 wifi_name：" + wifi_name);
@@ -50,6 +52,8 @@ void ESP_AI::set_config()
     DEBUG_PRINTLN(debug, "设置 ext3：" + ext3);
     DEBUG_PRINTLN(debug, "设置 ext4：" + ext4);
     DEBUG_PRINTLN(debug, "设置 ext5：" + ext5);
+    DEBUG_PRINTLN(debug, "设置 ext6：" + ext6);
+    DEBUG_PRINTLN(debug, "设置 ext7：" + ext7);
     DEBUG_PRINTLN(debug, ("==================================================="));
     // return;
 
@@ -110,7 +114,7 @@ void ESP_AI::set_config()
     if (onBindDeviceCb != nullptr)
     {
         String loc_device_id = get_local_data("device_id");
-        String res_str = onBindDeviceCb(loc_device_id, wifi_name, wifi_pwd, ext1, ext2, ext3, ext4, ext5);
+        String res_str = onBindDeviceCb(loc_device_id, wifi_name, wifi_pwd, ext1, ext2, ext3, ext4, ext5, ext6, ext7);
 
         JSONVar parse_res = JSON.parse(res_str);
         if (JSON.typeof(parse_res) == "undefined")
@@ -142,6 +146,8 @@ void ESP_AI::set_config()
         set_local_data("ext3", ext3);
         set_local_data("ext4", ext4);
         set_local_data("ext5", ext5);
+        set_local_data("ext6", ext6);
+        set_local_data("ext7", ext7);
         // 重启板子
         delay(2000);
         ESP.restart();
@@ -159,6 +165,8 @@ void ESP_AI::get_config()
     String loc_ext3 = get_local_data("ext3");
     String loc_ext4 = get_local_data("ext4");
     String loc_ext5 = get_local_data("ext5");
+    String loc_ext6 = get_local_data("ext6");
+    String loc_ext7 = get_local_data("ext7");
 
     JSONVar json_response;
     JSONVar json_response_data;
@@ -172,6 +180,8 @@ void ESP_AI::get_config()
     json_response_data["ext3"] = loc_ext3;
     json_response_data["ext4"] = loc_ext4;
     json_response_data["ext5"] = loc_ext5;
+    json_response_data["ext6"] = loc_ext6;
+    json_response_data["ext7"] = loc_ext7;
     json_response["data"] = json_response_data;
     String send_data = JSON.stringify(json_response);
 
@@ -264,6 +274,8 @@ void ESP_AI::clear_config()
     set_local_data("ext3", "");
     set_local_data("ext4", "");
     set_local_data("ext5", "");
+    set_local_data("ext6", "");
+    set_local_data("ext7", "");
 
     web_server_setCrossOrigin();
     esp_ai_server.send(200, "application/json", "{\"success\":true,\"message\":\"清除配网信息成功, 即将重启设备。\"}");

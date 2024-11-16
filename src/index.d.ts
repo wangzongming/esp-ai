@@ -383,7 +383,7 @@ export interface Instance {
       * 等同于硬件端的 .setWifiConfig 方法
       * wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5
      */
-    setWifiConfig(device_id: string, arg: Record<"wifi_name" | "wifi_pwd" | "api_key" | "ext1" | "ext2" | "ext3" | "ext4" | "ext5", string>): Promise<boolean>;
+    setWifiConfig(device_id: string, arg: Record<"wifi_name" | "wifi_pwd" | "api_key" | "ext1" | "ext2" | "ext3" | "ext4" | "ext5" | "ext6" | "ext7", string>): Promise<boolean>;
 
     /**
      * 让客户端输出一段话

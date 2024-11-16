@@ -52,7 +52,7 @@ class EspAiInstance {
      * 设置客户端 wifi 信息和存贮的业务数据，也就是配网页面设置的值，都可以用这个方法来改
      * 等同于硬件端的 .setWifiConfig 方法
      * @params device_id 指定设备
-     * @params arg 可该项：wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5
+     * @params arg 可该项：wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5 | ext6 | ext7
     */
     setWifiConfig(device_id, arg) {
         !device_id && log.error(`调用 setWifiConfig 方法时，请传入 device_id`);

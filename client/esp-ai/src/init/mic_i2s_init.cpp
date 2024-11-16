@@ -65,8 +65,6 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
     {
         Serial.println("[Error] Error in initializing dma buffer with 0");
     }
-
  
-
     return int(ret);
 }

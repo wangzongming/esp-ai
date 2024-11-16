@@ -24,7 +24,7 @@
  */
 #include "onBindDevice.h" 
  
-void ESP_AI::onBindDevice(String (*func)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5))
+void ESP_AI::onBindDevice(String (*func)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7))
 {
     onBindDeviceCb = func;
 }

@@ -236,7 +236,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String ext3 = (const char *)parseRes["configs"]["ext3"];
                     String ext4 = (const char *)parseRes["configs"]["ext4"];
                     String ext5 = (const char *)parseRes["configs"]["ext5"];
-                    bool is_ok = setWifiConfig(wifi_name, wifi_pwd, api_key, ext1, ext2, ext3, ext4, ext5);
+                    String ext6 = (const char *)parseRes["configs"]["ext6"];
+                    String ext7 = (const char *)parseRes["configs"]["ext7"];
+                    bool is_ok = setWifiConfig(wifi_name, wifi_pwd, api_key, ext1, ext2, ext3, ext4, ext5, ext6, ext7);
 
                     JSONVar set_wifi_config_res;
                     set_wifi_config_res["type"] = "set_wifi_config_res";
