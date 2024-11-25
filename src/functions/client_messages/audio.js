@@ -93,7 +93,7 @@ function fn({ device_id, data }) {
                         }
 
                     );
-                }, (user_config.iat_config.vad_eos || 2500) - 300) // 需要比静默时间少,
+                }, (user_config.iat_config.vad_eos || 1500) - 300) // 需要比静默时间少,
             })
         }
     } catch (err) {

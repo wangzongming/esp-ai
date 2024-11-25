@@ -207,7 +207,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                         },
                         // 填充business
                         business: {
-                            vad_eos: 2500,
+                            vad_eos: 1500,
                             language: "zh_cn",
                             domain: "iat",
                             accent: "mandarin",

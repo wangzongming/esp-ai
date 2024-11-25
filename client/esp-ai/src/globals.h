@@ -38,8 +38,7 @@
 // 要安装插件： https://github.com/pschatzmann/arduino-libhelix
 // 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行
 #include "AudioCodecs/CodecMP3Helix.h"   
-
-// 使用 LAME 对mp3编码  test...
+ 
 // 要安装插件： https://github.com/pschatzmann/arduino-liblame
 #include "AudioCodecs/CodecMP3LAME.h"  
 // #include "MP3EncoderLAME.h"
@@ -57,9 +56,7 @@
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
-
-// test...
-// using namespace liblame;
+ 
 
 struct ESP_AI_i2s_config_mic
 {
