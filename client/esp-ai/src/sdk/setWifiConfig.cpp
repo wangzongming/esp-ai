@@ -59,7 +59,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
         status_change("0_ing");
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing");
         }
         delay(250);
@@ -68,7 +68,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
         status_change("0_ing_after");
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing_after");
         }
         delay(250);
@@ -91,7 +91,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
         //     // 设备状态回调
         //     if (onNetStatusCb != nullptr)
         //     {
-        //         net_status = "0_ing";
+        //         esp_ai_net_status = "0_ing";
         //         onNetStatusCb("0_ing");
         //     }
         //     connect_count++;
@@ -99,7 +99,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
         //     DEBUG_PRINT(debug, ".");
         //     if (onNetStatusCb != nullptr)
         //     {
-        //         net_status = "0_ing";
+        //         esp_ai_net_status = "0_ing";
         //         onNetStatusCb("0_ing_after");
         //     }
         //     delay(250);

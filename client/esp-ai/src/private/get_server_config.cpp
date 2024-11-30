@@ -90,7 +90,7 @@ bool ESP_AI::get_server_config()
                 // 设备状态回调
                 if (onNetStatusCb != nullptr)
                 {
-                    net_status = "0_ap";
+                    esp_ai_net_status = "0_ap";
                     onNetStatusCb("0_ap");
                 }
                 return false;

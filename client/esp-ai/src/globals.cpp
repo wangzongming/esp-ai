@@ -24,21 +24,24 @@
  */
 
 #include "globals.h"
- 
-String ESP_AI_VERSION = "2.15.6";
-String start_ed = "0";
-String can_voice = "1";
+
+String ESP_AI_VERSION = "2.17.6";
+String esp_ai_start_ed = "0";
+String esp_ai_can_voice = "1";
 String is_send_server_audio_over = "1";
 int cur_ctrl_val = 0;
-bool ws_connected = false;
+bool esp_ai_ws_connected = false;
 String session_id = "";
 String tts_task_id = "";
+
+// 使用串口2来进行串口唤醒通信
+HardwareSerial Esp_ai_serial(2);
 
 // ing...
 int esp_ai_VAD_THRESHOLD = 60;
 
 // 网络状态
-String net_status = "0";
+String esp_ai_net_status = "0";
 // 是否是配网页面链接wifi时错处
 String ap_connect_err = "0";
 
@@ -47,8 +50,22 @@ WebSocketsClient esp_ai_webSocket;
 I2SStream i2s;
 VolumeStream esp_ai_volume(i2s);
 EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); // Decoding stream
-
  
+void esp_ai_asr_callback(uint8_t *mp3_data, size_t len)
+{  
+    // Serial.print(F("mp3 音频生成: "));
+    // Serial.print(len); 
+    // Serial.print(" => "); 
+    // for (size_t i = 0; i < 10; i++) {
+    //     Serial.print(mp3_data[i], HEX); // 以十六进制格式打印每个字节
+    //     Serial.print(" "); // 添加空格分隔
+    // }
+    // Serial.println(""); 
+    esp_ai_webSocket.sendBIN((uint8_t *)mp3_data, len); 
+}
+liblame::MP3EncoderLAME esp_ai_mp3_encoder(esp_ai_asr_callback);
+liblame::AudioInfo esp_ai_mp3_info;
+
 WebServer esp_ai_server(80);
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
@@ -62,20 +79,20 @@ ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", ""};
 // { ip， port, api_key }
 ESP_AI_server_config default_server_config = {"https", "node.espai.fun", 443, "", ""};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
-ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false}; 
+ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false};
 
 inference_t inference;
-signed short sampleBuffer[sample_buffer_size];
+// signed short sampleBuffer[sample_buffer_size];
 bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
 bool record_status = true;
 
-int16_t mic_sampleBuffer[mic_sample_buffer_size];
+int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size];
+int16_t mic_sampleBuffer[mic_sample_buffer_size]; 
 
 String wake_up_scheme = "edge_impulse";
 
-
-// 灯的数量, 灯带的连接引脚, 使用RGB模式控制ws2812类型灯带，灯带的频率为800KH 
-Adafruit_NeoPixel esp_ai_pixels(1, 18, NEO_GRB + NEO_KHZ800); 
+// 灯的数量, 灯带的连接引脚, 使用RGB模式控制ws2812类型灯带，灯带的频率为800KH
+Adafruit_NeoPixel esp_ai_pixels(1, 18, NEO_GRB + NEO_KHZ800);
 
 /**
  * 生成34位uiud
@@ -160,7 +177,7 @@ String get_local_data(const String &field_name = "")
     Info.ext4 = readStringFromEEPROM();
     Info.ext5 = readStringFromEEPROM();
     Info.ext6 = readStringFromEEPROM();
-    Info.ext7 = readStringFromEEPROM(); 
+    Info.ext7 = readStringFromEEPROM();
     // 如果指定了字段名，则返回对应的字段值
     if (field_name == "is_ready")
     {
@@ -303,7 +320,7 @@ void set_local_data(String field_name, String new_value)
     int ext3_len = current_info.ext3.length();
     int ext4_len = current_info.ext4.length();
     int ext5_len = current_info.ext5.length();
-    int ext6_len = current_info.ext6.length(); 
+    int ext6_len = current_info.ext6.length();
 
     // 保存更新后的数据到 EEPROM
     writeStringToEEPROM(0, current_info.is_ready);
@@ -317,11 +334,11 @@ void set_local_data(String field_name, String new_value)
     writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1, current_info.ext4);
     writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1, current_info.ext5);
     writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1, current_info.ext6);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1 +  ext6_len + 1, current_info.ext7);
+    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1 + ext6_len + 1, current_info.ext7);
     EEPROM.commit();
     // 确保数据被写入 EEPROM
     delay(60);
 }
- 
+
 std::vector<int> digital_read_pins;
-std::vector<int> analog_read_pins; 
+std::vector<int> analog_read_pins;

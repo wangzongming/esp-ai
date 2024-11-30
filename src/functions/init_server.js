@@ -91,7 +91,7 @@ function init_server() {
                 useed_flow: 0,
                 // 是否处于 IAT 预备状态
                 iat_readiness: false,
-                read_pin_cbs: new Map(), 
+                read_pin_cbs: new Map(),  
             });
 
             ws.isAlive = true;

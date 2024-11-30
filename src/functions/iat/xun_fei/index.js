@@ -190,14 +190,13 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             if (!iat_server_connected) return;
             let frame = "";
             let frameDataSection = {
-                "status": iat_status,
-                // 这里的帧率一定要和 inmp441 对上
+                "status": iat_status, 
                 "format": "audio/L16;rate=16000",
                 "audio": data.toString('base64'),
-                "encoding": "raw",
-                // "encoding": "lame", // mp3
-                
-            }
+                // "encoding": "raw",
+                "encoding": "lame", // mp3   
+            } 
+
             switch (iat_status) {
                 case XF_IAT_FRAME.STATUS_FIRST_FRAME:
                     frame = {

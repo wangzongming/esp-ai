@@ -29,11 +29,11 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     switch (type)
     {
     case WStype_DISCONNECTED:
-        if (ws_connected)
+        if (esp_ai_ws_connected)
         {
-            ws_connected = false;
-            can_voice = "1";
-            start_ed = "0";
+            esp_ai_ws_connected = false;
+            esp_ai_can_voice = "1";
+            esp_ai_start_ed = "0";
             session_id = "";
             // digitalWrite(LED_BUILTIN, LOW);
             Serial.println("\n\n[Info] -> ESP-AI 服务连接成功\n\n");
@@ -43,16 +43,16 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             // 设备状态回调
             if (onNetStatusCb != nullptr)
             {
-                net_status = "2";
+                esp_ai_net_status = "2";
                 onNetStatusCb("2");
             }
         }
         break;
     case WStype_CONNECTED:
     {
-        ws_connected = true;
-        can_voice = "1";
-        start_ed = "0";
+        esp_ai_ws_connected = true;
+        esp_ai_can_voice = "1";
+        esp_ai_start_ed = "0";
         session_id = "";
         Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
 
@@ -66,7 +66,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // 设备状态回调
         if (onNetStatusCb != nullptr)
         {
-            net_status = "3";
+            esp_ai_net_status = "3";
             onNetStatusCb("3");
         }
         break;
@@ -74,21 +74,20 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     case WStype_TEXT:
         if (strcmp((char *)payload, "start_voice") == 0)
         {
-            can_voice = "1";
+            esp_ai_can_voice = "1";
             DEBUG_PRINTLN(debug, ("[Info] -> 继续采集音频"));
         }
         else if (strcmp((char *)payload, "pause_voice") == 0)
         {
-            can_voice = "0";
+            esp_ai_can_voice = "0";
             DEBUG_PRINTLN(debug, ("[Info] -> 暂停采集音频"));
         }
         else if (strcmp((char *)payload, "session_end") == 0)
         {
-            start_ed = "0";
-            can_voice = "1";
+            esp_ai_start_ed = "0";
+            esp_ai_can_voice = "1";
             session_id = "";
             esp_ai_dec.end();
-            // digitalWrite(LED_BUILTIN, LOW);
             DEBUG_PRINTLN(debug, ("\n[Info] -> 会话结束\n"));
         }
         else
@@ -180,7 +179,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
                     // 这里其他给情况预留服务回调
                     is_send_server_audio_over = "1";
-                    can_voice = "1";
+                    esp_ai_can_voice = "1";
                     // digitalWrite(LED_BUILTIN, LOW);
                     JSONVar data;
                     data["type"] = "client_out_audio_over";
@@ -219,6 +218,21 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 {
                     String status = (const char *)parseRes["status"];
                     DEBUG_PRINTLN(debug, "[Info] -> 会话状态：" + status);
+
+                    if (status == "iat_end")
+                    {
+                        esp_ai_start_ed = "0";
+                        esp_ai_can_voice = "1";
+                        // 释放编码器资源
+                        esp_ai_mp3_encoder.end();
+                    }
+                    else if (status == "iat_start")
+                    {
+                        // 启动 mp3 编码器
+                        esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
+                        esp_ai_start_ed = "1";
+                    }
+
                     // 内置状态处理
                     status_change(status);
                     if (onSessionStatusCb != nullptr)
@@ -259,6 +273,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String value = (const char *)parseRes["value"];
                     set_local_data(field, value);
                 }
+                else if (type == "log")
+                {
+                    String data = (const char *)parseRes["data"];  
+                    DEBUG_PRINT(debug, F("\n[Server Log] -> "));
+                    DEBUG_PRINTLN(debug, data);
+                }
                 else if (type == "hardware-fns")
                 {
                     int pin = (int)parseRes["pin"];
@@ -267,19 +287,19 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     int num_val = (int)parseRes["num_val"];
 
                     if (fn_name == "pinMode")
-                    { 
+                    {
                         str_val == "OUTPUT" && (pinMode(pin, OUTPUT), true);
                         str_val == "INPUT" && (pinMode(pin, INPUT), true);
                         str_val == "INPUT_PULLUP" && (pinMode(pin, INPUT_PULLUP), true);
-                        str_val == "INPUT_PULLDOWN" && (pinMode(pin, INPUT_PULLDOWN), true); 
+                        str_val == "INPUT_PULLDOWN" && (pinMode(pin, INPUT_PULLDOWN), true);
                     }
                     else if (fn_name == "digitalWrite")
                     {
                         str_val == "HIGH" && (digitalWrite(pin, HIGH), true);
-                        str_val == "LOW" && (digitalWrite(pin, LOW), true); 
+                        str_val == "LOW" && (digitalWrite(pin, LOW), true);
                     }
                     else if (fn_name == "digitalRead")
-                    { 
+                    {
                         digital_read_pins.push_back(pin);
                     }
                     else if (fn_name == "analogWrite")

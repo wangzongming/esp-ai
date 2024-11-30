@@ -79,7 +79,7 @@ void ESP_AI::set_config()
         // 设备状态回调
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing");
         }
         delay(250);
@@ -88,7 +88,7 @@ void ESP_AI::set_config()
         status_change("0_ing_after");
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing_after");
         }
         delay(250);
@@ -98,7 +98,7 @@ void ESP_AI::set_config()
     // 如果失败，连接时间将会 >= 7500ms, 其他情况都只能说明 wifi 连接成功了
     if (WiFi.status() != WL_CONNECTED)
     {
-        net_status = "0";
+        esp_ai_net_status = "0";
         ap_connect_err = "1";
         DEBUG_PRINTLN(debug, ("配网页面设置 WIFI 连接失败"));
         web_server_setCrossOrigin();

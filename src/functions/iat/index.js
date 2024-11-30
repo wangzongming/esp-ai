@@ -33,6 +33,11 @@ async function cb({ device_id, text }) {
         if (!G_devices.get(device_id)) return;
         const { first_session, ws: ws_client, user_config: { sleep_reply } } = G_devices.get(device_id);
 
+        ws_client && ws_client.send(JSON.stringify({
+            type: "log", 
+            data: `ASR 识别结果：${text}`
+        }))
+        
         onIATcb && onIATcb({
             device_id, text, ws: ws_client, 
             instance: G_Instance,
@@ -105,6 +110,7 @@ module.exports = async (device_id, connected_cb) => {
                     ...G_devices.get(device_id),
                     iat_server_connected: true,
                     iat_server_connect_ing: false,
+                    asr_buffer_cache: Buffer.from([]),
                 })
                 connected_cb && connected_cb();
                 ws_client && ws_client.send(JSON.stringify({
@@ -117,7 +123,7 @@ module.exports = async (device_id, connected_cb) => {
                     ...G_devices.get(device_id),
                     iat_server_connected: false,
                     iat_server_connect_ing: false,
-                    iat_ws: null,
+                    iat_ws: null, 
                 })
                 ws_client && ws_client.send(JSON.stringify({
                     type: "session_status",

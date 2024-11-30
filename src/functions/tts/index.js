@@ -121,10 +121,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
         let c_l = G_max_audio_chunk_size;
         const alen = audio.length;
         for (let i = 0; i < audio.length; i += c_l) {
-            if (!G_devices.get(device_id)) return;
-            // if (i === 0) {
-            //     c_l = c_l * 2;
-            // }
+            if (!G_devices.get(device_id)) return; 
             const { session_id: now_session_id, useed_flow } = G_devices.get(device_id);
             // if(stoped) return;
             if (session_id && now_session_id !== session_id) {
@@ -145,7 +142,12 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             const combinedBuffer = Buffer.concat([sessionIdBuffer, chunk]);
             // console.log('chunk length', combinedBuffer.length)
             ws_client.send(combinedBuffer);
- 
+
+            // test... 
+            // G_devices.set(device_id, {
+            //     ...G_devices.get(device_id),
+            //     useed_flow: useed_flow + (combinedBuffer.length / 1024)
+            // })
 
             if (is_over && (end >= alen)) {
                 ws_client.send(JSON.stringify({ type: "tts_send_end", tts_task_id }));
@@ -153,7 +155,10 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, resolve, reRecor
             }
             index++;
         }
- 
+
+        // test... 
+        // const { useed_flow } = G_devices.get(device_id);
+        // console.log(`->>> 已发送：${useed_flow.toFixed(2)} kb`)
     } catch (err) {
         console.log(err);
         log.error(`[${device_id}] TTS 回调错误： ${err}`)

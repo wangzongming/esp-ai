@@ -100,6 +100,7 @@ class EspAiInstance {
     */
     async restart(device_id) {
         !device_id && log.error(`调用 restart 方法时，请传入 device_id`);
+        if(!G_devices.get(device_id)) return;
         const { ws: ws_client } = G_devices.get(device_id);
         ws_client && ws_client.send(JSON.stringify({ type: "restart" }));
     }
@@ -110,6 +111,7 @@ class EspAiInstance {
     */
     async setLocalData(device_id, field, value) {
         !device_id && log.error(`调用 setLocalData 方法时，请传入 device_id`);
+        if(!G_devices.get(device_id)) return;
         const { ws: ws_client } = G_devices.get(device_id);
         ws_client && ws_client.send(JSON.stringify({
             type: "set_local_data",

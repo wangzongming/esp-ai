@@ -78,12 +78,9 @@ function main(config = {}) {
 
 
         const init_server = require("./functions/init_server")
-        const _config = IS_DEV ? require("./config_dev") : require("./config")
-        // 计算规则：buffer_count * (buffer_size / 2) = 8 * 512 = 4096
-        // global.G_max_audio_chunk_size = 1024 * 2; // 2048 在对话里面是最合适的
-        global.G_max_audio_chunk_size = 1024; // mp3 格式  
-        // global.G_max_audio_chunk_size = 4096; 
-        global.G_max_buffered_amount = 1024 * 4;
+        const _config = IS_DEV ? require("./config_dev") : require("./config")   
+        global.G_max_audio_chunk_size = 1280 * 5;      
+        // global.G_max_buffered_amount = 1024 * 4;
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };

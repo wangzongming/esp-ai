@@ -26,16 +26,13 @@
 
 void ESP_AI::wakeUp()
 {
-    if (ws_connected)
+    if (esp_ai_ws_connected)
     {
-        // 音频流清空 
+        // 音频流清空
         esp_ai_dec.end();
         delay(300);
         esp_ai_dec.begin();
-
-        // 开始录音
-        // digitalWrite(LED_BUILTIN, HIGH);
-        start_ed = "1";
+  
         session_id = "";
 
         JSONVar data;

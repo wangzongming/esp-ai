@@ -25,11 +25,9 @@
 
 const https = require('https');
 const http = require('http');
-const log = require('../utils/log');
-// const delay = require('../utils/delay');
-// const ffmpeg = require('fluent-ffmpeg');
-// const ffmpegPath = require('ffmpeg-static');
+const log = require('../utils/log'); 
 const { PassThrough } = require('stream');
+const moment = require('moment');
 
 function isHttpUrl(url) {
     const regex = /^https?:\/\/.+/;
@@ -70,41 +68,13 @@ function urlToStream(url, errCb, onEnd) {
         log.error(`音频播放错误: ${err}`)
         errCb && errCb();
     }
-}
-// function convertStream(inputStream, seek = 0, endCb, errCb) {
-//     try {
-//         const outputStream = new PassThrough();
-//         ffmpeg(inputStream)
-//             .setFfmpegPath(ffmpegPath)
-//             .format('s16le')
-//             .seek(seek || 0) // 进度控制 time 参数可以是数字（以秒为单位）或时间戳字符串（格式为 [[hh：]mm：]ss[.xxx]）。
-//             .audioFrequency(16000)
-//             .audioChannels(1)
-//             .on('error', (err) => {
-//                 console.log("流写入停止：", err);
-//                 errCb && errCb();
-//             })
-//             .on('progress', function (progress) {
-//                 // console.log(`进度 ${progress?.timemark} ${progress?.targetSize}/${progress?.currentKbps}`);
-//             })
-//             .on('end', () => {
-//                 // console.log('音频转换完成');
-//                 endCb && endCb();
-//             })
-//             .pipe(outputStream);
-
-//         return outputStream;
-//     } catch (err) {
-//         console.log(err)
-//         log.error(`音频播放错误: ${err}`)
-//     }
-// }
-
+} 
 /**
  * 播放任何 mp3、wav 的声音
  * 提供 http 地址
 */
 function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end) {
+    let checkBufferedAmount =  null;
     try {
         if (!isHttpUrl(url)) {
             log.error("play_audio 不支持本地地址！")
@@ -167,13 +137,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         })
          
         client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: task_id || "any_audio" }));
-        // console.log("开始转换：", url, client_ws.bufferedAmount)
-        // const server_audio_stream = urlToStream(url, ()=> endCb("error"));
-        // let is_parse_over = false;
-        // const output_stream = convertStream(server_audio_stream, seek, () => {
-        //     is_parse_over = true;
-        // }, ()=> endCb("error"));
-
+         
         let is_parse_over = false;
         const output_stream = urlToStream(url, 
             ()=> endCb("error"),
@@ -197,11 +161,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             }
             let c_l = G_max_audio_chunk_size;
             for (let i = 0; i < audio.length; i += c_l) {
-                if (!G_devices.get(device_id)) return; 
-                // if(client_ws.bufferedAmount < G_max_audio_chunk_size){
-                //     c_l = G_max_audio_chunk_size * 2; 
-                // }
-                // console.log("缓冲区：", client_ws.bufferedAmount);
+                if (!G_devices.get(device_id)) return;  
 
                 const { session_id: now_session_id } = G_devices.get(device_id);
                 if ((session_id && now_session_id !== session_id)) {
@@ -236,11 +196,10 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 is_sending = true;
                 const send_chunk = buffer_queue.shift();
                 const real_chunk = Buffer.concat([session_id_buffer, send_chunk])
-                // console.log("发送音频：", real_chunk.length);
+                // console.log("发送音频：", moment().format("HH:mm:ss:sss"),  real_chunk.length);
                 client_ws.send(real_chunk, (err) => {
                     if (is_parse_over) {
-                        if (!G_devices.get(device_id)) return;
-                        // console.log("故事任务队列长度：", buffer_queue.length);
+                        if (!G_devices.get(device_id)) return; 
                         if (buffer_queue.length === 0) {
                             endCb();
                         }
@@ -250,18 +209,20 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                         console.error('发送数据出错:', err);
                     }
                     // 等待 WebSocket 缓冲区清空后继续发送 
-                    const checkBufferedAmount = setInterval(() => {
+                    clearInterval(checkBufferedAmount);
+                    checkBufferedAmount = setInterval(() => {
                         if (client_ws.bufferedAmount === 0) {
                             clearInterval(checkBufferedAmount);
                             is_sending = false;
                             sendNextChunk();
-                        }
+                        }  
                     }, 10);
                 });
             }
         }
 
     } catch (err) {
+        clearInterval(checkBufferedAmount);
         if (!G_devices.get(device_id)) return;
         G_devices.set(device_id, {
             ...G_devices.get(device_id),

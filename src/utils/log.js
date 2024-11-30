@@ -3,7 +3,7 @@ const colors = require('colors');
 const moment = require('moment');
 function info(text, styles = []) {
     const { logs = {}} = G_config;
-    const bold = styles.includes('bold');
+    const bold = styles?.includes?.('bold');
     text = text.cyan;
     if (bold) { text = text.bold }
     if (logs.info) {
@@ -62,7 +62,7 @@ function llm_info(...text) {
 
 function error(text, styles = []) {
     const { logs = {} } = G_config;
-    const bold = styles.includes('bold');
+    const bold = styles?.includes?.('bold');
     text = text.red;
     if (bold) { text = text.bold }
 

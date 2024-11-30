@@ -27,6 +27,10 @@
 
 void ESP_AI::begin(ESP_AI_CONFIG config)
 {
+    // esp_ai_serial.begin(115200); // asrpro
+    // 参数包括串行通信的波特率、串行模式、使用的 RX 引脚和 TX 引脚。
+    Esp_ai_serial.begin(115200, SERIAL_8N1, esp_ai_serial_rx, esp_ai_serial_tx);
+
     delay(1000);
 
     if (psramFound())
@@ -88,10 +92,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         return;
     }
 
-    // led 指示灯
-    // pinMode(LED_BUILTIN, OUTPUT);
-    // digitalWrite(LED_BUILTIN, LOW);
-
     // ws2812
     esp_ai_pixels.begin();
     esp_ai_pixels.setBrightness(100); // 亮度设置
@@ -109,7 +109,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 设备状态回调
     if (onNetStatusCb != nullptr)
     {
-        net_status = "0";
+        esp_ai_net_status = "0";
         onNetStatusCb("0");
     }
 
@@ -152,8 +152,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "[Info] loc_ext6: " + loc_ext6);
     DEBUG_PRINTLN(debug, "[Info] loc_ext7: " + loc_ext7);
     DEBUG_PRINTLN(debug, ("====================================================="));
- 
-    
+
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
     String _wifi_pwd = loc_wifi_pwd;
@@ -170,7 +169,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 没有 wifi 信息时直接进入配网
     if (_wifi_name == "")
     {
-        delay(1000); 
+        delay(1000);
         DEBUG_PRINTLN(debug, ("\n[Info] 没有wifi信息，请配网"));
         // 重新配网
         WiFi.mode(WIFI_AP);
@@ -192,21 +191,23 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         // 设备状态回调
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ap";
+            esp_ai_net_status = "0_ap";
             onNetStatusCb("0_ap");
         }
         return;
-    }else{ 
+    }
+    else
+    {
         // 内置状态处理
         status_change("0_ing");
         DEBUG_PRINTLN(debug, "[Info] 为了保证wifi连接的顺利，所以请耐心等待 10 秒钟。");
-    
+
         /**
          * 重启设备时候如果路由设备还没有断开链路，小部分路由设备存在这个问题。
          * 然后设备又重启完了 进入了连网状态 那一定连网失败
          * 否则路由设备会认为是一个重复连接...
-        */
-        delay(10000); 
+         */
+        delay(10000);
     }
 
     DEBUG_PRINTLN(debug, "[Info] wifi name: " + _wifi_name);
@@ -225,7 +226,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         status_change("0_ing");
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing");
         }
         DEBUG_PRINT(debug, ".");
@@ -235,7 +236,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         // 设备状态回调
         if (onNetStatusCb != nullptr)
         {
-            net_status = "0_ing";
+            esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing_after");
         }
         delay(250);
@@ -262,7 +263,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             // 设备状态回调
             if (onNetStatusCb != nullptr)
             {
-                net_status = "0_ap";
+                esp_ai_net_status = "0_ap";
                 onNetStatusCb("0_ap");
             }
         }
@@ -276,7 +277,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 设备状态回调
     if (onNetStatusCb != nullptr)
     {
-        net_status = "2";
+        esp_ai_net_status = "2";
         onNetStatusCb("2");
     }
 
@@ -311,7 +312,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     speaker_i2s_setup();
-     
+
     if (String(server_config.ip) == "custom-made")
     {
         bool get_server_success = get_server_config();
@@ -328,23 +329,23 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // 获取硬件的定位信息
     get_position();
 
-    if(String(server_config.protocol) != "https" && String(server_config.protocol) != "http"){
+    if (String(server_config.protocol) != "https" && String(server_config.protocol) != "http")
+    {
         DEBUG_PRINTLN(debug, ("[Error] 服务协议必须为 http 或者 https ！"));
         return;
     }
 
-    
     DEBUG_PRINTLN(debug, ("[Info] 开始连接后台服务，如果长时间无响应说明你的服务有问题。"));
     DEBUG_PRINT(debug, ("[Info] 主机："));
-    DEBUG_PRINTLN(debug, server_config.ip); 
+    DEBUG_PRINTLN(debug, server_config.ip);
     DEBUG_PRINT(debug, ("[Info] 协议："));
-    DEBUG_PRINTLN(debug, server_config.protocol); 
+    DEBUG_PRINTLN(debug, server_config.protocol);
     DEBUG_PRINT(debug, ("[Info] 端口："));
-    DEBUG_PRINTLN(debug, server_config.port); 
+    DEBUG_PRINTLN(debug, server_config.port);
     DEBUG_PRINT(debug, ("[Info] 路径："));
-    DEBUG_PRINTLN(debug, server_config.path); 
+    DEBUG_PRINTLN(debug, server_config.path);
     DEBUG_PRINT(debug, ("[Info] 参数："));
-    DEBUG_PRINTLN(debug, server_config.params); 
+    DEBUG_PRINTLN(debug, server_config.params);
 
     // ws 服务
     if (String(server_config.protocol) == "https")

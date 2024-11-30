@@ -1,8 +1,10 @@
 
 <div align="center"> 
 <a name="readme-top"></a>
-
-![logo.png](https://espai.fun/images/logo.png)
+  
+<div style="background:#fff;border-radius: 12px;width:300px;">
+  <img src="https://espai.fun/images/logo.png"/> 
+</div>
 
 <h1>ESP-AI</h1>
 
@@ -25,10 +27,12 @@
 [bundlephobia-image]: https://badgen.net/bundlephobia/minzip/esp-ai?style=flat-square
 [download-image]: https://img.shields.io/npm/dm/esp-ai.svg?style=flat
 [bundlephobia-url]: https://bundlephobia.com/package/esp-ai 
-   
-<!-- ![logo.png](./imgs/ESP-AI.png) -->
+    
+ 
+<div style="background:#fff;border-radius: 12px;">
+<img src="https://espai.fun/images/ESP-AI.png"/>
+</div>
 
-![logo.png](https://espai.fun/images/ESP-AI.png)
 
 </div>
 

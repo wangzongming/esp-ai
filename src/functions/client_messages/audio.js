@@ -31,47 +31,26 @@ const { iat_info, error } = require("../../utils/log");
 // 模拟音频测试压力 
 // const fs = require('fs');
 // const path = require('path');
-// const writeStream = fs.createWriteStream(path.join(__dirname, './output.bin'));
-// // const writeStream = fs.createWriteStream(path.join(__dirname, './output.mp3'));
-// const writeStream = fs.createWriteStream(path.join(__dirname, './output.pcm'));
+// const moment = require('moment');
+// const writeStream = fs.createWriteStream(path.join(__dirname, `./output_${moment().format("HH_mm_ss")}.mp3`));
+// // const writeStream = fs.createWriteStream(path.join(__dirname, './output.pcm'));
 // let timer = null;
 // let countSize = 0;
 
 function fn({ device_id, data }) {
-    // 压力测试数据摘取  
-    // console.log('写入字节', data.length)
-    // writeStream.write(data);
-    // clearTimeout(timer);
-    // timer = setTimeout(() => {
-    //     writeStream.end();
-    // }, 1000)
-
     try {
         const { devLog, onIATEndcb } = G_config;
         if (!G_devices.get(device_id)) return;
         const { started, send_pcm, iat_server_connected, iat_end_frame_timer, iat_end_queue, user_config } = G_devices.get(device_id);
 
-        if (started && data && data.length && send_pcm && iat_server_connected) {
-            // console.log("---", data.length)
-            // countSize += data.length;
-            /**
-             * 你好呀，帮我写一首散文可以吗
-             * 你叫什么名字，今天你做了什么，你会些什么技能
-            */
-            // console.log("已接收大小：", countSize);
-            // console.log('写入字节', data.length)
-            // writeStream.write(data);
-            // clearTimeout(timer);
-            // timer = setTimeout(() => {
-            //     writeStream.end();
-            // }, 3000)
-
+        if (started && data && data.length && send_pcm && iat_server_connected) { 
             // 发送数据 
             send_pcm(data);
+
             // 准备发送最后一帧
             clearTimeout(iat_end_frame_timer);
             G_devices.set(device_id, {
-                ...G_devices.get(device_id),
+                ...G_devices.get(device_id), 
                 iat_end_frame_timer: setTimeout(async () => {
                     if (!G_devices.get(device_id)) return;
                     const { iat_server_connected } = G_devices.get(device_id);
@@ -87,7 +66,7 @@ function fn({ device_id, data }) {
                     iat_end_queue && await iat_end_queue();
                     onIATEndcb && await onIATEndcb(
                         {
-                            device_id, 
+                            device_id,
                             ws: ws_client,
                             instance: G_Instance
                         }
