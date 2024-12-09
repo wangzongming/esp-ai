@@ -76,14 +76,13 @@
 
 - [ ] 🤔 内置离线唤醒精准度提升(目前建议使用天问asrpro)  
 - [ ] 🤔 唤醒词在线生成 
-- [ ] 🤔 其他语言编写插件的方法（避免只能使用nodejs进行开发插件）
-- [ ] 🤔 提供专用开发板（避免当前的复杂接线）
+- [ ] 🤔 其他语言编写插件的方法（避免只能使用nodejs进行开发插件） 
 
 # 📦 安装
 
 ### 服务端
 ```bash
-docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
+docker run -itd -p 8088:8088 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
 ```
 ### 客户端
 在发布页面下载依赖后烧录到开发板中即可，详情见：[客户端安装](https://espai.fun/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF)
@@ -95,11 +94,6 @@ docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name 
 <img src="https://espai.fun/images/arduino.png" />
 <img src="https://espai.fun/images/nodejs.png" />
 
-# 📜 商业使用
-商业使用请购买商业授权，详情见 [商业授权](./COMMERCIAL_LICENSE.md)  
-商用授权单位为 公司名称+产品名称+版本 , 例如： 深圳XXX公司智能玩偶V1.0。  
-单个产品版本的商业许可费用为 10000 人民币，需一次性支付。   
- 
 # 🏪 交流群
 QQ 交流群: 854445223
 

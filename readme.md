@@ -73,15 +73,14 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 
 - [ ] 🤔 Improve accuracy of built-in offline wake-up (currently recommended to use Tianwen ASRPro) 
 - [ ] 🤔 Online wake word generation 
-- [ ] 🤔 Develop plugins in other languages (to avoid relying solely on Node.js for plugin development)
-- [ ] 🤔 Provide a dedicated development board (to avoid current complex wiring)
+- [ ] 🤔 Develop plugins in other languages (to avoid relying solely on Node.js for plugin development) 
 
 # 📦 Install
 
 
 ### Server
 ```bash
-docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
+docker run -itd -p 8088:8088 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
 ```
 ### Client
 Download the dependency on the release page and burn it to the development board, see details: [Client Install](https://espai.fun/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF)
