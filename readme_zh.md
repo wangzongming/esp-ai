@@ -83,7 +83,7 @@
 
 ### 服务端
 ```bash
-docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:2.0.0
+docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name esp-ai-server registry.cn-shanghai.aliyuncs.com/xiaomingio/esp-ai:1.0.0
 ```
 ### 客户端
 在发布页面下载依赖后烧录到开发板中即可，详情见：[客户端安装](https://espai.fun/start.html#%E5%AE%A2%E6%88%B7%E7%AB%AF)
@@ -99,9 +99,7 @@ docker run -itd -p 8080:8080 -v /esp-ai-server/index.js:/server/index.js --name 
 商业使用请购买商业授权，详情见 [商业授权](./COMMERCIAL_LICENSE.md)  
 商用授权单位为 公司名称+产品名称+版本 , 例如： 深圳XXX公司智能玩偶V1.0。  
 单个产品版本的商业许可费用为 10000 人民币，需一次性支付。   
-
-授权查询/举报地址：见 https://espai.fun/commercial-license.html
-
+ 
 # 🏪 交流群
 QQ 交流群: 854445223
 

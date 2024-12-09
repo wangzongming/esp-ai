@@ -95,13 +95,6 @@ Below are the `Node.js` and `Arduino` codes you need to write if you only requir
 <img src="https://espai.fun/images/arduino.png" />
 <img src="https://espai.fun/images/nodejs.png" />
 
-# 📜 Commercial Use
-
-For commercial use, please purchase a commercial license. For more details, see [Commercial License](./COMMERCIAL_LICENSE.md).  
-The commercial license is granted per unit of **Company Name + Product Name + Version**, for example: "Shenzhen XXX Company Smart Doll V1.0".  
-The commercial license fee for a single product version is 10,000 RMB, payable in a one-time payment.  
-
-License inquiry/report address: [https://espai.fun/commercial-license.html](https://espai.fun/commercial-license.html).
 
 # 🏪 Discussion Group
 QQ Discussion Group: 854445223
