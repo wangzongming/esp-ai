@@ -54,6 +54,11 @@
 - [中文文档](https://espai.fun/)
 - [English](https://espai.fun/en)
 
+# 🖥 开放平台 
+
+基于 ESP-AI 向企业以及个人提供端服务、与管理服务的平台。[去看看开放平台](https://dev.espai.fun/)。
+提供免费的 ASR、TTS、LLM 服务，在平台中仅需 15s 音频您即可克隆出自定义音色。
+
 
 # ✨ 特性
 

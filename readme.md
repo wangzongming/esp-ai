@@ -52,6 +52,13 @@ Open source is not easy, click the `Star` button in the upper right corner to sh
 
 - [中文网站](https://espai.fun/)
 - [English](https://espai.fun/en)
+
+
+# 🖥 open platform 
+
+A platform based on ESP-AI that provides end services and management services to businesses and individuals. [Visit the Open Platform](https://dev.espai.fun/).
+It offers free ASR (Automatic Speech Recognition), TTS (Text-to-Speech), and LLM (Large Language Model) services. On this platform, you can clone a custom voice with just a 15-second audio clip.
+
 # ✨ Features
 
 - ✔️ Customizable offline wake words with multiple built-in wake-up methods (voice, button, serial port, Tianwen ASRPro)

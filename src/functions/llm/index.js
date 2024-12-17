@@ -34,7 +34,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
         const { devLog, onLLMcb, llm_qa_number } = G_config;
         if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../tts`);
-        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue, stoped } = G_devices.get(device_id);
+        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue, tts_server } = G_devices.get(device_id);
         // if(stoped) return;
         if (!texts.index) {
             texts.index = 0;
@@ -61,7 +61,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
             devLog && log.llm_info('-> LLM 推理完毕');
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0)
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0, tts_server)
 
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
             // console.log('llm 结束: ', textNowNull, ttsText);
@@ -118,7 +118,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
             }));
         }
         else {
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index)
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
             if (ttsText) {
                 // log.llm_info('客户端播放1：', ttsText);
                 texts.all_text += org_text;
@@ -151,23 +151,19 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
  *  1. 使用正则表达式匹配所有表示句子停顿的中英文标点,并不是使用标点符号分割
  *  2. 一些特殊符号不用念出来
 */
-function extractBeforeLastPunctuation(str, isLast, index) {
+function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
     const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
     const matches = [...str.matchAll(punctuationRegex)];
- 
-    // const combinedRegex = /([.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?|[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F680}-\u{1F6C0}])/ug;
-    // const matches = [...str.matchAll(combinedRegex)];
-
+   
     if (!isLast && matches.length === 0) return {};
     const notSpeek = /[\*|\\n]/g;
     // 获取最后一个匹配的标点符号的索引
     const lastIndex = matches[matches.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
-        // 这里是否考虑提供配置让用户决策
-        // const min_len = index === 1 ? 10 : Math.min(index * 50, 500);
-        const min_len = index === 1 ? 10 : Math.min(index * 30, 300);
+        // 这里是否考虑提供配置让用户决策   
+        const min_len =  (index === 1 ? 10 : Math.min(index * 30, 300)); 
         if ((res.length < min_len) && !isLast) {
             return {}
         }

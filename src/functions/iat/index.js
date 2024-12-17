@@ -169,7 +169,7 @@ module.exports = async (device_id, connected_cb) => {
                 iat_server_connected: false,
             })
             TTS_FN(device_id, {
-                text: "语音识别发生了错误。",
+                text: `语音识别发生了错误:${err}`,
                 reRecord: true,
                 pauseInputAudio: true
             });
