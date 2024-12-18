@@ -26,7 +26,10 @@ const fs = require('fs')
 const axios = require('axios');
 const { PassThrough } = require('stream');
 const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static'); 
 const AudioSender = require('../../../utils/AudioSender');
+
+
 
 /**
  * TTS 插件封装 - 讯飞 TTS
@@ -57,7 +60,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
              * 服务返回 wav 流，需要转为 mp3 流
             */
             async function sendTTSRequest({ url, streaming, ...other_config }) {
-                const data = { ...other_config };
+                const data = { ...other_config, streaming };
 
                 try {
                     connectServerBeforeCb();
@@ -77,25 +80,28 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
                     connectServerCb(true);
                     devLog && log.tts_info("-> ESP-AI TTS 服务连接成功！")
- 
+
                     // const fileWriter = fs.createWriteStream(`test.mp3`);
                     const threshold = 1280 * 5;
-                    let dataSender = new AudioSender(threshold, (data) => { 
+                    let dataSender = new AudioSender(threshold, (data) => {
                         // console.log('send data:', data.length);
                         cb({ is_over: false, audio: data, resolve, ws });
                     });
-                    const sampleRate = 24000;   
-                    const silenceDuration = 0.8;  
-                    const silenceSize = sampleRate * silenceDuration * 2; 
-                    const silenceBuffer = Buffer.alloc(silenceSize, 0); 
-                    const audioStream = response.data;
+                    const sampleRate = 24000;
+                    const silenceDuration = 0.8;
+                    const silenceSize = sampleRate * silenceDuration * 2;
+                    const silenceBuffer = Buffer.alloc(silenceSize, 0);
+                    const audioStream = response.data;  
+                    
                     const stream = new PassThrough();
                     audioStream.pipe(stream);
 
-                    ffmpeg(stream)
+                    try{
+                        ffmpeg(stream)
+                        .setFfmpegPath(ffmpegPath)
                         .inputFormat('wav')
                         .audioCodec('libmp3lame')
-                        .outputFormat('mp3')  
+                        .outputFormat('mp3')
                         .audioFrequency(sampleRate)
                         .on('error', (error) => {
                             console.error(`MP3 转换出错 ${error}`);
@@ -104,19 +110,26 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
                             resolve(false);
                         })
                         .pipe()
-                        .on('data', (chunk) => { 
-                            dataSender.addData(chunk);  
+                        .on('data', (chunk) => {
+                            dataSender.addData(chunk);
                             // fileWriter.write(chunk);  // 写入数据到文件 
                         })
-                        .on('end', () => {  
+                        .on('end', () => {
                             // 在音频流结束时添加一些静音，TTS 服务的 bug
                             dataSender.addData(silenceBuffer);  // 添加静音到发送器
                             //  .write(silenceBuffer);    // 写入数据到文件 
                             // fileWriter.end();   
                             dataSender.flushRemaining();
-                            cb({ is_over: true, audio: "", resolve, ws }); 
+                            cb({ is_over: true, audio: "", resolve, ws });
                             dataSender = null;
-                        }); 
+                        });
+                    }catch(err){
+                        log.error(err);
+                        log.error(`如果您遇到了 ffmpeg-static 错误，那请卸载 ffmpeg-static 后重新安装，注意删除 package-lock.json 文件`);
+                        log.error(`1. 执行 npm uninstall ffmpeg-static`);
+                        log.error(`2. 执行 npm install ffmpeg-static`);
+                    }
+                    
                 } catch (error) {
                     console.error(`tts错误 ${error.message}`);
                     console.error(`Status: ${error.response?.status}`);
