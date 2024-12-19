@@ -49,7 +49,7 @@ const axios = require('axios');
 */
 function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb, log }) {
     try {
-        const { url = 'http://espai.nat300.top/v1/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
+        const { url = 'https://espai.natapp4.cc/v1/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
         if (!api_key) return log.error(`请配给 LLM 配置 api_key 参数。`)
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制

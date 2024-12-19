@@ -50,7 +50,7 @@ const AudioSender = require('../../../utils/AudioSender');
 */
 function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
-        const { url = 'http://espai.nat300.top/v1/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
+        const { url = 'https://espai.natapp4.cc/v1/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
         if (!url) return log.error(`请配给 TTS 配置 url 参数。`);
         let shouldClose = false;

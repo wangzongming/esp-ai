@@ -58,7 +58,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let iat_server_connected = false;
 
         connectServerBeforeCb();
-        const iat_ws = new WebSocket(`ws://espai.nat300.top/v1/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
+        const iat_ws = new WebSocket(`wss://espai.natapp4.cc/v1/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
 
         logWSServer({
             close: () => {
