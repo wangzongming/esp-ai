@@ -31,34 +31,49 @@
 #include <WiFi.h>
 #include <WebSocketsClient.h>
 
-// 音频流播放插件
 #include "AudioTools.h"
 
 // 使用 libhelix 对mp3编码
 // 要安装插件： https://github.com/pschatzmann/arduino-libhelix
-// 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行
-#include "AudioCodecs/CodecMP3Helix.h"
+// 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行 --1.x 版本作者已经注释
+// #include "AudioCodecs/CodecMP3Helix.h"
+#include "AudioTools/AudioCodecs/CodecMP3Helix.h"
 
-// 使用 LAME 对mp3编码 
+// 使用 LAME 对mp3编码
 // 要安装插件： https://github.com/pschatzmann/arduino-liblame
-#include "AudioCodecs/CodecMP3LAME.h" 
+// #include "AudioCodecs/CodecMP3LAME.h"
+#include "AudioTools/AudioCodecs/CodecMP3LAME.h"
 
 #include <Arduino_JSON.h>
 #include <WebServer.h>
-#include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
 
-#include <HardwareSerial.h> 
+#include <HardwareSerial.h>
+#include <Preferences.h>
 
+#include <esp_adc_cal.h>
+#include <driver/adc.h>
+// #include "esp_sleep.h"
+
+#include "audio/zh/jian_quan_shi_bai.h"
+#include "audio/zh/lian_jie_cheng_gong.h"
+#include "audio/zh/lian_jie_shi_bai.h"
+#include "audio/zh/lian_jie_zhong.h"
+#include "audio/zh/mei_dian_le.h"
+#include "audio/zh/pei_wang_cheng_gong.h"
+#include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
+#include "audio/zh/qing_lian_jie_fu_wu.h"
+#include "audio/zh/qing_pei_wang.h"
+#include "audio/zh/san_ci.h"
+#include "audio/zh/yu_e_bu_zuo.h"
 
 // 天问使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
 #define esp_ai_serial_tx 11
-#endif 
+#endif
 #ifndef esp_ai_serial_rx
 #define esp_ai_serial_rx 12
 #endif
-
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 18
@@ -68,8 +83,9 @@
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
- 
+
 extern HardwareSerial Esp_ai_serial;
+extern Preferences esi_ai_prefs;
 
 struct ESP_AI_i2s_config_mic
 {
@@ -94,6 +110,8 @@ struct ESP_AI_i2s_config_speaker
  *       asrpro：天问语音模块唤醒
  *     pin_high：引脚高电平唤醒
  *      pin_low：引脚低电平唤醒
+ *     pin_high_listen：引脚高电平聆听(按下对话)  ing...
+ *      pin_low_listen：引脚低电平聆听(按下对话)  ing...
  *       serial：串口字符唤醒
  *       custom：自定义，自行调用 esp_ai.wakeUp() 唤醒
  */
@@ -109,6 +127,10 @@ struct ESP_AI_wake_up_config
     int pin;
     // 串口唤醒时的唤醒字符
     char str[32];
+    // 用户未说话前等待静默时间，默认 5000
+    int vad_first;
+    // 用户说话后等待静默时间，默认 500
+    int vad_course;
 };
 
 // 音量调节配置
@@ -149,6 +171,14 @@ struct ESP_AI_server_config
     char path[100];
 };
 
+struct ESP_AI_reset_btn_config
+{
+    // IO口，默认使用 10。也就是和按钮唤醒使用一个IO
+    int pin;
+    // 按钮按下时IO口输出为高电平还是低电平："low" | "high"， 默认 'high'
+    String power;
+};
+
 struct ESP_AI_CONFIG
 {
     // debug 模式，输出更多信息
@@ -165,6 +195,8 @@ struct ESP_AI_CONFIG
     ESP_AI_i2s_config_mic i2s_config_mic;
     // 扬声器引脚配置
     ESP_AI_i2s_config_speaker i2s_config_speaker;
+    // 重置信息按钮配置
+    ESP_AI_reset_btn_config reset_btn_config;
 };
 
 extern String esp_ai_net_status;
@@ -173,26 +205,50 @@ extern String ap_connect_err;
 extern WebSocketsClient esp_ai_webSocket;
 extern WebServer esp_ai_server;
 
-extern I2SStream i2s;
+extern I2SStream esp_ai_spk_i2s;
 extern EncodedAudioStream esp_ai_dec; // Decoding stream
-extern VolumeStream esp_ai_volume;
+extern VolumeStream esp_ai_volume; 
 
 extern liblame::MP3EncoderLAME esp_ai_mp3_encoder;
 extern liblame::AudioInfo esp_ai_mp3_info;
 void esp_ai_asr_callback(uint8_t *mp3_data, size_t len);
-  
-constexpr uint32_t esp_ai_asr_sample_buffer_size = 1280 * 5; // 大约 0.3kb/50ms 
-extern int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size]; 
+
+constexpr uint32_t esp_ai_asr_sample_buffer_size = 1280 * 5; // 大约 0.3kb/50ms
+extern int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size];
 
 extern String ESP_AI_VERSION;
-extern String esp_ai_start_ed;
-extern String esp_ai_can_voice;
-extern String is_send_server_audio_over;
-extern int cur_ctrl_val;
+extern String esp_ai_start_ed; 
 extern bool esp_ai_ws_connected;
-extern String session_id;
-extern String tts_task_id;
-extern int esp_ai_VAD_THRESHOLD;
+extern String esp_ai_session_id;
+extern String esp_ai_tts_task_id;
+extern String esp_ai_status;
+extern bool esp_ai_sleep;
+
+// 聆听模式
+extern bool esp_ai_is_listen_model;
+
+// 用户已经发话
+extern bool esp_ai_user_has_spoken;
+
+// Start collecting audio
+extern bool esp_ai_start_get_audio;
+// Start sending audio to the service
+extern bool esp_ai_start_send_audio;
+// circulating register
+extern std::vector<uint8_t> *esp_ai_asr_sample_buffer_before;
+extern size_t esp_ai_asr_sample_index;
+
+// 音频缓存
+extern std::vector<uint8_t> esp_ai_cache_audio_du;
+extern std::vector<uint8_t> esp_ai_cache_audio_greetings;
+extern std::vector<uint8_t> esp_ai_cache_audio_sleep_reply;
+
+extern long wakeup_time;
+extern long last_silence_time;
+extern long last_not_silence_time;
+extern long last_silence_time_wakeup;
+extern long last_not_silence_time_wekeup; 
+extern String play_cache; 
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 extern ESP_AI_i2s_config_mic default_i2s_config_mic;
@@ -206,6 +262,8 @@ extern ESP_AI_wifi_config default_wifi_config;
 extern ESP_AI_server_config default_server_config;
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 extern ESP_AI_volume_config default_volume_config;
+// 重置按钮 { 输入引脚，输入最大值，默认音量 }
+extern ESP_AI_reset_btn_config default_reset_btn_config;
 
 extern Adafruit_NeoPixel esp_ai_pixels;
 
@@ -231,17 +289,10 @@ typedef struct
 } inference_t;
 
 extern inference_t inference;
-constexpr uint32_t sample_buffer_size = 2048; //  1024 2048 √ 4096 
 extern bool debug_nn; // Set this to true to see e.g. features generated from the raw signal
-extern bool record_status;
-
-/**
- * wakeup mic setting
- * 内存占用：1600 * 3 * 2字节(int16_t)
- */
-// constexpr uint32_t mic_sample_buffer_size = 512;
-constexpr uint32_t mic_sample_buffer_size = 16000 * 3;
-extern int16_t mic_sampleBuffer[mic_sample_buffer_size];
+extern bool esp_ai_wakeup_record_status;
+constexpr uint32_t mic_sample_buffer_size = 1024 * 3;
+extern int16_t mic_sample_buffer[mic_sample_buffer_size];
 
 extern String wake_up_scheme;
 
@@ -268,6 +319,8 @@ typedef struct
 } saved_info;
 String get_local_data(const String &field_name);
 void set_local_data(String field_name, String new_value);
+String get_device_id();
+bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
 
 extern std::vector<int> digital_read_pins;
-extern std::vector<int> analog_read_pins;
+extern std::vector<int> analog_read_pins; 

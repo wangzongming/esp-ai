@@ -34,12 +34,12 @@ async function cb({ device_id, text }) {
         const { first_session, ws: ws_client, user_config: { sleep_reply } } = G_devices.get(device_id);
 
         ws_client && ws_client.send(JSON.stringify({
-            type: "log", 
+            type: "log",
             data: `ASR 识别结果：${text}`
         }))
-        
+
         onIATcb && onIATcb({
-            device_id, text, ws: ws_client, 
+            device_id, text, ws: ws_client,
             instance: G_Instance,
             sendToClient: () => ws_client && ws_client.send(JSON.stringify({
                 type: "instruct",
@@ -55,12 +55,7 @@ async function cb({ device_id, text }) {
                 // 其他情况交给 LLM
                 LLM_FN(device_id, { text })
             }
-        } else {
-            !first_session && await TTS_FN(device_id, {
-                text: sleep_reply || "我先退下了，有需要再叫我。",
-                reRecord: false,
-                pauseInputAudio: true
-            });
+        } else {  
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 first_session: true,
@@ -80,7 +75,7 @@ module.exports = async (device_id, connected_cb) => {
         const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config, sleep_reply } } = G_devices.get(device_id)
 
         devLog && log.info('');
-        devLog && log.iat_info('=== 开始请求语音识别 ===');
+        devLog && log.iat_info('-> 开始请求语音识别');
 
         const plugin = plugins.find(item => item.name == iat_server && item.type === "IAT")?.main;
         const IAT_FN = plugin || require(`./${iat_server}`);
@@ -123,7 +118,7 @@ module.exports = async (device_id, connected_cb) => {
                     ...G_devices.get(device_id),
                     iat_server_connected: false,
                     iat_server_connect_ing: false,
-                    iat_ws: null, 
+                    iat_ws: null,
                 })
                 ws_client && ws_client.send(JSON.stringify({
                     type: "session_status",
@@ -186,19 +181,11 @@ module.exports = async (device_id, connected_cb) => {
             iat_ws && iat_ws.close();
             connectServerCb(false);
 
-            devLog && log.iat_info('=== IAT服务响应超时，会话结束 ===');
+            devLog && log.iat_info('-> IAT服务响应超时，会话结束');
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 stoped: true,
-            })
-            TTS_FN(device_id, {
-                text: sleep_reply || "我先退下了，有需要再叫我。",
-                reRecord: false,
-                pauseInputAudio: true,
-                onAudioOutOver: () => {
-                    ws_client && ws_client.send("session_end");
-                }
-            });
+            }) 
         }
 
         /**

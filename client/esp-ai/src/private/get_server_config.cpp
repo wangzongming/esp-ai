@@ -70,47 +70,25 @@ bool ESP_AI::get_server_config()
                 }
                 Serial.println("[Error] 请求服务信息错误: " + message);
                 Serial.println("[Error] 请重新配网，如果您不使用 ESP-AI 开发者平台，请将配网页面中的 api_key 删除");
-                // 重新配网
-                WiFi.mode(WIFI_AP);
-                String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
-                WiFi.softAP(ap_name);
-                IPAddress ip = WiFi.softAPIP();
-                String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-                String httpUrl = "http://" + ipStr;
-                DEBUG_PRINTLN(debug, "WIFI名称：" + ap_name);
-                DEBUG_PRINTLN(debug, "配网地址：" + httpUrl);
-                // 启动配网服务
-                web_server_init();
-                if (onAPInfoCb != nullptr)
-                {
-                    onAPInfoCb(httpUrl, ipStr, ap_name);
-                }
-                // 内置状态处理
-                status_change("0_ap");
-                // 设备状态回调
-                if (onNetStatusCb != nullptr)
-                {
-                    esp_ai_net_status = "0_ap";
-                    onNetStatusCb("0_ap");
-                }
+                open_ap(); 
                 return false;
             }
             else
             {
                 String ip_str = (const char *)parse_res["data"]["ip"];
                 // String ip_str = "192.168.3.3";
-                int port = (int)parse_res["data"]["port"]; 
-                String protocol = (const char *)parse_res["data"]["protocol"]; 
-                String path = (const char *)parse_res["data"]["path"]; 
+                int port = (int)parse_res["data"]["port"];
+                String protocol = (const char *)parse_res["data"]["protocol"];
+                String path = (const char *)parse_res["data"]["path"];
 
                 DEBUG_PRINTLN(debug, "[Info] 服务协议: " + protocol);
                 DEBUG_PRINTLN(debug, "[Info] 服务IP: " + ip_str);
                 DEBUG_PRINTLN(debug, "[Info] 服务端口: " + String(port));
- 
-                strcpy(server_config.ip, ip_str.c_str()); 
-                strcpy(server_config.protocol, protocol.c_str()); 
-                strcpy(server_config.path, path.c_str());  
-                server_config.port = port; 
+
+                strcpy(server_config.ip, ip_str.c_str());
+                strcpy(server_config.protocol, protocol.c_str());
+                strcpy(server_config.path, path.c_str());
+                server_config.port = port;
                 return true;
             }
         }

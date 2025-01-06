@@ -27,15 +27,19 @@ const log = require("../utils/log");
 const getIPV4 = require("../utils/getIPV4");
 const parseUrlParams = require("../utils/parseUrlParams");
 const isOutTimeErr = require("../utils/isOutTimeErr");
-const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue");
+const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue"); 
 const {
     audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn,
-    client_out_audio_over, cts_time, client_receive_audio_over, set_wifi_config_res, digitalRead, analogRead
-} = require("../functions/client_messages");
-const { add_audio_out_over_queue_hoc, run_audio_out_over_queue_hoc, clear_audio_out_over_queue_hoc } = require("./device_fns/audio_out_over_queue")
+    client_out_audio_over, cts_time, set_wifi_config_res, digitalRead, analogRead, iat_end
+} = require("../functions/client_messages"); 
+const error_catch_hoc = require("./device_fns/error_catch") 
 
-const error_catch_hoc = require("./device_fns/error_catch")
-const du = require("../audio_temp/du")
+// 音频测试
+// const fs = require('fs');
+// const path = require('path');
+// var index = 0;
+// var writeStream;
+
 function init_server() {
     try {
         const { port, devLog, onDeviceConnect, auth, gen_client_config } = G_config;
@@ -65,10 +69,8 @@ function init_server() {
                 await G_Instance.stop(device_id, "打断会话时");
                 ws.terminate();
                 G_devices.delete(device_id);
-            }
+            } 
 
-
-            const audio_queue = new Map([]);
             G_devices.set(device_id, {
                 started: false,
                 // 会话是否已经停止, 作为 started 的辅助
@@ -80,18 +82,12 @@ function init_server() {
                 tts_list: new Map(),
                 await_out_tts: [],
                 client_params,
-                client_version,
-                add_audio_out_over_queue: add_audio_out_over_queue_hoc(audio_queue),
-                run_audio_out_over_queue: run_audio_out_over_queue_hoc(audio_queue),
-                clear_audio_out_over_queue: clear_audio_out_over_queue_hoc(audio_queue),
+                client_version, 
                 error_catch: error_catch_hoc(ws),
-                du: du(ws),
-                tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id),
+                tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id), 
                 // 已输出流量 kb
                 useed_flow: 0,
-                // 是否处于 IAT 预备状态
-                iat_readiness: false,
-                read_pin_cbs: new Map(),  
+                read_pin_cbs: new Map(),
             });
 
             ws.isAlive = true;
@@ -115,20 +111,20 @@ function init_server() {
                         comm_args.text = text;
                         comm_args.success = success;
                         comm_args.value = value;
-                        comm_args.pin = pin; 
+                        comm_args.pin = pin;
                         switch (type) {
                             case "start":
-                                start(comm_args);
+                                start(comm_args); 
+                                break;
+                            case "iat_end":
+                                iat_end(comm_args);
                                 break;
                             case "client_out_audio_ing":
                                 client_out_audio_ing_fn(comm_args)
                                 break;
                             case "client_out_audio_over":
                                 client_out_audio_over(comm_args);
-                                break;
-                            case "client_receive_audio_over":
-                                client_receive_audio_over(comm_args);
-                                break;
+                                break; 
                             case "play_audio_ws_conntceed":
                                 play_audio_ws_conntceed(comm_args)
                                 break;
@@ -151,6 +147,7 @@ function init_server() {
                     } else {
                         ws.isAlive = true;
                         audio({ ...comm_args, data })
+ 
                     }
 
                 } catch (err) {

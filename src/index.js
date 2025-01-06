@@ -42,6 +42,15 @@ const LOGO = `
 服务端版本号：v${package.version}
 `
 const IS_DEV = process.argv[2] === "--dev";
+
+// 判断nodejs版本，低于 18 进行报错
+// 判断nodejs版本，低于 18 进行报错
+const nodeVersion = process.version.split('.')[0].replace('v', '');
+if (parseInt(nodeVersion, 10) < 18) { 
+    log.error(`Node.js 版本必须至少为 18.x\n`);
+    process.exit(1);
+}
+
 function main(config = {}) {
     try {
         log.info(LOGO);
@@ -75,17 +84,38 @@ function main(config = {}) {
         global.G_devices = new Map();
         const Instance = new EspAiInstance()
         global.G_Instance = Instance;
+        
+        /**
+         * 会话ID定义：  
+         * 1000 -> 提示音缓存数据
+         * 1001 -> 唤醒问候语缓存数据
+         * 1002 -> 休息时回复缓存数据
+         * 2000 -> 整个回复的TTS最后一组数据，需要继续对话
+         * 2001 -> 整个回复的TTS最后一组数据，无需继续对话
+         * 2002 -> TTS 任务组的片段完毕
+         * 其他 -> session_id
+        */
+        global.G_session_ids = {
+            cache_du:"1000",
+            cache_hello:"1001",
+            cache_sleep_reply:"1002",
+            tts_all_end_align:"2000",
+            tts_all_end:"2001",
+            tts_chunk_end:"2002",
+        }
 
 
         const init_server = require("./functions/init_server")
-        const _config = IS_DEV ? require("./config_dev") : require("./config")   
-        global.G_max_audio_chunk_size = 1280 * 5;      
-        // global.G_max_buffered_amount = 1024 * 4;
+        const _config = IS_DEV ? require("./config_dev") : require("./config")    
+
+        // 满足最高 44khz 不卡顿，超过44khz将无法满足~
+        // 如果只是满足 16k 可以 *4
+        global.G_max_audio_chunk_size = 1024 * 8;     
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };
 
-        // 缓存 TTS 下个版本在做 ing...
+        // 缓存 TTS  
         global.G_cahce_TTS = new Map();
         global.G_cahce_TTS_number = (G_config.cache_TTS_number || G_config.cache_TTS_number === 0) ? G_config.cache_TTS_number : 1000; // 缓存 TTS 数量。
         global.G_get_cahce_TTS = (text) => G_cahce_TTS.get(text);

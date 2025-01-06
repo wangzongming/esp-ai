@@ -32,22 +32,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
     DEBUG_PRINTLN(debug, ("==================== 调用 setWifiConfig 方法设置信息 ===================="));
 
     WiFi.begin(wifi_name, wifi_pwd);
-    DEBUG_PRINT(debug, "connect wifi ing..");
-
-    // WiFi.disconnect();
-    // // 清除之前的连接状态, 给 Wi-Fi 模块一些时间来断开连接
-    // WiFi.mode(WIFI_OFF);
-    // delay(1000);
-
-    // strncpy(wifi_config.wifi_name, wifi_name, sizeof(wifi_config.wifi_name) - 1);
-    // wifi_config.wifi_name[sizeof(wifi_config.wifi_name) - 1] = '\0';
-    // strncpy(wifi_config.wifi_pwd, wifi_pwd, sizeof(wifi_config.wifi_pwd) - 1);
-    // wifi_config.wifi_pwd[sizeof(wifi_config.wifi_pwd) - 1] = '\0';
-
-    // DEBUG_PRINTLN(debug, "wifi name: " + String(wifi_config.wifi_name));
-    // DEBUG_PRINTLN(debug, "wifi pwd: " + String(wifi_config.wifi_pwd));
-    // WiFi.begin(wifi_config.wifi_name, wifi_config.wifi_pwd);
-    // DEBUG_PRINT(debug, "connect wifi ing..");
+    DEBUG_PRINT(debug, "connect wifi ing.."); 
 
     int connect_count = 0;
     // 10s 连不上Wifi的话
@@ -77,38 +62,7 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
     if (WiFi.status() != WL_CONNECTED)
     {
         DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败, 即将重启板子"));
-        ESP.restart();
-
-        // 上一个网络依旧存在连不上的概率，所以这里没必要这么设置...
-        // String loc_wifi_name = get_local_data("wifi_name");
-        // String loc_wifi_pwd = get_local_data("wifi_pwd");
-        // WiFi.begin(loc_wifi_name, loc_wifi_pwd);
-        // int connect_count = 0;
-        // // 连不上就重启板子,让 begin 进行热点打开
-        // int try_count = 15;
-        // while (WiFi.status() != WL_CONNECTED && connect_count <= try_count)
-        // {
-        //     // 设备状态回调
-        //     if (onNetStatusCb != nullptr)
-        //     {
-        //         esp_ai_net_status = "0_ing";
-        //         onNetStatusCb("0_ing");
-        //     }
-        //     connect_count++;
-        //     delay(250);
-        //     DEBUG_PRINT(debug, ".");
-        //     if (onNetStatusCb != nullptr)
-        //     {
-        //         esp_ai_net_status = "0_ing";
-        //         onNetStatusCb("0_ing_after");
-        //     }
-        //     delay(250);
-        // }
-        // if (WiFi.status() != WL_CONNECTED)
-        // {
-        //     DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败，即将重启板子"));
-        //     ESP.restart();
-        // }
+        ESP.restart(); 
         return false;
     }
     DEBUG_PRINTLN(debug, "");

@@ -102,9 +102,7 @@ function stop(device_id, at) {
                 }
                 tts_list.delete(key)
             }
-
-            // 清空 tts 回调
-            clear_audio_out_over_queue();
+ 
             resolve(true);
         } else {
             resolve(true);

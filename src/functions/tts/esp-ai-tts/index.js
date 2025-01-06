@@ -26,8 +26,40 @@ const fs = require('fs')
 const axios = require('axios');
 const { PassThrough } = require('stream');
 const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static'); 
-const AudioSender = require('../../../utils/AudioSender');
+const ffmpegPath = require('ffmpeg-static');
+
+class AudioSender {
+    constructor(threshold, sendCallback) {
+        this.threshold = threshold;   // 缓存的阈值，达到此值时发送数据
+        this.cache = Buffer.alloc(0);  // 用于缓存接收到的音频数据
+        this.sendCallback = sendCallback;  // 发送回调函数
+    }
+
+    // 接收数据并将其添加到缓存
+    addData(chunk) {
+        this.cache = Buffer.concat([this.cache, chunk]);
+
+        // 如果缓存的大小达到阈值，执行发送操作
+        if (this.cache.length >= this.threshold) {
+            this.sendData();
+        }
+    }
+
+    // 执行数据发送操作
+    sendData() {
+        // console.log('发送数据，大小:', this.cache.length); 
+        this.sendCallback(this.cache);
+        this.cache = Buffer.alloc(0);
+    }
+
+    // 手动调用此方法来处理缓存中的剩余数据
+    flushRemaining() {
+        if (this.cache.length > 0) {
+            this.sendCallback(this.cache);
+            this.cache = Buffer.alloc(0);
+        }
+    }
+}
 
 
 
@@ -54,50 +86,47 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
         if (!url) return log.error(`请配给 TTS 配置 url 参数。`);
         let shouldClose = false;
-        return new Promise((resolve) => {
-            /**
-             * ESP-AI TTS Server 请求接口封装
-             * 服务返回 wav 流，需要转为 mp3 流
-            */
-            async function sendTTSRequest({ url, streaming, ...other_config }) {
-                const data = { ...other_config, streaming };
+        /**
+         * ESP-AI TTS Server 请求接口封装
+         * 服务返回 wav 流，需要转为 mp3 流
+        */
+        async function sendTTSRequest({ url, streaming, ...other_config }) {
+            const data = { ...other_config, streaming };
+
+            try {
+                connectServerBeforeCb();
+                const response = await axios.post(url, tts_params_set ? tts_params_set(data) : data, {
+                    headers: {
+                        'Authorization': `Bearer ${api_key}`,
+                        'Content-Type': 'application/json',
+                    },
+                    responseType: streaming ? 'stream' : 'arraybuffer',
+                });
+                const ws = {
+                    close() {
+                        shouldClose = true;
+                    }
+                };
+                logWSServer(ws)
+
+                connectServerCb(true);
+                devLog && log.tts_info("-> ESP-AI TTS 服务连接成功！")
+
+                const threshold = 1280 * 5;
+                let dataSender = new AudioSender(threshold, (data) => {
+                    cb({ is_over: false, audio: data, ws });
+                });
+                const sampleRate = 24000;
+                const silenceDuration = 0.8;
+                const silenceSize = sampleRate * silenceDuration * 2;
+                const silenceBuffer = Buffer.alloc(silenceSize, 0);
+                const audioStream = response.data;
+
+                const stream = new PassThrough();
+                audioStream.pipe(stream);
 
                 try {
-                    connectServerBeforeCb();
-                    const response = await axios.post(url, tts_params_set ? tts_params_set(data) : data, {
-                        headers: {
-                            'Authorization': `Bearer ${api_key}`,
-                            'Content-Type': 'application/json',
-                        },
-                        responseType: streaming ? 'stream' : 'arraybuffer',
-                    });
-                    const ws = {
-                        close() {
-                            shouldClose = true;
-                        }
-                    };
-                    logWSServer(ws)
-
-                    connectServerCb(true);
-                    devLog && log.tts_info("-> ESP-AI TTS 服务连接成功！")
-
-                    // const fileWriter = fs.createWriteStream(`test.mp3`);
-                    const threshold = 1280 * 5;
-                    let dataSender = new AudioSender(threshold, (data) => {
-                        // console.log('send data:', data.length);
-                        cb({ is_over: false, audio: data, resolve, ws });
-                    });
-                    const sampleRate = 24000;
-                    const silenceDuration = 0.8;
-                    const silenceSize = sampleRate * silenceDuration * 2;
-                    const silenceBuffer = Buffer.alloc(silenceSize, 0);
-                    const audioStream = response.data;  
-                    
-                    const stream = new PassThrough();
-                    audioStream.pipe(stream);
-
-                    try{
-                        ffmpeg(stream)
+                    ffmpeg(stream)
                         .setFfmpegPath(ffmpegPath)
                         .inputFormat('wav')
                         .audioCodec('libmp3lame')
@@ -106,8 +135,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
                         .on('error', (error) => {
                             console.error(`MP3 转换出错 ${error}`);
                             ttsServerErrorCb(`MP3 转换出错 ${error}`);
-                            connectServerCb(false);
-                            resolve(false);
+                            connectServerCb(false); 
                         })
                         .pipe()
                         .on('data', (chunk) => {
@@ -120,26 +148,24 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
                             //  .write(silenceBuffer);    // 写入数据到文件 
                             // fileWriter.end();   
                             dataSender.flushRemaining();
-                            cb({ is_over: true, audio: "", resolve, ws });
+                            cb({ is_over: true, audio: "", ws });
                             dataSender = null;
                         });
-                    }catch(err){
-                        log.error(err);
-                        log.error(`如果您遇到了 ffmpeg-static 错误，那请卸载 ffmpeg-static 后重新安装，注意删除 package-lock.json 文件`);
-                        log.error(`1. 执行 npm uninstall ffmpeg-static`);
-                        log.error(`2. 执行 npm install ffmpeg-static`);
-                    }
-                    
-                } catch (error) {
-                    console.error(`tts错误 ${error.message}`);
-                    console.error(`Status: ${error.response?.status}`);
-                    connectServerCb(false);
-                    resolve(false);
+                } catch (err) {
+                    log.error(err);
+                    log.error(`如果您遇到了 ffmpeg-static 错误，那请卸载 ffmpeg-static 后重新安装，注意删除 package-lock.json 文件`);
+                    log.error(`1. 执行 npm uninstall ffmpeg-static`);
+                    log.error(`2. 执行 npm install ffmpeg-static`);
                 }
-            }
 
-            sendTTSRequest({ ...other_config, url, text, reference_id, streaming: true, reference_audio: [] });
-        })
+            } catch (error) {
+                console.error(`tts错误 ${error.message}`);
+                console.error(`Status: ${error.response?.status}`);
+                connectServerCb(false);
+            }
+        }
+
+        sendTTSRequest({ ...other_config, url, text, reference_id, streaming: true, reference_audio: [] });
     } catch (err) {
         connectServerCb(false);
         log.error(`ESP-AI TTS 错误： ${err}`)

@@ -22,24 +22,20 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
- 
+  
 const { tts_info } = require("../../utils/log");
 async function fn({ device_id, tts_task_id, session_id }) { 
     const { devLog } = G_config;
     if (!G_devices.get(device_id)) return;
-    const { ws, run_audio_out_over_queue, iat_readiness, start_iat } = G_devices.get(device_id); 
-    devLog && tts_info("-> 客户端音频流播放完毕：", session_id, tts_task_id || "无任务ID");
-    run_audio_out_over_queue(tts_task_id);
+    const { ws } = G_devices.get(device_id); 
+    devLog && tts_info("-> 客户端音频流播放完毕：", session_id || "无会话ID", tts_task_id || "无任务ID");
+ 
     if (tts_task_id === "play_music") {
         ws && ws.send("session_end");
-    }
-    if(tts_task_id === "warning_tone" && iat_readiness){
-        start_iat();
-    }
+    } 
     G_devices.set(device_id, {
         ...G_devices.get(device_id),
-        client_out_audio_ing: false, 
-        iat_readiness: false
+        client_out_audio_ing: false,  
     })
 }
 

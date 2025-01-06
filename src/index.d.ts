@@ -101,10 +101,11 @@ export interface Config {
     devLog?: number,
 
     /**
-     * 语音识别开始前"嘟"的音频流
+     * 语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
      * 只能播放本地 mp3 地址： iatDu: path.join(__dirname, `./du.mp3`) // nodejs 写法
+     * 为 false 时关闭提示音，为 true 时使用默认提示音。
     */
-    iatDu?: string;
+    iatDu?: string | boolean;
 
 
     /**
@@ -158,9 +159,9 @@ export interface Config {
         connected_reply?: string,
 
         /**
-         * 被唤醒后的回复
+         * 被唤醒后的回复，设置为空时使用默认的 "您好"，设置为 false 时不播放问候语
         */
-        f_reply?: string;
+        f_reply?: string | boolean;
 
         /**
          * 要退下时的回复
@@ -233,7 +234,7 @@ export interface Config {
      * iat 回调: 语音识别过程中的回调
      * @param {string}    device_id     设备id
      * @param {string}    text          语音转的文字 
-     * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、 
+     * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、
      * 
      * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
      * void on_command(String command_id, String data) {
@@ -304,7 +305,7 @@ export interface Config {
      * @param {string}    device_id     设备id
      * @param {string}    text          输入的文本，也就是 asr 识别结果  
      * @param {object[]}  llm_historys  对话历史 
-     * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、 
+     * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、 。如果调用时传入了一段文本，那会把文本发给客户端，而不是发送 llm 的推理结果
      * 
      * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
      * void on_command(String command_id, String data) {
@@ -318,7 +319,7 @@ export interface Config {
      * }
      * 
     */
-    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
+    onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: (text: String) => void, instance: Instance }) => void;
 
     /**
      * LLM 推理后的回调，拿到的文字是推理结果。

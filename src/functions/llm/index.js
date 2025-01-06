@@ -23,8 +23,7 @@
  * @websit https://espai.fun
  */
 
-const log = require("../../utils/log");
-const delay = require("../../utils/delay");
+const log = require("../../utils/log"); 
 
 /**
  * 接下来的 session_id 都当前形参为准
@@ -46,10 +45,10 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
             text: chunk_text,
             is_over, llm_historys, ws: ws_client,
             instance: G_Instance,
-            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+            sendToClient: (_chunk_text) => ws_client && ws_client.send(JSON.stringify({
                 type: "instruct",
                 command_id: "on_llm_cb",
-                data: chunk_text
+                data: _chunk_text || chunk_text
             }))
         });
 
@@ -81,14 +80,8 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
             } else {
                 // 特殊结束任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: 2000`);
-                    const endFlagBuf = Buffer.from("2000", 'utf-8');
-                    ws_client.send(endFlagBuf);
-
-                    ws_client && ws_client.send(JSON.stringify({
-                        type: "session_status",
-                        status: "tts_real_end",
-                    }));
+                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`); 
+                    ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8')); 
                     return true;
                 })
             }
@@ -125,7 +118,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
                 texts.index += 1;
 
                 // 添加任务
-                tts_buffer_chunk_queue.push(() => {
+                tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
                     return TTS_FN(device_id, {
                         text: ttsText,
                         pauseInputAudio: true,
@@ -200,7 +193,7 @@ module.exports = (device_id, opts) => {
         let LLM_FN = null;
 
         devLog && log.info("");
-        devLog && log.llm_info('=== 开始请求 LLM 输入: ', text, " ===");
+        devLog && log.llm_info('-> 开始请求 LLM 输入: ', text);
 
         LLM_FN = plugin || require(`./${llm_server}`);
         onLLM && onLLM({

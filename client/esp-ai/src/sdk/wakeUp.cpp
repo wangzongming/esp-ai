@@ -24,22 +24,54 @@
  */
 #include "wakeUp.h"
 
-void ESP_AI::wakeUp()
+void ESP_AI::wakeUp(String scene)
 {
     if (esp_ai_ws_connected)
     {
-        // 音频流清空
-        esp_ai_dec.end();
-        delay(300);
-        esp_ai_dec.begin();
-  
-        session_id = "";
+        esp_ai_session_id = "";
+        esp_ai_tts_task_id = "";
 
-        JSONVar data;
-        data["type"] = "start";
-        String sendData = JSON.stringify(data);
-        esp_ai_webSocket.sendTXT(sendData);
+        // 打断服务端
+        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
+        esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
         DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
+
+        // 结束解码
+        esp_ai_dec.end();
+        delay(100);
+        esp_ai_dec.begin();
+
+        // 播放问候语 
+        if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
+        {
+            esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
+        }
+
+        // 播放提示音
+        if (!esp_ai_cache_audio_du.empty())
+        {
+            esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
+        }
+
+        // 继续采集音频
+        esp_ai_start_get_audio = true;
+        
+        // 清空缓冲区
+        esp_ai_asr_sample_buffer_before->clear();
+        last_silence_time = 0;
+        wakeup_time = millis();
+
+        // 内置状态处理
+        if (scene == "wakeup")
+        {
+            status_change("wakeup");
+            if (onSessionStatusCb != nullptr)
+            {
+                onSessionStatusCb("wakeup");
+            }
+        }
+
+        esp_ai_user_has_spoken = false;
     }
     else
     {

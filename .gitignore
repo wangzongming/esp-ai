@@ -20,7 +20,12 @@ example/index_copy.js
 # builds
 build 
 test-server
+
 .vscode/
 _del/
 
 client/esp-ai/examples/test
+
+test.mp3
+test.wav
+client\esp-ai\src\audio\to-h.sh

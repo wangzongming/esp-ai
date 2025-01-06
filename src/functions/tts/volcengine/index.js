@@ -65,7 +65,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
         }
 
         // 复刻的音色有些参数不一样
-        if (is_clone) { 
+        if (is_clone) {
             audio_config["rate"] = 24000; // 大模型复刻必须 24k
             appConfig.cluster = "volcano_icl"
         }
@@ -89,103 +89,103 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                 operation: "submit"
             }
         };
-        
 
-        return new Promise((resolve) => {
-            const submit_request_json = JSON.parse(JSON.stringify(request_json));
-            let payload_bytes = Buffer.from(JSON.stringify(submit_request_json));
-            payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
-            const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
-            full_client_request.writeUInt32BE(payload_bytes.length, 4);
 
-            connectServerBeforeCb();
-            const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
-            logWSServer(curTTSWs)
+        const submit_request_json = JSON.parse(JSON.stringify(request_json));
+        let payload_bytes = Buffer.from(JSON.stringify(submit_request_json));
+        payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
+        const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
+        full_client_request.writeUInt32BE(payload_bytes.length, 4);
 
-            // 连接建立完毕，读取数据进行识别
-            curTTSWs.on('open', () => {
-                connectServerCb(true);
-                devLog && log.tts_info("-> 火山引擎 TTS 服务连接成功！")
-                send()
-            })
+        connectServerBeforeCb();
+        const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
+        logWSServer({
+            close(){
+                console.log(curTTSWs.OPEN) 
+                curTTSWs.OPEN && curTTSWs.close();
+            }
+        })
 
-            curTTSWs.on('message', (res, err) => {
-                if (err) {
-                    console.log('tts message error: ' + err)
-                    return
-                }
-                // const protocol_version = res[0] >> 4;
-                const header_size = res[0] & 0x0f;
-                const message_type = res[1] >> 4;
-                const message_type_specific_flags = res[1] & 0x0f;
-                // const serialization_method = res[2] >> 4;
-                const message_compression = res[2] & 0x0f;
-                let payload = res.slice(header_size * 4);
-                let done = false;
-                if (message_type === 0xb) {  // audio-only server response
-                    if (message_type_specific_flags === 0) {  // no sequence number as ACK
-                        // console.log("                Payload size: 0");
-                        return false;
-                    } else {
-                        const sequence_number = payload.readInt32BE(0);
-                        payload = payload.slice(8);
+        // 连接建立完毕，读取数据进行识别
+        curTTSWs.on('open', () => {
+            connectServerCb(true);
+            devLog && log.tts_info("-> 火山引擎 TTS 服务连接成功！")
+            send()
+        })
 
-                        done = sequence_number < 0;
-                    }
-                } else if (message_type === 0xf) {
-                    const code = payload.readUInt32BE(0);
-                    const msg_size = payload.readUInt32BE(4);
-                    let error_msg = payload.slice(8);
-                    if (message_compression === 1) {
-                        error_msg = zlib.gunzipSync(error_msg);
-                    }
-                    error_msg = error_msg.toString('utf-8');
-                    console.log(`          Error message code: ${code}`);
-                    console.log(`          Error message size: ${msg_size} bytes`);
-                    console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
-                    console.log(`               Error message: ${error_msg}`);
-
-                    ttsServerErrorCb(`火山 TTS 接口返回错误 ${res.code}: ${res.message} ${error_msg}`)
-                    curTTSWs.close()
-                    connectServerCb(false);
-                    resolve(false);
-                    return
-                } else if (message_type === 0xc) {
-                    payload = payload.slice(4);
-                    if (message_compression === 1) {
-                        payload = zlib.gunzipSync(payload);
-                    }
-                    log.tts_info(`            Frontend message: ${payload}`);
+        curTTSWs.on('message', (res, err) => {
+            if (err) {
+                console.log('tts message error: ' + err)
+                return
+            }
+            // const protocol_version = res[0] >> 4;
+            const header_size = res[0] & 0x0f;
+            const message_type = res[1] >> 4;
+            const message_type_specific_flags = res[1] & 0x0f;
+            // const serialization_method = res[2] >> 4;
+            const message_compression = res[2] & 0x0f;
+            let payload = res.slice(header_size * 4);
+            let done = false;
+            if (message_type === 0xb) {  // audio-only server response
+                if (message_type_specific_flags === 0) {  // no sequence number as ACK
+                    // console.log("                Payload size: 0");
+                    return false;
                 } else {
-                    log.tts_info("undefined message type!");
-                    done = true;
+                    const sequence_number = payload.readInt32BE(0);
+                    payload = payload.slice(8);
+
+                    done = sequence_number < 0;
                 }
+            } else if (message_type === 0xf) {
+                const code = payload.readUInt32BE(0);
+                const msg_size = payload.readUInt32BE(4);
+                let error_msg = payload.slice(8);
+                if (message_compression === 1) {
+                    error_msg = zlib.gunzipSync(error_msg);
+                }
+                error_msg = error_msg.toString('utf-8');
+                console.log(`          Error message code: ${code}`);
+                console.log(`          Error message size: ${msg_size} bytes`);
+                console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
+                console.log(`               Error message: ${error_msg}`);
 
-                cb({
-                    // 根据服务控制
-                    is_over: done,
-                    audio: payload,
-
-                    // 固定写法
-                    resolve: resolve,
-                    ws: curTTSWs,
-                });
-
-
-            })
-
-            // 连接错误
-            curTTSWs.on('error', (err) => {
-                ttsServerErrorCb("websocket connect err: " + err)
+                log.tts_info(`发送字符串：${text}`);
+                ttsServerErrorCb(`火山 TTS 接口返回错误 ${res.code}: ${res.message} ${error_msg}`)
+                curTTSWs.close()
                 connectServerCb(false);
-                resolve(false);
-            })
-            // 传输数据
-            function send() {
-                curTTSWs && curTTSWs.send(full_client_request);
+                cb({ is_over: true, audio: "", ws: curTTSWs });
+                return
+            } else if (message_type === 0xc) {
+                payload = payload.slice(4);
+                if (message_compression === 1) {
+                    payload = zlib.gunzipSync(payload);
+                }
+                log.tts_info(`            Frontend message: ${payload}`);
+            } else {
+                log.tts_info("undefined message type!");
+                done = true;
             }
 
+            cb({
+                // 根据服务控制
+                is_over: done,
+                audio: payload,
+
+                ws: curTTSWs,
+            });
+
+
         })
+
+        // 连接错误
+        curTTSWs.on('error', (err) => {
+            ttsServerErrorCb("火山 TTS 连接错误: " + err)
+            connectServerCb(false);
+        })
+        // 传输数据
+        function send() {
+            curTTSWs && curTTSWs.send(full_client_request);
+        }
     } catch (err) {
         connectServerCb(false);
         log.error(`火山 TTS 错误： ${err}`)

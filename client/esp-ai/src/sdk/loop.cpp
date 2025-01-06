@@ -25,9 +25,11 @@
  */
 #include "loop.h"
 
-long lastDebounceTime = 0;
-long debounceDelay = 250;
-long prev_state = 0;
+long esp_ai_last_debounce_time = 0;
+int esp_ai_debounce_delay = 250;
+int esp_ai_prev_state = 0;
+int esp_ai_prev_state_listen = 0;
+long esp_ai_btn_up_time = 0;
 
 String cleanString(String input)
 {
@@ -42,13 +44,6 @@ String cleanString(String input)
     }
     return output;
 }
-
-// 延迟多久发往服务器
-int read_to_s_delay_time = 100;
-long prev_read_to_s_delay_time = millis();
-
-JSONVar digitalReadJSONData;
-JSONVar analogReadJSONData;
 
 void ESP_AI::loop()
 {
@@ -72,113 +67,147 @@ void ESP_AI::loop()
             ESP.restart();
             delay(3000);
         }
+        return;
     }
 
-    if (volume_config.enable)
-    {
-        int _cur_ctrl_val = analogRead(volume_config.input_pin);
-        float _t = static_cast<float>(_cur_ctrl_val) / volume_config.max_val;
-        if (fabs(volume_config.volume - _t) >= 0.2)
-        {
-            cur_ctrl_val = _cur_ctrl_val;
-            volume_config.volume = static_cast<float>(cur_ctrl_val) / volume_config.max_val;
-            esp_ai_volume.setVolume(volume_config.volume);
-            // DEBUG_PRINTLN(debug, volume_config.volume);
-        }
-    }
-
-    bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
-
-    // if (esp_ai_ws_connected && esp_ai_start_ed != "1" && (strcmp(wake_up_config.wake_up_scheme, "edge_impulse") == 0))
-    // {
-    //     if (inference.buf_ready != 0 && esp_ai_can_voice == "1")
-    //     {
-    //         wakeup_inference();
-    //     }
-    // }
-
-    // 内置语音唤醒优化 ing...
-    if (is_use_edge_impulse && esp_ai_ws_connected)
-    {
-        if (inference.buf_ready != 0)
-        {
-            wakeup_inference();
-        }
-    } 
-    else if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
+    if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
     {
         int reading = digitalRead(wake_up_config.pin);
         long curTime = millis();
-        int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
+        int target_val = wake_up_scheme == "pin_high" ? 1 : 0; 
         if (reading == target_val)
         {
-            if ((curTime - lastDebounceTime) > debounceDelay)
+            if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
             {
-                lastDebounceTime = curTime;
-                if (prev_state != reading)
+                esp_ai_last_debounce_time = curTime;
+                if (esp_ai_prev_state != reading)
                 {
-                    prev_state = reading;
+                    esp_ai_prev_state = reading;
                     DEBUG_PRINTLN(debug, ("按下了按钮, 唤醒成功"));
-                    wakeUp();
+                    wakeUp("wakeup");
                 }
             }
         }
         else
         {
-            prev_state = reading;
+            esp_ai_prev_state = reading;
         }
     }
- 
-    else if ((wake_up_scheme == "asrpro" || wake_up_scheme == "serial") && Esp_ai_serial.available())
+    else if ((esp_ai_start_ed == "0" && wake_up_scheme == "asrpro" || wake_up_scheme == "serial"))
     {
-        String command = Esp_ai_serial.readStringUntil('\n'); 
-        String clear_str = cleanString(command);
-        if (clear_str == String(wake_up_config.str))
+        if (Esp_ai_serial.available())
         {
-            DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
-            wakeUp();
-        } 
+            String command = Esp_ai_serial.readStringUntil('\n');
+            String clear_str = cleanString(command);
+            if (clear_str == String(wake_up_config.str))
+            {
+                DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
+                wakeUp("wakeup");
+            }
+        }
+        if (Serial.available())
+        {
+            String command = Serial.readStringUntil('\n');
+            String clear_str = cleanString(command);
+            if (clear_str == String(wake_up_config.str))
+            {
+                DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
+                wakeUp("wakeup");
+            }
+        }
+    }
+    else if (esp_ai_is_listen_model)
+    {
+        int reading = digitalRead(wake_up_config.pin);
+        int target_val = wake_up_scheme == "pin_high_listen" ? 1 : 0;
+        if ((reading == target_val))
+        {
+            if (esp_ai_prev_state_listen != reading)
+            {
+                esp_ai_btn_up_time = 0;
+                esp_ai_prev_state_listen = reading;
+                DEBUG_PRINTLN(debug, ("您请说话。"));
+                wakeUp("wakeup");
+            }
+        }
+        else
+        {
+            // 需要给 mic 和解码器一些时间来处理还没有收集到的数据
+            esp_ai_prev_state_listen = reading;
+            if (esp_ai_start_get_audio)
+            {
+                if (esp_ai_btn_up_time == 0)
+                {
+                    esp_ai_btn_up_time = millis();
+                }
+                if ((millis() - esp_ai_btn_up_time) > 800)
+                {
+                    esp_ai_start_get_audio = false;
+                }
+            }
+        }
     }
 
-    if (esp_ai_ws_connected && esp_ai_start_ed == "1" && !is_use_edge_impulse && tts_task_id == "")
+    bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
+    if (esp_ai_ws_connected && esp_ai_start_get_audio && esp_ai_tts_task_id == "" && !is_use_edge_impulse)
     {
-        size_t asr_bytes_read;
-        i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, sizeof(esp_ai_asr_sample_buffer), &asr_bytes_read, portMAX_DELAY);
-        for (size_t i = 0; i < sizeof(esp_ai_asr_sample_buffer) / 2; i++)
+        int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
+        if (esp_ai_start_send_audio && !esp_ai_is_listen_model && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
         {
-            // 调整音量
-            esp_ai_asr_sample_buffer[i] = esp_ai_asr_sample_buffer[i] * 16;
+            // 静默时间过长
+            esp_ai_start_get_audio = false;
+            esp_ai_start_send_audio = false;
+            last_silence_time = 0;
+            esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
         }
-        esp_ai_mp3_encoder.write(esp_ai_asr_sample_buffer, sizeof(esp_ai_asr_sample_buffer));
+        else
+        {
+            size_t bytes_read;
+            size_t buffer_size = sizeof(esp_ai_asr_sample_buffer);
+            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, buffer_size, &bytes_read, 100);
+
+            if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
+            {
+                if (is_silence(esp_ai_asr_sample_buffer, bytes_read))
+                {
+                    if (last_silence_time == 0)
+                    {
+                        last_silence_time = millis();
+                    }
+                }
+                else
+                {
+                    if (last_not_silence_time > 0 && (millis() - last_not_silence_time > 500))
+                    {
+                        // 切换到非静音状态
+                        last_silence_time = 0;
+                        esp_ai_user_has_spoken = true;
+                    }
+                    else
+                    {
+                        if (last_not_silence_time == 0)
+                        {
+                            last_not_silence_time = millis();
+                        }
+                    }
+                }
+            }
+
+            size_t sample_count = bytes_read / sizeof(esp_ai_asr_sample_buffer[0]);
+            int gain_factor = 16;
+            for (size_t i = 0; i < sample_count; i++)
+            {
+                esp_ai_asr_sample_buffer[i] *= gain_factor;
+            }
+            esp_ai_mp3_encoder.write(esp_ai_asr_sample_buffer, bytes_read);
+        }
     }
 
-    // 上报传感器数据
-    long curTime = millis();
-    if (curTime - prev_read_to_s_delay_time > read_to_s_delay_time)
+    size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    if (freeHeap < 100)
     {
-        for (int i = 0; i < digital_read_pins.size(); i++)
-        {
-            int pin = digital_read_pins[i];
-            int reading = digitalRead(pin);
-            digitalReadJSONData["type"] = "digitalRead";
-            digitalReadJSONData["pin"] = pin;
-            digitalReadJSONData["value"] = reading;
-            String sendData = JSON.stringify(digitalReadJSONData);
-            esp_ai_webSocket.sendTXT(sendData);
-        }
-        for (int i = 0; i < analog_read_pins.size(); i++)
-        {
-            int pin = analog_read_pins[i];
-            int reading = analogRead(pin);
-            analogReadJSONData["type"] = "analogRead";
-            analogReadJSONData["pin"] = pin;
-            analogReadJSONData["value"] = reading;
-            String sendData = JSON.stringify(analogReadJSONData);
-            esp_ai_webSocket.sendTXT(sendData);
-        }
-
-        prev_read_to_s_delay_time = curTime;
+        Serial.println("[Error] 内存过低，请检查硬件是否符合标准");
     }
- 
-    delay(50); 
+
+    delay(50);
 }

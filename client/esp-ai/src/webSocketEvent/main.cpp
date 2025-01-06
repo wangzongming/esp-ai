@@ -32,11 +32,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         if (esp_ai_ws_connected)
         {
             esp_ai_ws_connected = false;
-            esp_ai_can_voice = "1";
             esp_ai_start_ed = "0";
-            session_id = "";
-            // digitalWrite(LED_BUILTIN, LOW);
+            esp_ai_session_id = "";
             Serial.println("\n\n[Info] -> ESP-AI 服务连接成功\n\n");
+            esp_ai_cache_audio_du.clear();
+            esp_ai_cache_audio_greetings.clear();
+            esp_ai_cache_audio_sleep_reply.clear();
 
             // 内置状态处理
             status_change("2");
@@ -51,10 +52,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     case WStype_CONNECTED:
     {
         esp_ai_ws_connected = true;
-        esp_ai_can_voice = "1";
         esp_ai_start_ed = "0";
-        session_id = "";
+        esp_ai_session_id = "";
         Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
+ 
+        esp_ai_start_get_audio = false;
+        esp_ai_start_send_audio = false;
 
         JSONVar data_1;
         data_1["type"] = "play_audio_ws_conntceed";
@@ -72,23 +75,19 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         break;
     }
     case WStype_TEXT:
-        if (strcmp((char *)payload, "start_voice") == 0)
+        if (strcmp((char *)payload, "session_end") == 0)
         {
-            esp_ai_can_voice = "1";
-            DEBUG_PRINTLN(debug, ("[Info] -> 继续采集音频"));
-        }
-        else if (strcmp((char *)payload, "pause_voice") == 0)
-        {
-            esp_ai_can_voice = "0";
-            DEBUG_PRINTLN(debug, ("[Info] -> 暂停采集音频"));
-        }
-        else if (strcmp((char *)payload, "session_end") == 0)
-        {
-            esp_ai_start_ed = "0";
-            esp_ai_can_voice = "1";
-            session_id = "";
-            esp_ai_dec.end();
             DEBUG_PRINTLN(debug, ("\n[Info] -> 会话结束\n"));
+
+            // 没有会话ID时，说明不是会话状态，无需回复休息语
+            if (!esp_ai_cache_audio_sleep_reply.empty() && esp_ai_session_id != "" && !esp_ai_is_listen_model)
+            {
+                esp_ai_dec.begin();
+                esp_ai_dec.write(esp_ai_cache_audio_sleep_reply.data(), esp_ai_cache_audio_sleep_reply.size());
+            }
+
+            esp_ai_start_ed = "0";
+            esp_ai_session_id = "";
         }
         else
         {
@@ -143,52 +142,23 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 else if (type == "play_audio")
                 {
                     esp_ai_dec.begin();
-                    tts_task_id = (const char *)parseRes["tts_task_id"];
+                    esp_ai_tts_task_id = (const char *)parseRes["tts_task_id"];
                     String now_session_id = (const char *)parseRes["session_id"];
-                    DEBUG_PRINTLN(debug, "\n[TTS] -> TTS 任务：" + tts_task_id + " 所属会话：" + now_session_id);
+                    DEBUG_PRINTLN(debug, "\n[TTS] -> TTS 任务：" + esp_ai_tts_task_id + " 所属会话：" + now_session_id);
                 }
-
-                else if (type == "i2s_out_begin")
-                {
-                    esp_ai_dec.begin();
-                }
-                else if (type == "i2s_out_end")
-                {
-                    esp_ai_dec.end();
-                }
-
                 else if (type == "session_start")
                 {
                     String now_session_id = (const char *)parseRes["session_id"];
                     DEBUG_PRINTLN(debug, "\n[Info] -> 会话开始：" + now_session_id);
-                    session_id = now_session_id;
+                    esp_ai_session_id = now_session_id;
                 }
 
                 else if (type == "session_stop")
                 {
                     // 这里仅仅是停止，并不能结束录音
                     DEBUG_PRINTLN(debug, "\n[Info] -> 会话停止");
-                    session_id = "";
+                    esp_ai_session_id = "";
                     esp_ai_dec.end();
-                }
-
-                else if (type == "tts_send_end")
-                {
-                    String end_tts_task_id = (const char *)parseRes["tts_task_id"];
-                    DEBUG_PRINTLN(debug, "\n[TTS] -> 客户端收到 TTS 任务结束：" + end_tts_task_id);
-
-                    // 这里其他给情况预留服务回调
-                    is_send_server_audio_over = "1";
-                    esp_ai_can_voice = "1";
-                    // digitalWrite(LED_BUILTIN, LOW);
-                    JSONVar data;
-                    data["type"] = "client_out_audio_over";
-                    data["tts_task_id"] = end_tts_task_id;
-                    data["session_id"] = session_id;
-                    String sendData = JSON.stringify(data);
-                    DEBUG_PRINTLN(debug, ("\n[TTS] -> 发送播放结束标识到服务端"));
-                    esp_ai_webSocket.sendTXT(sendData);
-                    tts_task_id = "";
                 }
 
                 else if (type == "auth_fail")
@@ -197,6 +167,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String code = (const char *)parseRes["code"];
                     Serial.println("[Error] -> 连接服务失败，鉴权失败：" + message);
                     Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。"));
+                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
+                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
+                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
                     if (onErrorCb != nullptr)
                     {
                         onErrorCb("002", "auth", message);
@@ -222,15 +195,16 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     if (status == "iat_end")
                     {
                         esp_ai_start_ed = "0";
-                        esp_ai_can_voice = "1";
-                        // 释放编码器资源
-                        esp_ai_mp3_encoder.end();
+                        esp_ai_start_get_audio = false;
+                        esp_ai_start_send_audio = false;
                     }
                     else if (status == "iat_start")
                     {
-                        // 启动 mp3 编码器
-                        esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
+
+                        // 正在说话时就不要继续推理了，否则会误唤醒
                         esp_ai_start_ed = "1";
+                        // 开始发送音频时，将缓冲区中的数据发送出去
+                        esp_ai_start_send_audio = true;
                     }
 
                     // 内置状态处理
@@ -275,7 +249,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
                 else if (type == "log")
                 {
-                    String data = (const char *)parseRes["data"];  
+                    String data = (const char *)parseRes["data"];
                     DEBUG_PRINT(debug, F("\n[Server Log] -> "));
                     DEBUG_PRINTLN(debug, data);
                 }
@@ -321,36 +295,80 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         break;
     case WStype_BIN:
     {
-        if (is_send_server_audio_over != "0")
-        {
-            is_send_server_audio_over = "0";
-        }
-
         // 提取 session_id
         char sessionIdString[5];
         memcpy(sessionIdString, payload, 4);
         sessionIdString[4] = '\0';
         String sid = String(sessionIdString);
 
-        if (sid == "2000" || sid == "2001")
+        /**
+         * sid
+         * 0000 -> 嘟提示音数据
+         * 1000 -> 提示音缓存数据
+         * 1001 -> 唤醒问候语缓存数据
+         * 1002 -> 休息时回复缓存数据
+         * 2000 -> 整个回复的TTS最后一组数据，需要继续对话
+         * 2001 -> 整个回复的TTS最后一组数据，无需继续对话
+         * 2002 -> TTS 任务组的片段完毕
+         * 其他 -> session_id
+         */
+
+        if (sid == "2000")
         {
-            JSONVar data;
-            data["type"] = "client_receive_audio_over";
-            data["session_id"] = session_id;
-            data["sid"] = sid;
-            String sendData = JSON.stringify(data);
-            DEBUG_PRINTLN(debug, ("\n[TTS] -> 发送LLM播放结束标识到服务端"));
-            esp_ai_webSocket.sendTXT(sendData);
+            esp_ai_tts_task_id = "";
+            // 内置状态处理
+            status_change("tts_real_end");
+            if (onSessionStatusCb != nullptr)
+            {
+                onSessionStatusCb("tts_real_end");
+            }
+
+            if (!esp_ai_is_listen_model)
+            {
+                // tts发送完毕，需要重新开启录音
+                DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，需继续对话。"));
+                wakeUp("continue");
+            }
+        }
+        else if (sid == "2001")
+        {
+            esp_ai_tts_task_id = "";
+            // 内置状态处理
+            status_change("tts_real_end");
+            if (onSessionStatusCb != nullptr)
+            {
+                onSessionStatusCb("tts_real_end");
+            }
+            DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，无需继续对话。"));
             return;
+        }
+        else if (sid == "2002")
+        {
+            DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS CHUNK 接收完毕。"));
+            esp_ai_tts_task_id = "";
         }
 
-        if (sessionIdString && sid != "0000" && sid != session_id)
-        {
-            return;
-        }
         // 提取音频数据
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
+
+        if (sid == "1000")
+        {
+            esp_ai_cache_audio_du.insert(esp_ai_cache_audio_du.end(), audioData, audioData + audioLength);
+        }
+        else if (sid == "1001")
+        {
+            esp_ai_cache_audio_greetings.insert(esp_ai_cache_audio_greetings.end(), audioData, audioData + audioLength);
+        }
+        else if (sid == "1002")
+        {
+            esp_ai_cache_audio_sleep_reply.insert(esp_ai_cache_audio_sleep_reply.end(), audioData, audioData + audioLength);
+        }
+
+        if (sessionIdString && sid != "0000" && sid != esp_ai_session_id)
+        {
+            return;
+        }
 
         esp_ai_dec.write(audioData, audioLength);
         break;

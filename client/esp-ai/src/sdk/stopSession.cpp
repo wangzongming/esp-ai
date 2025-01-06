@@ -30,6 +30,6 @@ void ESP_AI::stopSession()
 {
     DEBUG_PRINTLN(debug, F("[Info] -> 调用 SDK 停止会话"));
     esp_ai_start_ed = "0";
-    session_id = "";
+    esp_ai_session_id = "";
     esp_ai_dec.end();
 }

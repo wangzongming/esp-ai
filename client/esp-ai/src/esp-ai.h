@@ -23,6 +23,21 @@
  * @websit https://espai.fun
  */
 
+/***
+ * RAM
+ * |   task                  |     occupy     |
+ * |-------------------------|----------------|
+ * |   long press            |     8kb        |
+ * |   capture samples       |     32kb       |
+ * |   wakeup inference      |     60kb       |
+ * |   i2s_listener          |     32kb       |
+ * |   volume                |     1kb        |
+ * |   ws2812                |     -kb        |
+ * |   reporting sensor data |     -kb        | 
+ *
+ *
+ */
+
 #pragma once
 #include "globals.h"
 
@@ -34,7 +49,7 @@ public:
     void loop();
     bool wifiIsConnected();
     std::string localIP();
-    void wakeUp();
+    void wakeUp(String scene = "wakeup");
     // 设置音量 0-1
     void setVolume(float volume);
 
@@ -146,13 +161,24 @@ public:
      * 获取坐标定位
      * 利用设备连接的wifi或者ipv4地址，并且解析成为地址后返回
      * 硬件连接wifi后会执行一次
-     * 
+     *
      * @ip          wifi的公网临时ip
      * @nation      国家
      * @province    省份
      * @city        城市
      */
     void onPosition(void (*func)(String ip, String nation, String province, String city));
+
+    /**
+     * 长按按钮回调，内部会自动执行清除配网信息的操作，
+     * 如果开发者还需要执行其他操作，请在函数回调中执行
+     */
+    void onRepeatedlyClick(void (*func)());
+
+    /**
+     * 清除设备所有数据，包括开发者存储的数据和配网信息
+     */
+    void clearData();
 
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
@@ -161,30 +187,43 @@ private:
     ESP_AI_server_config server_config;
     ESP_AI_wake_up_config wake_up_config;
     ESP_AI_volume_config volume_config;
+    ESP_AI_reset_btn_config reset_btn_config;
     bool debug;
+
     void (*onEventCb)(String command_id, String data) = nullptr;
     void (*onErrorCb)(String code, String at_pos, String message) = nullptr;
     void (*onAPInfoCb)(String url, String ip, String ap_name) = nullptr;
     void (*onNetStatusCb)(String status) = nullptr;
-    // std::function<void(String)> onNetStatusCb;
- 
     void (*onConnectedWifiCb)(String device_ip) = nullptr;
     void (*onSessionStatusCb)(String status) = nullptr;
     void (*onPositionCb)(String ip, String nation, String province, String city) = nullptr;
     String (*onBindDeviceCb)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7) = nullptr;
+    void (*onRepeatedlyClickCb)() = nullptr;
 
     void speaker_i2s_setup();
     void adjustVolume(int16_t *buffer, size_t length, float volume);
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
+    void open_ap();
+    void connect_ws();
+ 
+    static void volume_listener_wrapper(void *arg);
+    void volume_listener();
+
+    static void lights_wrapper(void *arg);
+    void lights();
+    
+  
     bool microphone_inference_start(uint32_t n_samples);
     void microphone_inference_end(void);
-    void capture_samples(void *arg);
 
     static void capture_samples_wrapper(void *arg);
+    void capture_samples();
+  
+    void wakeup_init(); 
+    static void wakeup_inference_wrapper(void *arg);
+    void wakeup_inference(); 
 
-    void wakeup_init();
-    void wakeup_inference();
     static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr);
     void status_change(String status);
 
@@ -193,14 +232,34 @@ private:
     void web_server_page_index();
     void set_config();
     void get_config();
-    // void get_ssids();
-    void start_scan_ssids();
-    void scan_ssids();
-    void clear_config();
 
+    void get_ssids();
+    void re_scan_ssids();
+ 
+    void clear_config();
     bool get_server_config();
+
+    static void get_position_wrapper(void *arg);
     void get_position();
+
+    static void scan_wifi_wrapper(void *arg);
+    void scan_wifi();
+
+    static void on_repeatedly_click_wrapper(void *arg);
+    void on_repeatedly_click();
+
+    static void send_audio_wrapper(void *arg);
+    void send_audio(); 
+
+    static void play_audio_wrapper(void *arg);
+    void play_audio(); 
 
     void audio_inference_callback(uint32_t n_bytes);
     int i2s_deinit(void);
+
+    
+
+    static void reporting_sensor_data_wrapper(void *arg);
+    void reporting_sensor_data();
+    
 };

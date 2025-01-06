@@ -44,6 +44,6 @@
 
 #include "webServer/main.h" 
  
-ESP_AI::ESP_AI() : debug(false), wifi_config(default_wifi_config), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker)
+ESP_AI::ESP_AI() : debug(false), wifi_config(default_wifi_config), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker), reset_btn_config(default_reset_btn_config)
 {
 } 

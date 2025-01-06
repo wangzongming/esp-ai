@@ -25,13 +25,15 @@
 
 const log = require("../../utils/log");
 const isOutTimeErr = require("../../utils/isOutTimeErr");
+const du_cache = require("../../audio_temp/du_cache");
+
 /**
  * 客户端连接成功
 */
 async function fn({ device_id }) {
     try {
         const { devLog, gen_client_config } = G_config;
-        const { ws, client_params, client_version, error_catch, tts_buffer_chunk_queue } = G_devices.get(device_id);
+        const { ws, client_params, client_version, error_catch } = G_devices.get(device_id);
         const user_config = await gen_client_config({
             client_params,
             ws,
@@ -102,191 +104,37 @@ async function fn({ device_id }) {
                 G_Instance.pinMode(device_id, pin, "OUTPUT");
             }
         })
-
-        // // 缓存必要的 TTS  test...
-        // const reqTTS = [_user_config.f_reply, _user_config.sleep_reply, _user_config.connected_reply];
-        // if (user_config.intention && Array.isArray(user_config.intention)) {
-        //     user_config.intention.forEach((item) => {
-        //         reqTTS.push(item?.message)
-        //     })
-        // } 
-        // // 需要改为以音色为主键...
-        // for (const text of reqTTS) {
-        //     const tts_cache_key = `${device_id}_${text}`;
-        //     const cache_TTS = G_get_cahce_TTS(tts_cache_key);
-        //     if (!cache_TTS) {
-        //         devLog && log.t_info(`正在缓存 "${text}" TTS...`);
-        //         const sessionIdBuffer = Buffer.from("", 'utf-8');
-        //         G_set_cahce_TTS(tts_cache_key, sessionIdBuffer);
-
-        //         let combinedBuffer = sessionIdBuffer;
-        //         await TTS_FN(device_id, {
-        //             text: text,
-        //             reRecord: false,
-        //             pauseInputAudio: true,
-        //             text_is_over: true,
-        //             is_cache: true,
-        //             frameOnTTScb(bufferAudio, is_over) {
-        //                 // console.log(text, is_over, bufferAudio);
-        //                 combinedBuffer = Buffer.concat([combinedBuffer, bufferAudio]); 
-        //                 if (is_over) {
-        //                     devLog && log.t_info(`缓存 "${text}" TTS 完毕`);
-        //                     G_set_cahce_TTS(tts_cache_key, combinedBuffer);
-        //                 }
-        //             }
-        //         })
-        //     }
-        // }
-
-
-        // 播放ws连接成功语音
-        if (connected_reply) {
-            TTS_FN(device_id, {
-                text: connected_reply,
-                reRecord: false,
-                pauseInputAudio: true,
-                onAudioOutOver: () => {
-                    ws && ws.send("session_end");
-                },
+ 
+        // 缓存提示音 
+        du_cache(ws);
+        // 缓存问候语 
+        const f_reply = _user_config.f_reply;
+        if (f_reply !== false) {
+            await TTS_FN(device_id, {
+                text: f_reply, 
                 text_is_over: true,
+                session_id: G_session_ids.cache_hello,
+                is_create_cache: true,
+            })
+        }
+        const sleep_reply = _user_config.sleep_reply;
+        if (sleep_reply !== false) {
+            await TTS_FN(device_id, {
+                text: sleep_reply, 
+                text_is_over: true,
+                session_id: G_session_ids.cache_sleep_reply,
+                is_create_cache: true,
             })
         }
 
-
-
-
-        // const IAT_FN = require(`../iat`); 
-        // const LLM_FN = require(`../llm`);
-        // const play_temp = require(`../../audio_temp/play_temp`);
-        // ============= 提示音测试 =============
-        // play_temp("du.mp3", ws);   
-        // play_audio("http://m10.music.126.net/20240723180659/13eabc0c9291dab9a836120bf3f609ea/ymusic/5353/0f0f/0358/d99739615f8e5153d77042092f07fd77.mp3", ws)
-
-
-        // ============= 指令发送测试 ============= 
-        // ws.send(JSON.stringify({ type: "instruct", command_id: "open_test", data: "这是数据" }));
-
-
-        // // ============= TTS 测试 =============  
-        // return TTS_FN(device_id, {
-        //     text: "上一曲",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第1句播放完毕的回调')
-        //     }
-        // });
-        // tts_buffer_chunk_queue.push(() => {
-        //     return TTS_FN(device_id, {
-        //         text: "你好",
-        //         reRecord: false,
-        //         pauseInputAudio: true,
-        //         onAudioOutOver: () => {
-        //             console.log('第1句播放完毕的回调')
-        //         }
-        //     });
-        // })
-
-        // // await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // tts_buffer_chunk_queue.push(() => {
-        //     return TTS_FN(device_id, {
-        //         text: "小明在的",
-        //         reRecord: false,
-        //         pauseInputAudio: true,
-        //         onAudioOutOver: () => {
-        //             console.log('第2句播放完毕的回调')
-        //         }
-        //     });
-        // })
-
-        /**
-         * 108个字
-         * 
-         * PCM         数据大小：818 kb  |  火山 610kb
-         * MP3         数据大小：155 kb  |  火山 384kb
-         * ogg_opus    数据大小：622 kb
-         * speex8k     数据大小：98  kb
-         * speex16k    数据大小：77  kb
-         * opus ...
-        */
-        // tts_buffer_chunk_queue.push(() => {
-        //     return TTS_FN(device_id, {
-        //         text: "第三句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //         reRecord: false,
-        //         pauseInputAudio: true,
-        //         onAudioOutOver: () => {
-        //             console.log('第3句播放完毕的回调')
-        //         }
-        //     });
-        // })
-
-
-
-        // await TTS_FN(device_id, {
-        //     text: "小明在的",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第一句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第二句，萌娃音色要上线啦！",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第二句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第三句！第三句！第三句！",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第三句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第四句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第4句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第五句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第5句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第六句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第6句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第七句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第7句播放完毕的回调')
-        //     }
-        // });
-        // await TTS_FN(device_id, {
-        //     text: "第八句，经向中国主管部门核实，中国驻泰国使馆再次澄清，为帮助下游地区应对洪灾，中方近来持续稳定和减少景洪水电站出库流量，不可能对下游地区抗洪救灾形成压力。中方愿继续与流域国家加强沟通合作，共同应对极端天气造成的影响。",
-        //     reRecord: false,
-        //     pauseInputAudio: true,
-        //     onAudioOutOver: () => {
-        //         console.log('第8句播放完毕的回调')
-        //     }
-        // }); 
+        // 播放ws连接成功语音
+        if (connected_reply) {
+            await TTS_FN(device_id, {
+                text: connected_reply, 
+                text_is_over: true,
+                tts_task_id: "connected_reply"
+            })
+        }
 
     } catch (err) {
         console.log(err);

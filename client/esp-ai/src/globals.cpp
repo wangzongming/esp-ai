@@ -24,21 +24,28 @@
  */
 
 #include "globals.h"
+#include <vector>
 
-String ESP_AI_VERSION = "2.17.6";
-String esp_ai_start_ed = "0";
-String esp_ai_can_voice = "1";
-String is_send_server_audio_over = "1";
-int cur_ctrl_val = 0;
+String ESP_AI_VERSION = "2.38.26";
+
+String esp_ai_start_ed = "0"; 
 bool esp_ai_ws_connected = false;
-String session_id = "";
-String tts_task_id = "";
+String esp_ai_session_id = "";
+String esp_ai_tts_task_id = "";
+String esp_ai_status = ""; 
+bool esp_ai_is_listen_model = true; 
+bool esp_ai_user_has_spoken = false;
+bool esp_ai_sleep = false;
 
-// 使用串口2来进行串口唤醒通信
+// 开始搜集音频
+bool esp_ai_start_get_audio = false;
+// 开始将音频发往服务
+bool esp_ai_start_send_audio = false;
+std::vector<uint8_t> *esp_ai_asr_sample_buffer_before;
+
+// 使用串口2进行串口通信
 HardwareSerial Esp_ai_serial(2);
-
-// ing...
-int esp_ai_VAD_THRESHOLD = 60;
+Preferences esi_ai_prefs;
 
 // 网络状态
 String esp_ai_net_status = "0";
@@ -47,22 +54,16 @@ String ap_connect_err = "0";
 
 WebSocketsClient esp_ai_webSocket;
 
-I2SStream i2s;
-VolumeStream esp_ai_volume(i2s);
-EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); // Decoding stream
- 
+I2SStream esp_ai_spk_i2s;
+VolumeStream esp_ai_volume(esp_ai_spk_i2s);
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); 
+
+
 void esp_ai_asr_callback(uint8_t *mp3_data, size_t len)
-{  
-    // Serial.print(F("mp3 音频生成: "));
-    // Serial.print(len); 
-    // Serial.print(" => "); 
-    // for (size_t i = 0; i < 10; i++) {
-    //     Serial.print(mp3_data[i], HEX); // 以十六进制格式打印每个字节
-    //     Serial.print(" "); // 添加空格分隔
-    // }
-    // Serial.println(""); 
-    esp_ai_webSocket.sendBIN((uint8_t *)mp3_data, len); 
+{ 
+    esp_ai_asr_sample_buffer_before->insert(esp_ai_asr_sample_buffer_before->end(), mp3_data, mp3_data + len); 
 }
+
 liblame::MP3EncoderLAME esp_ai_mp3_encoder(esp_ai_asr_callback);
 liblame::AudioInfo esp_ai_mp3_info;
 
@@ -73,21 +74,35 @@ ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
 // 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
 ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15, 16000};
 // 默认离线唤醒方案
-ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.95};
+ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.9};
 // { wifi 账号， wifi 密码 }
 ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", ""};
 // { ip， port, api_key }
 ESP_AI_server_config default_server_config = {"https", "node.espai.fun", 443, "", ""};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false};
+// 重置按钮 { 输入引脚，电平： high | low}
+ESP_AI_reset_btn_config default_reset_btn_config = {10, "high"};
 
 inference_t inference;
-// signed short sampleBuffer[sample_buffer_size];
-bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
-bool record_status = true;
+// Set this to true to see e.g. features generated from the raw signal
+bool debug_nn = false;
+bool esp_ai_wakeup_record_status = true;
 
 int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size];
-int16_t mic_sampleBuffer[mic_sample_buffer_size]; 
+int16_t mic_sample_buffer[mic_sample_buffer_size];
+
+// 音频缓存
+std::vector<uint8_t> esp_ai_cache_audio_du;
+std::vector<uint8_t> esp_ai_cache_audio_greetings;
+std::vector<uint8_t> esp_ai_cache_audio_sleep_reply;
+
+long wakeup_time = 0;
+long last_silence_time = 0;
+long last_not_silence_time = 0; 
+long last_silence_time_wakeup = 0;
+long last_not_silence_time_wekeup = 0; 
+String play_cache = ""; 
 
 String wake_up_scheme = "edge_impulse";
 
@@ -128,17 +143,19 @@ String generateUUID()
     return uuid;
 }
 
-/**
- * 辅助函数：将字符串写入 EEPROM
- */
-void writeStringToEEPROM(int pos, const String &value)
+// 获取ESP32的硬件地址（eFuse MAC地址）
+String get_device_id()
 {
-    int len = value.length() + 1; // 包括 '\0' 终止符
-    for (int i = 0; i < len; i++)
-    {
-        EEPROM.write(pos + i, value[i]);
-    }
-    EEPROM.write(pos + len, '\0'); // 确保字符串以 '\0' 结束
+    uint64_t mac = ESP.getEfuseMac();
+    char macStr[18];
+    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+            (uint8_t)(mac >> 40),
+            (uint8_t)(mac >> 32),
+            (uint8_t)(mac >> 24),
+            (uint8_t)(mac >> 16),
+            (uint8_t)(mac >> 8),
+            (uint8_t)mac);
+    return macStr;
 }
 
 /**
@@ -147,88 +164,14 @@ void writeStringToEEPROM(int pos, const String &value)
  */
 String get_local_data(const String &field_name = "")
 {
-
-    saved_info Info;
-    int pos = 0;
-
-    // 辅助函数，读取从 EEPROM 开始位置直到 '\0' 的字符串
-    auto readStringFromEEPROM = [&pos]() -> String
+    esi_ai_prefs.begin("esp-ai-kv", true);
+    String val = "";
+    if (esi_ai_prefs.isKey(field_name.c_str()))
     {
-        String result = "";
-        char c = EEPROM.read(pos);
-        while (c != '\0')
-        {
-            result += c;
-            pos++;
-            c = EEPROM.read(pos);
-        }
-        pos++; // 跳过 '\0'
-        return result;
-    };
-
-    Info.is_ready = readStringFromEEPROM();
-    Info.device_id = readStringFromEEPROM();
-    Info.wifi_name = readStringFromEEPROM();
-    Info.wifi_pwd = readStringFromEEPROM();
-    Info.api_key = readStringFromEEPROM();
-    Info.ext1 = readStringFromEEPROM();
-    Info.ext2 = readStringFromEEPROM();
-    Info.ext3 = readStringFromEEPROM();
-    Info.ext4 = readStringFromEEPROM();
-    Info.ext5 = readStringFromEEPROM();
-    Info.ext6 = readStringFromEEPROM();
-    Info.ext7 = readStringFromEEPROM();
-    // 如果指定了字段名，则返回对应的字段值
-    if (field_name == "is_ready")
-    {
-        return Info.is_ready;
+        val = esi_ai_prefs.getString(field_name.c_str()).c_str();
     }
-    else if (field_name == "device_id")
-    {
-        return Info.device_id;
-    }
-    else if (field_name == "wifi_name")
-    {
-        return Info.wifi_name;
-    }
-    else if (field_name == "wifi_pwd")
-    {
-        return Info.wifi_pwd;
-    }
-    else if (field_name == "api_key")
-    {
-        return Info.api_key;
-    }
-    else if (field_name == "ext1")
-    {
-        return Info.ext1;
-    }
-    else if (field_name == "ext2")
-    {
-        return Info.ext2;
-    }
-    else if (field_name == "ext3")
-    {
-        return Info.ext3;
-    }
-    else if (field_name == "ext4")
-    {
-        return Info.ext4;
-    }
-    else if (field_name == "ext5")
-    {
-        return Info.ext5;
-    }
-    else if (field_name == "ext6")
-    {
-        return Info.ext6;
-    }
-    else if (field_name == "ext7")
-    {
-        return Info.ext7;
-    }
-
-    return "";
+    esi_ai_prefs.end();
+    return val;
 }
 
 /**
@@ -237,108 +180,43 @@ String get_local_data(const String &field_name = "")
  */
 void set_local_data(String field_name, String new_value)
 {
+    esi_ai_prefs.begin("esp-ai-kv", false);
+    esi_ai_prefs.putString(field_name.c_str(), new_value.c_str());
+    esi_ai_prefs.end();
+}
 
-    // 读取当前保存的信息
-    saved_info current_info = {};
-    current_info.is_ready = get_local_data("is_ready");
-    current_info.device_id = get_local_data("device_id");
-    current_info.wifi_name = get_local_data("wifi_name");
-    current_info.wifi_pwd = get_local_data("wifi_pwd");
-    current_info.api_key = get_local_data("api_key");
-    current_info.ext1 = get_local_data("ext1");
-    current_info.ext2 = get_local_data("ext2");
-    current_info.ext3 = get_local_data("ext3");
-    current_info.ext4 = get_local_data("ext4");
-    current_info.ext5 = get_local_data("ext5");
-    current_info.ext6 = get_local_data("ext6");
-    current_info.ext7 = get_local_data("ext7");
+/**
+ * 静音检测
+ */
+bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
+{
+    if (bytes_read > 0)
+    {
+        // 计算缓冲区能量
+        float energy = 0.0;
+        int16_t *samples = (int16_t *)audio_buffer;
+        size_t num_samples = bytes_read / sizeof(int16_t);
 
-    if (field_name == "is_ready")
-    {
-        current_info.is_ready = new_value;
-    }
-    else if (field_name == "device_id")
-    {
-        current_info.device_id = new_value;
-    }
-    else if (field_name == "wifi_name")
-    {
-        current_info.wifi_name = new_value;
-    }
-    else if (field_name == "wifi_pwd")
-    {
-        current_info.wifi_pwd = new_value;
-    }
-    else if (field_name == "api_key")
-    {
-        current_info.api_key = new_value;
-    }
-    else if (field_name == "ext1")
-    {
-        current_info.ext1 = new_value;
-    }
-    else if (field_name == "ext2")
-    {
-        current_info.ext2 = new_value;
-    }
-    else if (field_name == "ext3")
-    {
-        current_info.ext3 = new_value;
-    }
-    else if (field_name == "ext4")
-    {
-        current_info.ext4 = new_value;
-    }
-    else if (field_name == "ext5")
-    {
-        current_info.ext5 = new_value;
-    }
-    else if (field_name == "ext6")
-    {
-        current_info.ext6 = new_value;
-    }
-    else if (field_name == "ext7")
-    {
-        current_info.ext7 = new_value;
-    }
-    else
-    {
-        // 无效的字段名
-        Serial.println("[Error] 无效字段：" + field_name);
-        return;
-    }
+        for (size_t i = 0; i < num_samples; i++)
+        {
+            energy += samples[i] * samples[i]; // 信号平方和
+        }
+        energy /= num_samples; // 平均能量 
+        // Serial.print("能量: ");
+        // Serial.println(energy);
 
-    Serial.println("存储字段：" + field_name + "  值：" + new_value);
-
-    int is_ready_len = current_info.is_ready.length();
-    int device_id_len = current_info.device_id.length();
-    int wifi_name_len = current_info.wifi_name.length();
-    int wifi_pwd_len = current_info.wifi_pwd.length();
-    int api_key_len = current_info.api_key.length();
-    int ext1_len = current_info.ext1.length();
-    int ext2_len = current_info.ext2.length();
-    int ext3_len = current_info.ext3.length();
-    int ext4_len = current_info.ext4.length();
-    int ext5_len = current_info.ext5.length();
-    int ext6_len = current_info.ext6.length();
-
-    // 保存更新后的数据到 EEPROM
-    writeStringToEEPROM(0, current_info.is_ready);
-    writeStringToEEPROM(is_ready_len + 1, current_info.device_id);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1, current_info.wifi_name);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1, current_info.wifi_pwd);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1, current_info.api_key);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1, current_info.ext1);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1, current_info.ext2);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1, current_info.ext3);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1, current_info.ext4);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1, current_info.ext5);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1, current_info.ext6);
-    writeStringToEEPROM(is_ready_len + 1 + device_id_len + 1 + wifi_name_len + 1 + wifi_pwd_len + 1 + api_key_len + 1 + ext1_len + 1 + ext2_len + 1 + ext3_len + 1 + ext4_len + 1 + ext5_len + 1 + ext6_len + 1, current_info.ext7);
-    EEPROM.commit();
-    // 确保数据被写入 EEPROM
-    delay(60);
+        // 判断是否有语音活动 
+        if (energy > 10000)
+        {  
+            return false;
+        }
+        else
+        { 
+            return true;
+        }
+    }
+    return true;
 }
 
 std::vector<int> digital_read_pins;
-std::vector<int> analog_read_pins;
+std::vector<int> analog_read_pins; 

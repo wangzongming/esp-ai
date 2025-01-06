@@ -26,52 +26,5 @@
 
 void ESP_AI::status_change(String status)
 {
-    // Serial.print("===================收到状态：");
-    // Serial.println(status);
-    if (status == "iat_start")
-    {
-        esp_ai_pixels.clear();
-        esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(18, 170, 156));
-        esp_ai_pixels.setBrightness(100); // 亮度设置
-        esp_ai_pixels.show();
-    }
-    else if (status == "tts_chunk_start")
-    {
-        esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 147, 156));
-        esp_ai_pixels.setBrightness(100); // 亮度设置
-        esp_ai_pixels.show();
-    }
-    else if (status == "iat_end" || status == "tts_real_end")
-    {
-        esp_ai_pixels.clear();
-        esp_ai_pixels.show();
-    }
-    else if (status == "0_ing")
-    {
-        esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-        esp_ai_pixels.setBrightness(50); // 亮度设置
-        esp_ai_pixels.show();
-    }
-    else if (status == "0_ing_after")
-    {
-        esp_ai_pixels.clear();
-        esp_ai_pixels.show();
-    }
-    else if (status == "0_ap")
-    {
-        esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
-        esp_ai_pixels.setBrightness(50); // 亮度设置
-        esp_ai_pixels.show();
-    }
-    else if (status == "2")
-    {
-        esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-        esp_ai_pixels.setBrightness(50); // 亮度设置
-        esp_ai_pixels.show();
-    }
-    else if (status == "3")
-    {
-        esp_ai_pixels.clear();
-        esp_ai_pixels.show();
-    }
+    esp_ai_status = status;  
 }

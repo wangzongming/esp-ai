@@ -41,10 +41,8 @@ async function fn({ device_id }) {
 
         const { auth } = G_config;
         const {
-            ws, du,
-            client_params,
-            first_session,
-            user_config: { f_reply },
+            ws,  
+            client_params, 
         } = G_devices.get(device_id);
         if (auth) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
@@ -83,8 +81,7 @@ async function fn({ device_id }) {
                 ...G_devices.get(device_id),
                 started: true,
             })
-
-            ws && ws.send("start_voice");
+ 
             return IAT_FN(device_id, connect_cb);
         };
         if (!G_devices.get(device_id)) return;
@@ -93,25 +90,11 @@ async function fn({ device_id }) {
             started: true,
             start_iat,
         })
+ 
+        
+        // 应该直接去连接 iat 服务
+        start_iat();
 
-        if (first_session) {
-            TTS_FN(device_id, {
-                text: f_reply || "您好",
-                pauseInputAudio: true,
-                text_is_over: true,
-                need_record: true,
-            });
-        } else {
-            // start_iat(async () => { 
-            //     await du();
-            // });
-
-            G_devices.set(device_id, {
-                ...G_devices.get(device_id),
-                iat_readiness: true
-            })
-            await du(); 
-        }
     } catch (err) {
         console.log(err);
         error(`[${device_id}] start 消息错误： ${err}`)

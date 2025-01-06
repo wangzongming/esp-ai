@@ -25,7 +25,7 @@
 
 const https = require('https');
 const http = require('http');
-const log = require('../utils/log'); 
+const log = require('../utils/log');
 const { PassThrough } = require('stream');
 const moment = require('moment');
 
@@ -42,9 +42,9 @@ function isHttpsUrl(url) {
 function urlToStream(url, errCb, onEnd) {
     try {
         const stream = new PassThrough();
-        const hf = isHttpsUrl(url) ? https : http; 
+        const hf = isHttpsUrl(url) ? https : http;
         hf.get(url, {
-            timeout: 100000, 
+            timeout: 100000,
         }, (response) => {
             // console.log(response)
             if (response.statusCode !== 200) {
@@ -57,7 +57,7 @@ function urlToStream(url, errCb, onEnd) {
             errCb && errCb();
             log.error(`音频播放错误：${err}`)
             stream.emit('error', err);
-        }).on("close", ()=>{
+        }).on("close", () => {
             log.t_info('音频下载完毕');
             onEnd && onEnd();
         });
@@ -68,13 +68,13 @@ function urlToStream(url, errCb, onEnd) {
         log.error(`音频播放错误: ${err}`)
         errCb && errCb();
     }
-} 
+}
 /**
  * 播放任何 mp3、wav 的声音
  * 提供 http 地址
 */
 function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end) {
-    let checkBufferedAmount =  null;
+    let checkBufferedAmount = null;
     try {
         if (!isHttpUrl(url)) {
             log.error("play_audio 不支持本地地址！")
@@ -104,11 +104,10 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 break_second: Math.floor(seek + play_time / 1000),
                 event,
                 seek
-            })
-            client_ws && client_ws.send(JSON.stringify({
-                type: "session_status",
-                status: "tts_real_end",
-            }));
+            }) 
+            
+            // 特殊发一组标志 
+            this.ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8')); 
 
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -116,35 +115,32 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 play_audio_ing: false,
                 play_audio_on_end: null,
             })
-            
-            if(end_res?.url){
+
+            if (end_res?.url) {
                 play_audio(end_res?.url, client_ws, task_id, session_id, device_id, end_res?.seek, on_end);
             }
-            
+
         }
 
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
             play_audio_ing: true,
-            play_audio_on_end: (...arg) => {
-                client_ws && client_ws.send(JSON.stringify({
-                    type: "session_status",
-                    status: "tts_real_end",
-                }));
+            play_audio_on_end: (...arg) => { 
+                this.ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));  
                 return on_end && on_end(...arg);
             },
             play_audio_seek: seek || 0,
         })
-         
+
         client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: task_id || "any_audio" }));
-         
+
         let is_parse_over = false;
-        const output_stream = urlToStream(url, 
-            ()=> endCb("error"),
-            ()=> {
+        const output_stream = urlToStream(url,
+            () => endCb("error"),
+            () => {
                 is_parse_over = true;
             }
-        ); 
+        );
 
         let buffer_queue = [];
         let is_sending = false;
@@ -161,7 +157,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             }
             let c_l = G_max_audio_chunk_size;
             for (let i = 0; i < audio.length; i += c_l) {
-                if (!G_devices.get(device_id)) return;  
+                if (!G_devices.get(device_id)) return;
 
                 const { session_id: now_session_id } = G_devices.get(device_id);
                 if ((session_id && now_session_id !== session_id)) {
@@ -199,7 +195,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 // console.log("发送音频：", moment().format("HH:mm:ss:sss"),  real_chunk.length);
                 client_ws.send(real_chunk, (err) => {
                     if (is_parse_over) {
-                        if (!G_devices.get(device_id)) return; 
+                        if (!G_devices.get(device_id)) return;
                         if (buffer_queue.length === 0) {
                             endCb();
                         }
@@ -215,7 +211,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                             clearInterval(checkBufferedAmount);
                             is_sending = false;
                             sendNextChunk();
-                        }  
+                        }
                     }, 10);
                 });
             }

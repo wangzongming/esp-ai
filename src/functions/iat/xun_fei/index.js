@@ -25,6 +25,15 @@
  */
 const WebSocket = require('ws')
 const getServerURL = require("../../getServerURL");
+const { PassThrough, Readable } = require('stream');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * 讯飞 iat 服务器如果给压缩过的音频，不管是 mp3 还是 其他，都会报错 10043 ，所以直接将硬件采集的数据转为原始数据给接口
+*/
 
 /**
  * 讯飞语音识别  
@@ -55,10 +64,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
-        let shouldClose = false;
-
-        // 长时间无反应时应该自动关闭
-        // let close_connect_timer = null;
+        let shouldClose = false; 
 
         // console.log('开始连接 IAT 服务...')
         const iatResult = [];
@@ -68,8 +74,14 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             close: () => {
                 shouldClose = true;
                 log.t_red_info('框架调用 IAT 关闭:' + session_id);
-                // clearTimeout(close_connect_timer);
-                iat_ws.close() 
+                iat_ws.close()
+            },
+            end: () => {
+                log.iat_info('IAT 服务结束:' + session_id); 
+                if (iat_server_connected && send_pcm) { 
+                    iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
+                    send_pcm("");
+                } 
             }
         });
 
@@ -84,22 +96,16 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
         // 连接建立完毕，读取数据进行识别
         iat_ws.on('open', (event) => {
-            if(shouldClose) return;
+            if (shouldClose) return;
             devLog && log.iat_info("-> 讯飞 IAT 服务连接成功: " + session_id)
             iat_server_connected = true;
             connectServerCb(true);
-
-            // clearTimeout(close_connect_timer);
-            // close_connect_timer = setTimeout(() => {
-            //     // serverTimeOutCb();
-            // }, 8000);
         })
 
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
-            if(shouldClose) return;
-            // clearTimeout(close_connect_timer);
-            if (iat_server_connected && send_pcm) {
+            if (shouldClose) return; 
+            if (iat_server_connected && send_pcm) { 
                 iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
                 send_pcm("");
             }
@@ -108,7 +114,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
         iat_ws.on('message', (data, err) => {
-            if(shouldClose) return;
+            if (shouldClose) return;
             // clearTimeout(close_connect_timer);
             if (err) {
                 log.iat_info(`err:${err}`)
@@ -162,60 +168,49 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                         })
                     })
                 }
-            })  
+            })
             devLog && log.iat_info(str)
         })
 
         // 资源释放
         iat_ws.on('close', () => {
-            if(shouldClose) return;
-            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭：", session_id)
-            // clearTimeout(close_connect_timer);
+            if (shouldClose) return;
+            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭：", session_id) 
             iat_server_connected = false;
             connectServerCb(false);
         })
 
         // 建连错误
         iat_ws.on('error', (err) => {
-            if(shouldClose) return;
-            // clearTimeout(close_connect_timer);
+            if (shouldClose) return; 
             iatServerErrorCb(err);
             iat_server_connected = false;
             connectServerCb(false);
         })
 
-
-        function send_pcm(data) {
-            if(shouldClose) return;
-            if (!iat_server_connected) return;
-            let frame = "";
-            let frameDataSection = {
-                "status": iat_status, 
+        function build_frame(chunk) {
+            const frameDataSection = {
+                status: iat_status,
+                audio: chunk ? chunk.toString('base64') : "", 
                 "format": "audio/L16;rate=16000",
-                "audio": data.toString('base64'),
-                // "encoding": "raw",
-                "encoding": "lame", // mp3   
-            } 
-
+                "encoding": "raw",
+            };
+ 
+            let frame = {};
             switch (iat_status) {
                 case XF_IAT_FRAME.STATUS_FIRST_FRAME:
                     frame = {
-                        // 填充common
-                        common: {
-                            app_id: appid
-                        },
-                        // 填充business
+                        common: { app_id: appid },
                         business: {
                             vad_eos: 1500,
                             language: "zh_cn",
                             domain: "iat",
                             accent: "mandarin",
-                            dwa: "wpgs", // 可选参数，动态修正
+                            dwa: "wpgs",
                             ...other_config,
                         },
-                        //填充data
-                        data: frameDataSection
-                    }
+                        data: frameDataSection,
+                    };
                     if (other_config.dwa === false) {
                         delete frame.business.dwa;
                     }
@@ -223,13 +218,40 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     break;
                 case XF_IAT_FRAME.STATUS_CONTINUE_FRAME:
                 case XF_IAT_FRAME.STATUS_LAST_FRAME:
-                    //填充frame
-                    frame = {
-                        data: frameDataSection
-                    }
+                    frame = { data: frameDataSection };
                     break;
             }
-            iat_ws.send(JSON.stringify(frame))
+            return frame;
+        }
+ 
+        function send_pcm(data) {
+            if (shouldClose) return;
+            if (!iat_server_connected) return;
+            if (!data) {
+                const frame = build_frame(data);
+                iat_ws.send(JSON.stringify(frame));
+                return;
+            }
+
+            const stream = Readable.from(data); 
+
+            ffmpeg(stream)
+                .setFfmpegPath(ffmpegPath)
+                .inputFormat('mp3')
+                .audioCodec('pcm_s16le')
+                .audioFrequency(16000)
+                .outputOptions(['-ac 1'])
+                .outputFormat('s16le')
+                .on('error', (error) => {
+                    console.error(`MP3 转换出错 ${error}`);
+                })
+                .pipe()
+                .on('data', (chunk) => {   
+                    const frame = build_frame(chunk);
+                    iat_ws.send(JSON.stringify(frame));
+                })
+            // .on("end", ()=>{  });
+ 
         }
 
         logSendAudio(send_pcm)

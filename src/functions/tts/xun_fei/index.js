@@ -48,101 +48,91 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         if (!apiKey) return log.error(`请配给 TTS 配置 apiKey 参数。`)
         if (!apiSecret) return log.error(`请配给 TTS 配置 apiSecret 参数。`)
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
+        connectServerBeforeCb();
+        const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, }));
 
-        return new Promise((resolve) => {
-            connectServerBeforeCb();
-            const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, }));
+        // 如果 ws 服务是个 WebSocket 对象，请调用这个方法。框架在适合的时候会调用 .close() 方法
+        logWSServer(ws)
 
-            // 如果 ws 服务是个 WebSocket 对象，请调用这个方法。框架在适合的时候会调用 .close() 方法
-            logWSServer(ws)
+        // 连接建立完毕，读取数据进行识别
+        ws.on('open', () => {
+            connectServerCb(true);
+            devLog && log.tts_info("-> 讯飞 TTS 服务连接成功！")
+            send()
+        })
 
-            // 连接建立完毕，读取数据进行识别
-            ws.on('open', () => {
-                connectServerCb(true);
-                devLog && log.tts_info("-> 讯飞 TTS 服务连接成功！")
-                send()
-            })
-
-            ws.on('message', (data, err) => {
-                if (err) {
-                    log.tts_info('tts message error: ' + err)
-                    return
-                }
-
-                let res = JSON.parse(data)
-
-                if (res.code != 0) {
-                    ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
-                    connectServerCb(false);
-                    ws.close()
-                    resolve(false);
-                    return
-                }
-
-                const audio = res.data.audio;
-                if (!audio) {
-                    // 这种情况算结束
-                    cb({ is_over: true, audio: "", resolve: resolve, ws: ws });
-                    connectServerCb(false); 
-                    // ttsServerErrorCb(`tts错误：未返回音频流`)
-                    resolve(false);
-                    return
-                }
-                let audioBuf = Buffer.from(audio, 'base64')
-                cb({
-                    // 根据服务控制
-                    is_over: res.code == 0 && res.data.status == 2,
-                    audio: audioBuf,
-
-                    // 固定写法
-                    resolve: resolve,
-                    ws: ws
-                });
-
-            })
-
-            // 资源释放, 某些服务需要在这里面调用一次 cb({ is_over: true })
-            ws.on('close', () => { 
-                connectServerCb(false);
-            })
-
-            // 连接错误
-            ws.on('error', (err) => {
-                ttsServerErrorCb(`tts错误："websocket connect err: ${err}`)
-                connectServerCb(false);
-                resolve(false);
-            })
-            // 传输数据
-            function send() {
-                const business = {
-                    volume: 100,
-                    "vcn": "aisbabyxu",
-                    ...other_config, 
-                    // pcm
-                    // "aue": "raw", 
-                    // mp3
-                    aue: "lame",
-                    sfl:1,  
-                    "auf": "audio/L16;rate=16000",
-                    "tte": "UTF8",
-                }
-                const frame = {
-                    // 填充common
-                    "common": {
-                        "app_id": appid
-                    },
-                    // 填充business
-                    "business": tts_params_set ? tts_params_set(business) : business,
-                    // 填充data
-                    "data": {
-                        "text": Buffer.from(text).toString('base64'),
-                        "status": 2
-                    }
-                }
-                ws && ws.send(JSON.stringify(frame))
+        ws.on('message', (data, err) => {
+            if (err) {
+                log.tts_info('tts message error: ' + err)
+                return
             }
 
+            let res = JSON.parse(data)
+
+            if (res.code != 0) {
+                ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
+                connectServerCb(false);
+                ws.close() 
+                return
+            }
+
+            const audio = res.data.audio;
+            if (!audio) {
+                // 这种情况算结束
+                cb({ is_over: true, audio: "", resolve: resolve, ws: ws });
+                connectServerCb(false);
+                // ttsServerErrorCb(`tts错误：未返回音频流`) 
+                return
+            }
+            let audioBuf = Buffer.from(audio, 'base64')
+            cb({
+                // 根据服务控制
+                is_over: res.code == 0 && res.data.status == 2,
+                audio: audioBuf, 
+                ws: ws
+            });
+
         })
+
+        // 资源释放, 某些服务需要在这里面调用一次 cb({ is_over: true })
+        ws.on('close', () => {
+            connectServerCb(false);
+        })
+
+        // 连接错误
+        ws.on('error', (err) => {
+            ttsServerErrorCb(`tts错误："websocket connect err: ${err}`)
+            connectServerCb(false); 
+        })
+        // 传输数据
+        function send() {
+            const business = {
+                volume: 100,
+                "vcn": "aisbabyxu",
+                ...other_config,
+                // pcm
+                // "aue": "raw", 
+                // mp3
+                aue: "lame",
+                sfl: 1,
+                "auf": "audio/L16;rate=16000",
+                "tte": "UTF8",
+            }
+            const frame = {
+                // 填充common
+                "common": {
+                    "app_id": appid
+                },
+                // 填充business
+                "business": tts_params_set ? tts_params_set(business) : business,
+                // 填充data
+                "data": {
+                    "text": Buffer.from(text).toString('base64'),
+                    "status": 2
+                }
+            }
+            ws && ws.send(JSON.stringify(frame))
+        }
     } catch (err) {
         connectServerCb(false);
         log.error(`讯飞 TTS 错误： ${err}`)

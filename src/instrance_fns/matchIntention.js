@@ -63,27 +63,18 @@ async function matchIntention(device_id, text, reply) {
             });
             let _t = (typeof resText) === "string" ? resText : message;
             _t && await TTS_FN(device_id, {
-                text: _t,
-                reRecord: false,
-                pauseInputAudio: true,
+                text: _t, 
                 need_record: false,
             });
         } else {
             switch (instruct) {
                 case "__sleep__":
-                    if (!G_devices.get(device_id)) return;
-
+                    if (!G_devices.get(device_id)) return; 
                     // 所有 LLM 用下面的 key 为准
                     llm_historys.push(
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || sleep_reply || "我先退下了，有需要再叫我。" }
-                    );
-                    await TTS_FN(device_id, {
-                        text: reply || message || sleep_reply || "我先退下了，有需要再叫我。",
-                        reRecord: false,
-                        need_record: false,
-                        pauseInputAudio: true
-                    });
+                    ); 
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         first_session: true,
@@ -101,10 +92,8 @@ async function matchIntention(device_id, text, reply) {
                     );
                     G_Instance.digitalWrite(device_id, pin, "HIGH");
                     await TTS_FN(device_id, {
-                        text: message || "好的",
-                        reRecord: false,
-                        need_record: false,
-                        pauseInputAudio: true
+                        text: message || "好的", 
+                        need_record: false, 
                     });
                     ws_client && ws_client.send("session_end");
 
@@ -118,10 +107,8 @@ async function matchIntention(device_id, text, reply) {
                     );
                     G_Instance.digitalWrite(device_id, pin, "LOW");
                     await TTS_FN(device_id, {
-                        text: message || "好的",
-                        reRecord: false,
-                        need_record: false,
-                        pauseInputAudio: true
+                        text: message || "好的", 
+                        need_record: false, 
                     });
                     ws_client && ws_client.send("session_end");
                     break;
@@ -139,19 +126,15 @@ async function matchIntention(device_id, text, reply) {
                     })
 
                     await TTS_FN(device_id, {
-                        text: reply || message || "好的",
-                        reRecord: false,
-                        need_record: false,
-                        pauseInputAudio: true
+                        text: reply || message || "好的", 
+                        need_record: false, 
                     });
                     // 不延时不能保证播放队列
                     setTimeout(async () => {
                         const { url, seek, message: errMessage } = await music_server(__name__, { user_config });
                         if (!url) {
                             await TTS_FN(device_id, {
-                                text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
-                                reRecord: false,
-                                pauseInputAudio: true,
+                                text: errMessage || "没有找到相关的结果，换个关键词试试吧！", 
                                 need_record: true,
                             });
                             return;
@@ -161,9 +144,7 @@ async function matchIntention(device_id, text, reply) {
                         } catch (err) {
                             log.error(`音频播放过程失败： ${err}`)
                             await TTS_FN(device_id, {
-                                text: "音频播放出错啦，重新换一首吧！",
-                                reRecord: false,
-                                pauseInputAudio: true,
+                                text: "音频播放出错啦，重新换一首吧！", 
                                 need_record: true,
                             });
                         }
@@ -178,10 +159,7 @@ async function matchIntention(device_id, text, reply) {
                         name: __name__
                     }));
                     (message || reply) && await TTS_FN(device_id, {
-                        text: reply || message,
-                        // reRecord: true,
-                        reRecord: false,
-                        pauseInputAudio: true,
+                        text: reply || message, 
                         need_record: true,
                     });
                     break;

@@ -65,13 +65,16 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 shouldClose = true;
                 iat_server_connected = false;
                 iat_ws.close()
+            },
+            end: ()=>{
+                iat_ws.send("end");  
             }
         });
 
         // 连接建立完毕，读取数据进行识别
         iat_ws.on('open', (event) => {
             if (shouldClose) return;
-            devLog && log.iat_info("-> 讯飞 IAT 服务连接成功: " + session_id)
+            devLog && log.iat_info("-> ESP-AI ASR 服务连接成功: " + session_id)
             iat_server_connected = true;
             connectServerCb(true);
         })
@@ -79,6 +82,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
             if (shouldClose) return;
+            iat_ws.send("end"); 
         })
 
         let realStr = "";
@@ -137,7 +141,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
     } catch (err) {
         connectServerCb(false);
         console.log(err);
-        log.error("讯飞 IAT 插件错误：", err)
+        log.error("ESP-AI-ASR  插件错误：", err)
     }
 }
 

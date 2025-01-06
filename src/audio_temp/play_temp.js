@@ -25,9 +25,6 @@
 
 const fs = require('fs');
 
-/**
- * @volumeFactor 调整音量的系数，0.5 表示减半 
- * */
 function play_temp(filePath, client_ws) {
     return new Promise((resolve, reject) => {
         const readStream = fs.createReadStream(filePath); 
@@ -37,10 +34,8 @@ function play_temp(filePath, client_ws) {
             const combinedBuffer = Buffer.concat([sessionIdBuffer, audio]);
             client_ws.send(combinedBuffer); 
         });
-        readStream.on('end', () => {
-            const endFlagBuf = Buffer.from("2001", 'utf-8');
-            client_ws.send(endFlagBuf);
-            client_ws.send(JSON.stringify({ type: "tts_send_end", tts_task_id: "warning_tone" }));
+        readStream.on('end', () => {  
+            client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));   
             resolve(true);
         });
         readStream.on('error', (err) => {
