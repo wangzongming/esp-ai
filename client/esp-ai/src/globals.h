@@ -52,22 +52,25 @@
 #include <Preferences.h>
 
 #include <esp_adc_cal.h>
-#include <driver/adc.h>
-// #include "esp_sleep.h"
+#include <driver/adc.h> 
 
-#include "audio/zh/jian_quan_shi_bai.h"
-#include "audio/zh/lian_jie_cheng_gong.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_heap_caps.h"
+
 #include "audio/zh/lian_jie_shi_bai.h"
 #include "audio/zh/lian_jie_zhong.h"
-#include "audio/zh/mei_dian_le.h"
 #include "audio/zh/pei_wang_cheng_gong.h"
-#include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
-#include "audio/zh/qing_lian_jie_fu_wu.h"
 #include "audio/zh/qing_pei_wang.h"
 #include "audio/zh/san_ci.h"
-#include "audio/zh/yu_e_bu_zuo.h"
+// #include "audio/zh/yu_e_bu_zuo.h"
+// #include "audio/zh/jian_quan_shi_bai.h"
+// #include "audio/zh/lian_jie_cheng_gong.h"
+// #include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
+// #include "audio/zh/qing_lian_jie_fu_wu.h"
+// #include "audio/zh/mei_dian_le.h"
 
-// 天问使用软串口 TX=11，R=12
+// 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
 #define esp_ai_serial_tx 11
 #endif
@@ -78,8 +81,7 @@
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 18
 #endif
-
-// 大多数麦克风可能默认为左通道，但可能需要将L/R引脚绑低
+ 
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
@@ -110,8 +112,8 @@ struct ESP_AI_i2s_config_speaker
  *       asrpro：天问语音模块唤醒
  *     pin_high：引脚高电平唤醒
  *      pin_low：引脚低电平唤醒
- *     pin_high_listen：引脚高电平聆听(按下对话)  ing...
- *      pin_low_listen：引脚低电平聆听(按下对话)  ing...
+ *     pin_high_listen：引脚高电平聆听(按下对话)   
+ *      pin_low_listen：引脚低电平聆听(按下对话)   
  *       serial：串口字符唤醒
  *       custom：自定义，自行调用 esp_ai.wakeUp() 唤醒
  */

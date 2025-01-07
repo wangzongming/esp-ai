@@ -53,13 +53,14 @@ void ESP_AI::loop()
     if (WiFi.status() != WL_CONNECTED)
     {
 
-        if (esp_ai_net_status == "2" && esp_ai_net_status != "0" && ap_connect_err != "1")
+        bool status_0 = esp_ai_net_status == "2" && esp_ai_net_status != "0" && ap_connect_err != "1";
+        if (status_0)
         {
             // 内置状态处理
             status_change("0");
         }
         // 设备状态回调
-        if (onNetStatusCb != nullptr && esp_ai_net_status == "2" && esp_ai_net_status != "0" && ap_connect_err != "1")
+        if (onNetStatusCb != nullptr && status_0)
         {
             esp_ai_net_status = "0";
             onNetStatusCb("0");
@@ -202,12 +203,6 @@ void ESP_AI::loop()
             esp_ai_mp3_encoder.write(esp_ai_asr_sample_buffer, bytes_read);
         }
     }
-
-    size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-    if (freeHeap < 100)
-    {
-        Serial.println("[Error] 内存过低，请检查硬件是否符合标准");
-    }
-
+  
     delay(50);
 }

@@ -32,6 +32,7 @@ void ESP_AI::get_position_wrapper(void *arg)
     instance->get_position();
 }
 
+HTTPClient esp_ai_get_position_http; 
 void ESP_AI::get_position()
 {
     if (WiFi.status() != WL_CONNECTED)
@@ -39,25 +40,21 @@ void ESP_AI::get_position()
         return;
     }
  
-    HTTPClient http; 
     String ip = "";
     String nation = "";
     String province = "";
     String city = "";
 
-    DEBUG_PRINTLN(debug, "[Info] 定位中...");
-    String loc_device_id = get_device_id();
-
-
+    DEBUG_PRINTLN(debug, "[Info] 定位中..."); 
     String api2 = "https://g3.letv.com/r?format=1";
-    http.begin(api2);
-    http.addHeader("Content-Type", "application/json");
-    http.setTimeout(10000);   
-    int httpCode2 = http.GET();
-
+    esp_ai_get_position_http.begin(api2);
+    esp_ai_get_position_http.addHeader("Content-Type", "application/json");
+    esp_ai_get_position_http.setTimeout(10000);   
+    int httpCode2 = esp_ai_get_position_http.GET();
+  
     if (httpCode2 > 0)
     {
-        String payload = http.getString();
+        String payload = esp_ai_get_position_http.getString();
         Serial.printf("[HTTPS] GET code: %d\n", httpCode2);
         Serial.printf("[HTTPS] GET res: %d\n", payload);
         JSONVar parse_res = JSON.parse(payload);
@@ -79,15 +76,16 @@ void ESP_AI::get_position()
             ip = (const char *)parse_res["host"];
             nation = parts[0];
             province = parts[1];
-            city = parts[2];
-
+            city = parts[2];  
             DEBUG_PRINT(debug, "[Info] 定位完毕：");
             DEBUG_PRINT(debug, nation);
             DEBUG_PRINT(debug, "/");
             DEBUG_PRINT(debug, province);
             DEBUG_PRINT(debug, "/");
-            DEBUG_PRINTLN(debug, city);
-
+            DEBUG_PRINTLN(debug, city);  
+            esp_ai_get_position_http.end(); 
+ 
+            delay(100);
             if (onPositionCb != nullptr)
             {
                 onPositionCb(ip, nation, province, city);
@@ -99,14 +97,14 @@ void ESP_AI::get_position()
         else
         {
             DEBUG_PRINTLN(debug, "[Info] 定位请求失败， 返回数据错误。");
-            http.end();
+            esp_ai_get_position_http.end();
         }
     }
     else
     {
         Serial.printf("[HTTPS] GET code: %d\n", httpCode2);
         DEBUG_PRINTLN(debug, "[Info] 定位请求失败");
-        http.end();
+        esp_ai_get_position_http.end();
     }
  
     vTaskDelete(NULL);

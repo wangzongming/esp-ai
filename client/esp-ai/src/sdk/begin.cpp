@@ -99,23 +99,22 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         wake_up_config = config.wake_up_config;
         wake_up_scheme = String(wake_up_config.wake_up_scheme);
         if (wake_up_scheme == "pin_high")
-        { 
+        {
             pinMode(wake_up_config.pin, INPUT_PULLDOWN);
         }
         else if (wake_up_scheme == "pin_low")
-        { 
+        {
             pinMode(wake_up_config.pin, INPUT_PULLUP);
         }
 
         if (!wake_up_config.vad_first)
         {
             wake_up_config.vad_first = 5000;
-        } 
+        }
         if (!wake_up_config.vad_course)
         {
             wake_up_config.vad_course = 1000;
         }
-        
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
 
@@ -134,7 +133,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         esp_ai_net_status = "0";
         onNetStatusCb("0");
     }
- 
+
     String loc_device_id = get_device_id();
     String loc_wifi_name = get_local_data("wifi_name");
     String loc_wifi_pwd = get_local_data("wifi_pwd");
@@ -238,9 +237,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     WiFi.setSleep(false);
 
     DEBUG_PRINTLN(debug, "");
-    DEBUG_PRINT(debug, F("[Info] wifi 连接成功，设备 IP 地址: "));
-    DEBUG_PRINT(debug, WiFi.localIP());
-    DEBUG_PRINTLN(debug, F("(与硬件连接同一wifi方可访问)\n"));
+    DEBUG_PRINT(debug, F("[Info] wifi 连接成功。"));
+    // DEBUG_PRINT(debug, F("[Info] wifi 连接成功，设备 IP 地址: "));
+    // DEBUG_PRINT(debug, WiFi.localIP());
+    // DEBUG_PRINTLN(debug, F("(与硬件连接同一wifi方可访问)\n"));
     String ip_str = WiFi.localIP().toString();
     if (onConnectedWifiCb != nullptr)
     {
@@ -258,7 +258,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         wakeup_init();
         xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 60, this, 1, NULL);
-    } 
+    }
 
     if (String(server_config.ip) == "custom-made")
     {
@@ -269,21 +269,70 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             return;
         }
     }
+  
+    xTaskCreate(
+        ESP_AI::reporting_sensor_data_wrapper,
+        "reporting_sensor_data",
+        1024 * 4,
+        this,
+        1,
+        NULL
+    );
 
-    // 在局域网也建立服务
-    web_server_init();
+    xTaskCreate(
+        ESP_AI::send_audio_wrapper,
+        "send_audio",
+        1024 * 2,
+        this,
+        1,
+        NULL
+    );
 
-    xTaskCreate(ESP_AI::lights_wrapper, "lights", 1024 * 4, this, 1, NULL);
-    xTaskCreate(ESP_AI::get_position_wrapper, "get_position", 1024 * 4, this, 1, NULL);
-    xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 32, this, 1, NULL);
-    xTaskCreate(ESP_AI::reporting_sensor_data_wrapper, "reporting_sensor_data", 1024 * 4, this, 1, NULL);
-    xTaskCreate(ESP_AI::send_audio_wrapper, "send_audio", 1024 * 4, this, 1, NULL);
-    xTaskCreate(ESP_AI::play_audio_wrapper, "play_audio", 1024 * 4, this, 1, NULL);
+    xTaskCreate(
+        ESP_AI::lights_wrapper,
+        "lights",
+        1024 * 2,
+        this,
+        1,
+        NULL
+    );
+    xTaskCreate(
+        ESP_AI::on_repeatedly_click_wrapper,
+        "on_repeatedly_click",
+        1024 * 2,
+        this,
+        1,
+        NULL
+    );
+
+    xTaskCreate(
+        ESP_AI::get_position_wrapper,
+        "get_position",
+        1024 * 4,
+        this,
+        1,
+        NULL
+    );
+
+    xTaskCreate(
+        ESP_AI::play_audio_wrapper,
+        "play_audio",
+        1024 * 4,
+        this,
+        1,
+        NULL
+    );
 
     if (volume_config.enable)
     {
-        xTaskCreate(ESP_AI::volume_listener_wrapper, "volume_listener", 1024 * 4, this, 1, NULL);
+        xTaskCreate(
+            ESP_AI::volume_listener_wrapper,
+            "volume_listener",
+            1024 * 4,
+            this,
+            1,
+            NULL
+        );
     }
-
     connect_ws();
 }
