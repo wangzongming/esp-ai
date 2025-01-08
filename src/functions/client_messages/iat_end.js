@@ -24,6 +24,7 @@
  */
 
 async function fn({ device_id  }) { 
+    if(!G_devices.get(device_id)) return;
     const { iat_ws } = G_devices.get(device_id); 
     iat_ws?.end?.();
 }

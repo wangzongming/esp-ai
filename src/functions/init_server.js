@@ -114,7 +114,10 @@ function init_server() {
                         comm_args.pin = pin;
                         switch (type) {
                             case "start":
-                                start(comm_args); 
+                                start(comm_args);
+                                // test...
+                                // writeStream = fs.createWriteStream(path.join(__dirname, `./${index}_output.mp3`));
+                                // index++;
                                 break;
                             case "iat_end":
                                 iat_end(comm_args);
@@ -147,7 +150,9 @@ function init_server() {
                     } else {
                         ws.isAlive = true;
                         audio({ ...comm_args, data })
- 
+
+                        // test...
+                        // writeStream.write(data);
                     }
 
                 } catch (err) {
@@ -195,7 +200,8 @@ function init_server() {
                 devLog && log.info(``);
                 devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
                 devLog && log.info(``);
-
+                // ws.send(JSON.stringify({ type: "sever-close" }));
+                // ws?.close();
                 // 清空该设备的所有任务
                 G_Instance.stop(device_id, "设备断开服务时");
 
@@ -229,8 +235,7 @@ function init_server() {
         }, 60 * 1000);
 
         setInterval(function () {
-            log.info("当前客户端数量：" + wss.clients.size)
-            // }, 60 * 1000);
+            log.info("当前客户端数量：" + wss.clients.size) 
         }, 30 * 1000);
 
         wss.on('close', function close() {

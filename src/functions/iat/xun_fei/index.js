@@ -114,8 +114,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
         iat_ws.on('message', (data, err) => {
-            if (shouldClose) return;
-            // clearTimeout(close_connect_timer);
+            if (shouldClose) return; 
             if (err) {
                 log.iat_info(`err:${err}`)
                 return
@@ -223,7 +222,10 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             }
             return frame;
         }
- 
+
+        // test... 
+        // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`));
+
         function send_pcm(data) {
             if (shouldClose) return;
             if (!iat_server_connected) return;
@@ -234,6 +236,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             }
 
             const stream = Readable.from(data); 
+            // test...
+            // writeStreamMP3.write(data);
 
             ffmpeg(stream)
                 .setFfmpegPath(ffmpegPath)

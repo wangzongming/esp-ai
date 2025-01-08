@@ -118,6 +118,12 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
 
+    // 将按钮默认拉低
+    if (wake_up_scheme != "pin_high" && wake_up_scheme != "pin_low" && reset_btn_config.power != "high" && reset_btn_config.power != "low")
+    {
+        pinMode(wake_up_config.pin, INPUT_PULLDOWN);
+    }
+
     // ws2812
     esp_ai_pixels.begin();
     esp_ai_pixels.setBrightness(100); // 亮度设置
@@ -158,6 +164,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, "[Info] loc_ext6: " + loc_ext6);
     DEBUG_PRINTLN(debug, "[Info] loc_ext7: " + loc_ext7);
     DEBUG_PRINTLN(debug, ("====================================================="));
+
+    xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 2, this, 1, NULL);
 
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
@@ -221,10 +229,15 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             open_ap();
         }
     }
+
     if (WiFi.status() != WL_CONNECTED)
     {
+        esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
         return;
     }
+    esp_ai_dec.write(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
+    esp_ai_dec.write(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
+
     // 内置状态处理
     status_change("2");
     // 设备状态回调
@@ -238,9 +251,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 
     DEBUG_PRINTLN(debug, "");
     DEBUG_PRINT(debug, F("[Info] wifi 连接成功。"));
-    // DEBUG_PRINT(debug, F("[Info] wifi 连接成功，设备 IP 地址: "));
-    // DEBUG_PRINT(debug, WiFi.localIP());
-    // DEBUG_PRINTLN(debug, F("(与硬件连接同一wifi方可访问)\n"));
     String ip_str = WiFi.localIP().toString();
     if (onConnectedWifiCb != nullptr)
     {
@@ -269,15 +279,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             return;
         }
     }
-  
+
     xTaskCreate(
         ESP_AI::reporting_sensor_data_wrapper,
         "reporting_sensor_data",
         1024 * 4,
         this,
         1,
-        NULL
-    );
+        NULL);
 
     xTaskCreate(
         ESP_AI::send_audio_wrapper,
@@ -285,8 +294,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         1024 * 2,
         this,
         1,
-        NULL
-    );
+        NULL);
 
     xTaskCreate(
         ESP_AI::lights_wrapper,
@@ -294,16 +302,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         1024 * 2,
         this,
         1,
-        NULL
-    );
-    xTaskCreate(
-        ESP_AI::on_repeatedly_click_wrapper,
-        "on_repeatedly_click",
-        1024 * 2,
-        this,
-        1,
-        NULL
-    );
+        NULL);
 
     xTaskCreate(
         ESP_AI::get_position_wrapper,
@@ -311,8 +310,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         1024 * 4,
         this,
         1,
-        NULL
-    );
+        NULL);
 
     xTaskCreate(
         ESP_AI::play_audio_wrapper,
@@ -320,8 +318,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         1024 * 4,
         this,
         1,
-        NULL
-    );
+        NULL);
 
     if (volume_config.enable)
     {
@@ -331,8 +328,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             1024 * 4,
             this,
             1,
-            NULL
-        );
+            NULL);
     }
     connect_ws();
 }

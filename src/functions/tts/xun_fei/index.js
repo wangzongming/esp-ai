@@ -50,7 +50,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
         connectServerBeforeCb();
         const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, }));
-
+        // console.log('text', text)
         // 如果 ws 服务是个 WebSocket 对象，请调用这个方法。框架在适合的时候会调用 .close() 方法
         logWSServer(ws)
 
@@ -70,21 +70,20 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
             let res = JSON.parse(data)
 
             if (res.code != 0) {
-                ttsServerErrorCb(`tts错误 ${res.code}: ${res.message}`)
+                ttsServerErrorCb(`讯飞tts接口错误 ${res.code}: ${res.message}`)
                 connectServerCb(false);
                 ws.close() 
                 return
             }
 
             const audio = res.data.audio;
-            if (!audio) {
+            if (!audio) { 
                 // 这种情况算结束
-                cb({ is_over: true, audio: "", resolve: resolve, ws: ws });
-                connectServerCb(false);
-                // ttsServerErrorCb(`tts错误：未返回音频流`) 
+                cb({ is_over: true, audio: "", ws: ws });
+                connectServerCb(false); 
                 return
-            }
-            let audioBuf = Buffer.from(audio, 'base64')
+            } 
+            let audioBuf = Buffer.from(audio, 'base64'); 
             cb({
                 // 根据服务控制
                 is_over: res.code == 0 && res.data.status == 2,
@@ -109,10 +108,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
             const business = {
                 volume: 100,
                 "vcn": "aisbabyxu",
-                ...other_config,
-                // pcm
-                // "aue": "raw", 
-                // mp3
+                ...other_config, 
                 aue: "lame",
                 sfl: 1,
                 "auf": "audio/L16;rate=16000",

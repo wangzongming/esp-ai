@@ -34,7 +34,7 @@ async function matchIntention(device_id, text, reply) {
     !device_id && log.error(`调用 matchIntention 方法时，请传入 device_id`);
     const { devLog } = G_config;
     const TTS_FN = require(`../functions/tts`);
-    const { ws: ws_client, session_id, user_config, llm_historys = [], prev_play_audio_ing, tts_buffer_chunk_queue, user_config: { sleep_reply, intention = [] } } = G_devices.get(device_id);
+    const { ws: ws_client, session_id, user_config, llm_historys = [], prev_play_audio_ing, user_config: { sleep_reply, intention = [] } } = G_devices.get(device_id);
     if (!text) return null;
     let task_info = null;
     intention_for: for (const item of intention) {

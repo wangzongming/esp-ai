@@ -26,7 +26,7 @@
 #include "loop.h"
 
 long esp_ai_last_debounce_time = 0;
-int esp_ai_debounce_delay = 250;
+int esp_ai_debounce_delay = 200;
 int esp_ai_prev_state = 0;
 int esp_ai_prev_state_listen = 0;
 long esp_ai_btn_up_time = 0;
@@ -75,7 +75,7 @@ void ESP_AI::loop()
     {
         int reading = digitalRead(wake_up_config.pin);
         long curTime = millis();
-        int target_val = wake_up_scheme == "pin_high" ? 1 : 0; 
+        int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
         if (reading == target_val)
         {
             if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
@@ -83,6 +83,8 @@ void ESP_AI::loop()
                 esp_ai_last_debounce_time = curTime;
                 if (esp_ai_prev_state != reading)
                 {
+                    esp_ai_start_send_audio = false;
+                    esp_ai_start_get_audio = false;
                     esp_ai_prev_state = reading;
                     DEBUG_PRINTLN(debug, ("按下了按钮, 唤醒成功"));
                     wakeUp("wakeup");
@@ -102,6 +104,8 @@ void ESP_AI::loop()
             String clear_str = cleanString(command);
             if (clear_str == String(wake_up_config.str))
             {
+                esp_ai_start_send_audio = false;
+                esp_ai_start_get_audio = false;
                 DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
                 wakeUp("wakeup");
             }
@@ -112,6 +116,8 @@ void ESP_AI::loop()
             String clear_str = cleanString(command);
             if (clear_str == String(wake_up_config.str))
             {
+                esp_ai_start_send_audio = false;
+                esp_ai_start_get_audio = false;
                 DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
                 wakeUp("wakeup");
             }
@@ -125,6 +131,8 @@ void ESP_AI::loop()
         {
             if (esp_ai_prev_state_listen != reading)
             {
+                esp_ai_start_send_audio = false;
+                esp_ai_start_get_audio = false;
                 esp_ai_btn_up_time = 0;
                 esp_ai_prev_state_listen = reading;
                 DEBUG_PRINTLN(debug, ("您请说话。"));
@@ -163,9 +171,8 @@ void ESP_AI::loop()
         }
         else
         {
-            size_t bytes_read;
-            size_t buffer_size = sizeof(esp_ai_asr_sample_buffer);
-            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, buffer_size, &bytes_read, 100);
+            size_t bytes_read; 
+            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, esp_ai_asr_sample_buffer_size, &bytes_read, 100);
 
             if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
             {
@@ -193,16 +200,17 @@ void ESP_AI::loop()
                     }
                 }
             }
-
-            size_t sample_count = bytes_read / sizeof(esp_ai_asr_sample_buffer[0]);
+ 
+            size_t sample_count = esp_ai_asr_sample_buffer_size / 2;
             int gain_factor = 16;
             for (size_t i = 0; i < sample_count; i++)
             {
                 esp_ai_asr_sample_buffer[i] *= gain_factor;
             }
+ 
             esp_ai_mp3_encoder.write(esp_ai_asr_sample_buffer, bytes_read);
         }
     }
-  
+
     delay(50);
 }

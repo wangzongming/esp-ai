@@ -52,7 +52,7 @@
 #include <Preferences.h>
 
 #include <esp_adc_cal.h>
-#include <driver/adc.h> 
+#include <driver/adc.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -63,9 +63,10 @@
 #include "audio/zh/pei_wang_cheng_gong.h"
 #include "audio/zh/qing_pei_wang.h"
 #include "audio/zh/san_ci.h"
+#include "audio/zh/lian_jie_cheng_gong.h"
+#include "audio/zh/fu_wu_lian_jie_zhong.h"
 // #include "audio/zh/yu_e_bu_zuo.h"
 // #include "audio/zh/jian_quan_shi_bai.h"
-// #include "audio/zh/lian_jie_cheng_gong.h"
 // #include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
 // #include "audio/zh/qing_lian_jie_fu_wu.h"
 // #include "audio/zh/mei_dian_le.h"
@@ -81,7 +82,7 @@
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 18
 #endif
- 
+
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_1
 #define YSQ_i2s_num I2S_NUM_0
@@ -112,8 +113,8 @@ struct ESP_AI_i2s_config_speaker
  *       asrpro：天问语音模块唤醒
  *     pin_high：引脚高电平唤醒
  *      pin_low：引脚低电平唤醒
- *     pin_high_listen：引脚高电平聆听(按下对话)   
- *      pin_low_listen：引脚低电平聆听(按下对话)   
+ *     pin_high_listen：引脚高电平聆听(按下对话)
+ *      pin_low_listen：引脚低电平聆听(按下对话)
  *       serial：串口字符唤醒
  *       custom：自定义，自行调用 esp_ai.wakeUp() 唤醒
  */
@@ -209,7 +210,7 @@ extern WebServer esp_ai_server;
 
 extern I2SStream esp_ai_spk_i2s;
 extern EncodedAudioStream esp_ai_dec; // Decoding stream
-extern VolumeStream esp_ai_volume; 
+extern VolumeStream esp_ai_volume;
 
 extern liblame::MP3EncoderLAME esp_ai_mp3_encoder;
 extern liblame::AudioInfo esp_ai_mp3_info;
@@ -219,13 +220,13 @@ constexpr uint32_t esp_ai_asr_sample_buffer_size = 1280 * 5; // 大约 0.3kb/50m
 extern int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size];
 
 extern String ESP_AI_VERSION;
-extern String esp_ai_start_ed; 
+extern String esp_ai_start_ed;
 extern bool esp_ai_ws_connected;
 extern String esp_ai_session_id;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
-
+extern bool esp_ai_is_first_send; 
 // 聆听模式
 extern bool esp_ai_is_listen_model;
 
@@ -249,8 +250,8 @@ extern long wakeup_time;
 extern long last_silence_time;
 extern long last_not_silence_time;
 extern long last_silence_time_wakeup;
-extern long last_not_silence_time_wekeup; 
-extern String play_cache; 
+extern long last_not_silence_time_wekeup;
+extern String play_cache;
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 extern ESP_AI_i2s_config_mic default_i2s_config_mic;
@@ -325,4 +326,4 @@ String get_device_id();
 bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
 
 extern std::vector<int> digital_read_pins;
-extern std::vector<int> analog_read_pins; 
+extern std::vector<int> analog_read_pins;

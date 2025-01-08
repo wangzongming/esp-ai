@@ -50,64 +50,68 @@ uint32_t wheel(byte pos)
 
 void ESP_AI::lights()
 {
-    
+
     int rainbow_step_ai = 0;
 
     while (true)
     {
-
-        if (esp_ai_status == "iat_start" || esp_ai_status == "wakeup")
-        {
-            esp_ai_pixels.clear();
-            esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(18, 170, 156));
-            esp_ai_pixels.setBrightness(100); // 亮度设置
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "tts_chunk_start")
+        if (esp_ai_tts_task_id != "")
         { 
             esp_ai_pixels.setPixelColor(0, wheel(rainbow_step_ai));
             esp_ai_pixels.show();
             rainbow_step_ai = (rainbow_step_ai + 15) & 255;
         }
-        else if (esp_ai_status == "iat_end" || esp_ai_status == "tts_real_end")
+        else
         {
-            esp_ai_pixels.clear();
-            esp_ai_pixels.show();
+            if (esp_ai_status == "iat_start" || esp_ai_status == "wakeup")
+            {
+                esp_ai_pixels.clear();
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(18, 170, 156));
+                esp_ai_pixels.setBrightness(100); 
+                esp_ai_pixels.show();
+            }
+
+            else if (esp_ai_status == "iat_end" || esp_ai_status == "tts_real_end")
+            {
+                esp_ai_pixels.clear();
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "0_ing")
+            {
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
+                esp_ai_pixels.setBrightness(50); 
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "0_ing_after")
+            {
+                esp_ai_pixels.clear();
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "0_ap")
+            {
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
+                esp_ai_pixels.setBrightness(50);  
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "2")
+            {
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
+                esp_ai_pixels.setBrightness(50); 
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "3")
+            {
+                esp_ai_pixels.clear();
+                esp_ai_pixels.show();
+            }
+            else if (esp_ai_status == "long_press_ing")
+            {
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
+                esp_ai_pixels.setBrightness(50);  
+                esp_ai_pixels.show();
+            }
         }
-        else if (esp_ai_status == "0_ing")
-        {
-            esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-            esp_ai_pixels.setBrightness(50); // 亮度设置
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "0_ing_after")
-        {
-            esp_ai_pixels.clear();
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "0_ap")
-        {
-            esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
-            esp_ai_pixels.setBrightness(50); // 亮度设置
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "2")
-        {
-            esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-            esp_ai_pixels.setBrightness(50); // 亮度设置
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "3")
-        {
-            esp_ai_pixels.clear();
-            esp_ai_pixels.show();
-        }
-        else if (esp_ai_status == "long_press_ing")
-        {
-            esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-            esp_ai_pixels.setBrightness(50); // 亮度设置
-            esp_ai_pixels.show();
-        } 
+
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

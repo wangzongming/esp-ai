@@ -2,13 +2,14 @@
  * 音频流发送器
 */
 class Audio_sender {
-    constructor(ws) {
+    constructor(ws, device_id) {
         this.ws = ws;
         this.send_timer = null;
         this.accumulated_data = Buffer.alloc(0);
         this.send_num = G_max_audio_chunk_size;
         this.check_count = 0;
         this.started = false;
+        this.device_id = device_id; 
     }
 
     /**
@@ -19,8 +20,8 @@ class Audio_sender {
             this.started = true;
             this.check_count = 0;
             this.accumulated_data = Buffer.alloc(0);
-            clearInterval(this.send_timer);
-            this.send_timer = setInterval(() => {
+
+            this.sender = () => {
                 if (!this.accumulated_data.length) {
                     if (this.check_count >= 20) {
                         clearInterval(this.send_timer);
@@ -29,9 +30,10 @@ class Audio_sender {
                     }
                     this.check_count++;
                     this.send_timer = null;
+                    setTimeout(this.sender, 350)
                     return;
                 };
- 
+
                 let data = null;
                 const remain = this.accumulated_data.length - this.send_num;
                 if (remain > 0 && remain < 4) { 
@@ -39,27 +41,37 @@ class Audio_sender {
                 } else {
                     data = this.accumulated_data.slice(0, this.send_num);
                 }
-                // session_id
-                const _session_id = session_id ? `${session_id}` : "0000";
  
+                const  { session_id: now_session_id } = G_devices.get(this.device_id);
+                if(now_session_id && now_session_id !== session_id) return;
+                
+                const _session_id = session_id ? `${session_id}` : "0000";
                 const end_str = data.slice(-4).toString();
                 if ([G_session_ids["tts_all_end_align"], G_session_ids["tts_all_end"], G_session_ids["tts_chunk_end"]].includes(end_str)) {
-                    // console.log("执行结束回调：")
-                    // 删除最后四个字节
-                    const end_data = data.slice(0, -4);
-                    end_data.length && this.ws.send(end_data);
-                    // 特殊发一组标志
-                    this.ws.send(Buffer.from(end_str, 'utf-8'));
-                    on_end && on_end();
-                    resolve();
-                } else {
-                    const sessionIdBuffer = Buffer.from(_session_id, 'utf-8');
-                    const combinedBuffer = Buffer.concat([sessionIdBuffer, data]);
-                    this.ws.send(combinedBuffer);
+                    // 删除最后四个字节 
+                    const real_data = data.slice(0, data.length - 4);
+                    const end_data = data.slice(-4);
+                    const combinedBuffer = Buffer.concat([Buffer.from(_session_id, 'utf-8'), real_data]); 
+ 
+                    this.ws.send(combinedBuffer, () => { 
+                        this.ws.send(end_data, () => {
+                            this.send_timer = setTimeout(this.sender, 350)
+                            this.accumulated_data = this.accumulated_data.slice(data.length);
+                            on_end && on_end();
+                            resolve();
+                        });
+                    });
+                } else { 
+                    const combinedBuffer = Buffer.concat([Buffer.from(_session_id, 'utf-8'), data]);
+                    this.ws.send(combinedBuffer, () => {
+                        this.send_timer = setTimeout(this.sender, 350)
+                        this.accumulated_data = this.accumulated_data.slice(data.length);
+                    });
                 } 
-                this.accumulated_data = this.accumulated_data.slice(data.length);
-            }, 300);// 给网络延时预留一定的时间
-        }) 
+            };
+            this.sender();
+ 
+        })
     }
 
     /**

@@ -27,11 +27,11 @@
  * RAM
  * |   task                  |     occupy     |
  * |-------------------------|----------------|
- * |   long press            |     8kb        |
- * |   capture samples       |     32kb       |
- * |   wakeup inference      |     60kb       |
- * |   i2s_listener          |     32kb       |
- * |   volume                |     1kb        |
+ * |   long press            |     -kb        |
+ * |   capture samples       |     -kb       |
+ * |   wakeup inference      |     -kb       |
+ * |   i2s_listener          |     -kb       |
+ * |   volume                |     -kb        |
  * |   ws2812                |     -kb        |
  * |   reporting sensor data |     -kb        | 
  *
@@ -170,7 +170,7 @@ public:
     void onPosition(void (*func)(String ip, String nation, String province, String city));
 
     /**
-     * 长按按钮回调，内部会自动执行清除配网信息的操作，
+     * 按五次按钮回调，内部会自动执行清除配网信息的操作，
      * 如果开发者还需要执行其他操作，请在函数回调中执行
      */
     void onRepeatedlyClick(void (*func)());

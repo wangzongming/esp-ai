@@ -26,7 +26,7 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.38.26";
+String ESP_AI_VERSION = "2.40.28";
 
 String esp_ai_start_ed = "0"; 
 bool esp_ai_ws_connected = false;
@@ -36,6 +36,7 @@ String esp_ai_status = "";
 bool esp_ai_is_listen_model = true; 
 bool esp_ai_user_has_spoken = false;
 bool esp_ai_sleep = false;
+bool esp_ai_is_first_send = true; 
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;
@@ -164,6 +165,9 @@ String get_device_id()
  */
 String get_local_data(const String &field_name = "")
 {
+    if(field_name == "device_id"){
+        return get_device_id();
+    }
     esi_ai_prefs.begin("esp-ai-kv", true);
     String val = "";
     if (esi_ai_prefs.isKey(field_name.c_str()))

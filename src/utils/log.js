@@ -14,7 +14,7 @@ function info(text, styles = []) {
 }
 
 function time() {
-    return moment().format("HH:mm:ss");
+    return moment().format("HH:mm:ss SSS");
 }
 function t_info(...text) {
     const { logs = {} } = G_config;

@@ -32,25 +32,23 @@ void ESP_AI::send_audio_wrapper(void *arg)
 
 void ESP_AI::send_audio()
 {
-    int threshold = 1028 * 3;
-    bool is_first_send = true; // 标记是否是首次发送
+    int threshold = 1028 * 3; 
     long last_send_time = 0;
 
     while (true)
     {
         if (esp_ai_start_send_audio)
-        {
-            // 并且清除掉已经发送过的数据
-            int cur_size = esp_ai_asr_sample_buffer_before->size(); 
+        { 
+            int cur_size = esp_ai_asr_sample_buffer_before->size();  
             if (cur_size >= threshold)
             {
                 std::vector<uint8_t> send_buffer;
 
-                if (is_first_send)
+                if (esp_ai_is_first_send)
                 {
                     uint8_t mp3_header[4] = {0xFF, 0xFB, 0x90, 0x64}; // MP3 标准帧头：单声道、16kHz、128kbps
                     send_buffer.insert(send_buffer.end(), mp3_header, mp3_header + sizeof(mp3_header));
-                    is_first_send = false;
+                    esp_ai_is_first_send = false;
                 }
 
                 // 添加实际 MP3 数据
@@ -95,7 +93,7 @@ void ESP_AI::send_audio()
             {
                 esp_ai_asr_sample_buffer_before->clear();
             }
-            is_first_send = true; // 重置首次发送标记
+            esp_ai_is_first_send = true; 
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
     }

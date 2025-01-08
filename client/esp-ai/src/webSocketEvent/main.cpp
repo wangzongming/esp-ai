@@ -34,7 +34,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_ws_connected = false;
             esp_ai_start_ed = "0";
             esp_ai_session_id = "";
-            Serial.println("\n\n[Info] -> ESP-AI 服务连接成功\n\n");
+            Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
             esp_ai_cache_audio_du.clear();
             esp_ai_cache_audio_greetings.clear();
             esp_ai_cache_audio_sleep_reply.clear();
@@ -51,11 +51,11 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         break;
     case WStype_CONNECTED:
     {
+        Serial.println("\n\n[Info] -> ESP-AI 服务连接成功\n\n");
         esp_ai_ws_connected = true;
         esp_ai_start_ed = "0";
         esp_ai_session_id = "";
-        Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
- 
+
         esp_ai_start_get_audio = false;
         esp_ai_start_send_audio = false;
 
@@ -141,6 +141,17 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 // tts task log
                 else if (type == "play_audio")
                 {
+                    // 用户在说话时丢弃服务数据
+                    if (esp_ai_start_get_audio)
+                    {
+                        esp_ai_tts_task_id = "";
+                        return;
+                    }
+
+                    // 结束解码
+                    esp_ai_dec.end();
+                    delay(100);
+
                     esp_ai_dec.begin();
                     esp_ai_tts_task_id = (const char *)parseRes["tts_task_id"];
                     String now_session_id = (const char *)parseRes["session_id"];
@@ -155,10 +166,18 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
                 else if (type == "session_stop")
                 {
+                    // 用户在说话时丢弃服务数据
+                    if (esp_ai_start_get_audio)
+                    {
+                        esp_ai_tts_task_id = "";
+                        esp_ai_session_id = "";
+                        return;
+                    }
+
                     // 这里仅仅是停止，并不能结束录音
                     DEBUG_PRINTLN(debug, "\n[Info] -> 会话停止");
-                    esp_ai_session_id = "";
                     esp_ai_dec.end();
+                    esp_ai_session_id = "";
                 }
 
                 else if (type == "auth_fail")
@@ -253,6 +272,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     DEBUG_PRINT(debug, F("\n[Server Log] -> "));
                     DEBUG_PRINTLN(debug, data);
                 }
+                else if (type == "sever-close")
+                {
+                    DEBUG_PRINT(debug, F("\n[Error] 服务端主动断开，尝试重新连接。"));
+                    ESP.restart();
+                }
+
                 else if (type == "hardware-fns")
                 {
                     int pin = (int)parseRes["pin"];
@@ -295,11 +320,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         break;
     case WStype_BIN:
     {
-        // 提取 session_id
-        char sessionIdString[5];
-        memcpy(sessionIdString, payload, 4);
-        sessionIdString[4] = '\0';
-        String sid = String(sessionIdString);
+        char session_id_string[5];
+        memcpy(session_id_string, payload, 4);
+        session_id_string[4] = '\0';
+        String sid = String(session_id_string); 
 
         /**
          * sid
@@ -318,16 +342,20 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_tts_task_id = "";
             // 内置状态处理
             status_change("tts_real_end");
-            if (onSessionStatusCb != nullptr)
-            {
-                onSessionStatusCb("tts_real_end");
-            }
 
-            if (!esp_ai_is_listen_model)
+            if (esp_ai_session_id != "")
             {
-                // tts发送完毕，需要重新开启录音
-                DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，需继续对话。"));
-                wakeUp("continue");
+                if (onSessionStatusCb != nullptr)
+                {
+                    onSessionStatusCb("tts_real_end");
+                }
+
+                if (!esp_ai_is_listen_model)
+                {
+                    // tts发送完毕，需要重新开启录音
+                    DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，需继续对话。"));
+                    wakeUp("continue");
+                }
             }
         }
         else if (sid == "2001")
@@ -335,11 +363,15 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_tts_task_id = "";
             // 内置状态处理
             status_change("tts_real_end");
-            if (onSessionStatusCb != nullptr)
+
+            if (esp_ai_session_id != "")
             {
-                onSessionStatusCb("tts_real_end");
+                if (onSessionStatusCb != nullptr)
+                {
+                    onSessionStatusCb("tts_real_end");
+                }
+                DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，无需继续对话。"));
             }
-            DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，无需继续对话。"));
             return;
         }
         else if (sid == "2002")
@@ -365,11 +397,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_cache_audio_sleep_reply.insert(esp_ai_cache_audio_sleep_reply.end(), audioData, audioData + audioLength);
         }
 
-        if (sessionIdString && sid != "0000" && sid != esp_ai_session_id)
+        if (session_id_string && sid != "0000" && sid != esp_ai_session_id)
         {
             return;
         }
-
         esp_ai_dec.write(audioData, audioLength);
         break;
     }
