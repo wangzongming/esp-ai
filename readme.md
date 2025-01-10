@@ -36,9 +36,16 @@
 
 </div>
 
-<h2>
-<a href="./readme_zh.md">👉简体中文</a>
-</h2>
+<br />
+
+# language
+
+<h3>
+<a href="./readme_zh.md">👉简体中文</a> 
+</h3>
+<h3> 
+<a href="./readme_ja.md">👉Japanese</a>
+</h3>
 
 > Provides a complete AI dialogue solution for your development board, including but not limited to the `IAT(ASR)+LLM+TTS` integration solution for the `ESP32` series development boards. It is injected into the project as a dependency without affecting existing projects.
 
