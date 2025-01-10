@@ -39,7 +39,8 @@ void ESP_AI::send_audio()
     {
         if (esp_ai_start_send_audio)
         { 
-            int cur_size = esp_ai_asr_sample_buffer_before->size();  
+            int cur_size = esp_ai_asr_sample_buffer_before->size();   
+
             if (cur_size >= threshold)
             {
                 std::vector<uint8_t> send_buffer;

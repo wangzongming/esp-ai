@@ -162,7 +162,7 @@ void ESP_AI::loop()
     {
         int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
         if (esp_ai_start_send_audio && !esp_ai_is_listen_model && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
-        {
+        { 
             // 静默时间过长
             esp_ai_start_get_audio = false;
             esp_ai_start_send_audio = false;
@@ -170,9 +170,9 @@ void ESP_AI::loop()
             esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
         }
         else
-        {
+        { 
             size_t bytes_read; 
-            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, esp_ai_asr_sample_buffer_size, &bytes_read, 100);
+            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, esp_ai_asr_sample_buffer_size, &bytes_read, 100); 
 
             if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
             {
@@ -201,8 +201,8 @@ void ESP_AI::loop()
                 }
             }
  
-            size_t sample_count = esp_ai_asr_sample_buffer_size / 2;
-            int gain_factor = 16;
+            size_t sample_count = bytes_read / 2;
+            int gain_factor = 8;
             for (size_t i = 0; i < sample_count; i++)
             {
                 esp_ai_asr_sample_buffer[i] *= gain_factor;

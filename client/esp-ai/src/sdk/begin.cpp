@@ -112,8 +112,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             wake_up_config.vad_first = 5000;
         }
         if (!wake_up_config.vad_course)
-        {
-            wake_up_config.vad_course = 1000;
+        { 
+            wake_up_config.vad_course = 1500; 
         }
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");

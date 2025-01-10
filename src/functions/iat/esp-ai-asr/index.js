@@ -23,8 +23,7 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-const WebSocket = require('ws')
-const getServerURL = require("../../getServerURL");
+const WebSocket = require('ws') 
 
 /**
  * 讯飞语音识别  

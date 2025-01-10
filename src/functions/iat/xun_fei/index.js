@@ -64,12 +64,16 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
-        let shouldClose = false; 
+        let shouldClose = false;
+
+        let dataTransOver = false;
 
         // console.log('开始连接 IAT 服务...')
         const iatResult = [];
         connectServerBeforeCb();
         const iat_ws = new WebSocket(getServerURL("IAT", { iat_server, llm_server, tts_server, appid, apiSecret, apiKey }))
+        let endTimer = null;
+        let endCheckCount = 0;
         logWSServer({
             close: () => {
                 shouldClose = true;
@@ -77,11 +81,27 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 iat_ws.close()
             },
             end: () => {
-                log.iat_info('IAT 服务结束:' + session_id); 
-                if (iat_server_connected && send_pcm) { 
-                    iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
-                    send_pcm("");
-                } 
+                log.iat_info('IAT 服务结束:' + session_id);
+                if (iat_server_connected && send_pcm) {  
+                    if (dataTransOver) {
+                        iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
+                        send_pcm("");
+                    } else {
+                        const checkFn = () => {
+                            if(endCheckCount > 10){
+                                return;
+                            }
+                            if (dataTransOver) {
+                                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
+                                send_pcm("");
+                            } else {
+                                endTimer = setTimeout(checkFn, 300);
+                                endCheckCount ++;
+                            }
+                        };
+                        endTimer = setTimeout(checkFn, 300);
+                    }
+                }
             }
         });
 
@@ -104,8 +124,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
-            if (shouldClose) return; 
-            if (iat_server_connected && send_pcm) { 
+            if (shouldClose) return;
+            if (iat_server_connected && send_pcm) {
                 iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
                 send_pcm("");
             }
@@ -114,7 +134,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
         iat_ws.on('message', (data, err) => {
-            if (shouldClose) return; 
+            if (shouldClose) return;
             if (err) {
                 log.iat_info(`err:${err}`)
                 return
@@ -127,6 +147,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             }
 
             let str = ""
+            iatResult[res.data.result.sn] = res.data.result;
             if (res.data.status == 2) {
                 iat_ws.close();
 
@@ -151,7 +172,6 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             } else {
                 str += "-> 中间识别结果"
             }
-            iatResult[res.data.result.sn] = res.data.result
             if (res.data.result.pgs == 'rpl') {
                 res.data.result.rg.forEach(i => {
                     iatResult[i] = null
@@ -174,14 +194,14 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         // 资源释放
         iat_ws.on('close', () => {
             if (shouldClose) return;
-            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭：", session_id) 
+            devLog && log.iat_info("-> 讯飞 IAT 服务已关闭：", session_id)
             iat_server_connected = false;
             connectServerCb(false);
         })
 
         // 建连错误
         iat_ws.on('error', (err) => {
-            if (shouldClose) return; 
+            if (shouldClose) return;
             iatServerErrorCb(err);
             iat_server_connected = false;
             connectServerCb(false);
@@ -190,11 +210,11 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         function build_frame(chunk) {
             const frameDataSection = {
                 status: iat_status,
-                audio: chunk ? chunk.toString('base64') : "", 
+                audio: chunk ? chunk.toString('base64') : "",
                 "format": "audio/L16;rate=16000",
                 "encoding": "raw",
             };
- 
+
             let frame = {};
             switch (iat_status) {
                 case XF_IAT_FRAME.STATUS_FIRST_FRAME:
@@ -226,6 +246,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         // test... 
         // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`));
 
+        let overTimer = null;
         function send_pcm(data) {
             if (shouldClose) return;
             if (!iat_server_connected) return;
@@ -235,9 +256,11 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 return;
             }
 
-            const stream = Readable.from(data); 
+            const stream = Readable.from(data);
             // test...
             // writeStreamMP3.write(data);
+            dataTransOver = false;
+            clearTimeout(overTimer);
 
             ffmpeg(stream)
                 .setFfmpegPath(ffmpegPath)
@@ -250,12 +273,16 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     console.error(`MP3 转换出错 ${error}`);
                 })
                 .pipe()
-                .on('data', (chunk) => {   
+                .on('data', (chunk) => {
                     const frame = build_frame(chunk);
                     iat_ws.send(JSON.stringify(frame));
                 })
-            // .on("end", ()=>{  });
- 
+                .on("end", () => {
+                    overTimer = setTimeout(() => { 
+                        dataTransOver = true;
+                    }, 500)
+                });
+
         }
 
         logSendAudio(send_pcm)

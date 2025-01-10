@@ -30,6 +30,7 @@ void ESP_AI::wakeUp(String scene)
     {
         esp_ai_session_id = "";
         esp_ai_tts_task_id = "";
+        esp_ai_start_get_audio = false;
 
         // 结束解码
         esp_ai_dec.end();
@@ -37,11 +38,6 @@ void ESP_AI::wakeUp(String scene)
 
         // 清空缓冲区
         esp_ai_asr_sample_buffer_before->clear();
-
-        // 打断服务端
-        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
-        esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
-        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
 
 
         esp_ai_dec.begin();
@@ -57,7 +53,11 @@ void ESP_AI::wakeUp(String scene)
             esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
         }
 
-        
+        // 提示音播放完后发送 start
+        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
+        esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
+        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
+
         last_silence_time = 0;
         wakeup_time = millis(); 
 
