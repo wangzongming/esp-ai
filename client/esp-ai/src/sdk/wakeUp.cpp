@@ -37,13 +37,18 @@ void ESP_AI::wakeUp(String scene)
         delay(100);
 
         // 清空缓冲区
-        esp_ai_asr_sample_buffer_before->clear();
+        if (esp_ai_asr_sample_buffer_before && !esp_ai_asr_sample_buffer_before->empty())
+        {
+            esp_ai_asr_sample_buffer_before->clear();
+        } else {
+            DEBUG_PRINTLN(debug, ("[ERROR] -> 尝试清理空的esp_ai_asr_sample_buffer_before"));
+        }
 
 
         esp_ai_dec.begin();
-        // 播放问候语 
+        // 播放问候语
         if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
-        { 
+        {
             esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
         }
 
@@ -53,13 +58,16 @@ void ESP_AI::wakeUp(String scene)
             esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
         }
 
+<<<<<<< HEAD
         // 提示音播放完后发送 start
         DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
         esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
         DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
+=======
+>>>>>>> 47b0ec3e136c75885d61731f5c22b700a031a335
 
         last_silence_time = 0;
-        wakeup_time = millis(); 
+        wakeup_time = millis();
 
         // 继续采集音频
         esp_ai_start_get_audio = true;
