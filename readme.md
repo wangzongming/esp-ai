@@ -47,6 +47,9 @@
 <a href="./readme_ja.md">👉Japanese</a>
 </h3>
 
+
+# Intro
+
 > Provides a complete AI dialogue solution for your development board, including but not limited to the `IAT(ASR)+LLM+TTS` integration solution for the `ESP32` series development boards. It is injected into the project as a dependency without affecting existing projects.
 
 For developing the dialogue functionality of robots, you only need to prepare the `IAT(ASR)`, `LLM`, and `TTS` services, and leave the rest to `ESP-AI`.
