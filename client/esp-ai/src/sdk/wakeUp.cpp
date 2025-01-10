@@ -58,13 +58,10 @@ void ESP_AI::wakeUp(String scene)
             esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
         }
 
-<<<<<<< HEAD
         // 提示音播放完后发送 start
         DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
         esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
         DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
-=======
->>>>>>> 47b0ec3e136c75885d61731f5c22b700a031a335
 
         last_silence_time = 0;
         wakeup_time = millis();
