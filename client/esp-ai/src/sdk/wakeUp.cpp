@@ -36,7 +36,12 @@ void ESP_AI::wakeUp(String scene)
         delay(100);
 
         // 清空缓冲区
-        esp_ai_asr_sample_buffer_before->clear();
+        if (esp_ai_asr_sample_buffer_before && !esp_ai_asr_sample_buffer_before->empty())
+        {
+            esp_ai_asr_sample_buffer_before->clear();
+        } else {
+            DEBUG_PRINTLN(debug, ("[ERROR] -> 尝试清理空的esp_ai_asr_sample_buffer_before"));
+        }
 
         // 打断服务端
         DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
@@ -45,9 +50,9 @@ void ESP_AI::wakeUp(String scene)
 
 
         esp_ai_dec.begin();
-        // 播放问候语 
+        // 播放问候语
         if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
-        { 
+        {
             esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
         }
 
@@ -57,9 +62,9 @@ void ESP_AI::wakeUp(String scene)
             esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
         }
 
-        
+
         last_silence_time = 0;
-        wakeup_time = millis(); 
+        wakeup_time = millis();
 
         // 继续采集音频
         esp_ai_start_get_audio = true;
