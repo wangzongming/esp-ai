@@ -17,8 +17,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -36,25 +36,25 @@ const path = require('path');
 */
 
 /**
- * 讯飞语音识别  
- * @param {String}      device_id           设备ID  
- * @param {String}      session_id          会话ID   
- * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
- * @param {Object}      iat_config          用户配置的 apikey 等信息   
- * @param {String}      iat_server          用户配置的 iat 服务 
- * @param {String}      llm_server          用户配置的 llm 服务 
- * @param {String}      tts_server          用户配置的 tts 服务 
+ * 讯飞语音识别
+ * @param {String}      device_id           设备ID
+ * @param {String}      session_id          会话ID
+ * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志
+ * @param {Object}      iat_config          用户配置的 apikey 等信息
+ * @param {String}      iat_server          用户配置的 iat 服务
+ * @param {String}      llm_server          用户配置的 llm 服务
+ * @param {String}      tts_server          用户配置的 tts 服务
  * @param {Function}    logWSServer         将 ws 服务回传给框架，如果不是ws服务可以这么写: logWSServer({ close: ()=> {} })
- * @param {Function}    iatServerErrorCb    与 TTS 服务之间发生错误时调用，并且传入错误说明，eg: ttsServerErrorCb("意外错误") 
+ * @param {Function}    iatServerErrorCb    与 TTS 服务之间发生错误时调用，并且传入错误说明，eg: ttsServerErrorCb("意外错误")
  * @param {Function}    cb                  IAT 识别的结果调用这个方法回传给框架 eg: cb({ text: "我是语音识别结果"  })
  * @param {Function}    logSendAudio        记录发送音频数据给服务的函数，框架在合适的情况下会进行调用
  * @param {Function}    connectServerBeforeCb 连接 iat 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
  * @param {Function}    connectServerCb     连接 iat 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
  * @param {Function}    serverTimeOutCb     当 IAT 服务连接成功了，但是长时间不响应时
- * @param {Function}    iatEndQueueCb       iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
+ * @param {Function}    iatEndQueueCb       iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.iat_info("iat 专属信息")
- * 
- *  
+ *
+ *
 */
 function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
     try {
@@ -82,7 +82,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             },
             end: () => {
                 log.iat_info('IAT 服务结束:' + session_id);
-                if (iat_server_connected && send_pcm) {  
+                if (iat_server_connected && send_pcm) {
                     if (dataTransOver) {
                         iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
                         send_pcm("");
@@ -148,13 +148,13 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
             let str = ""
             iatResult[res.data.result.sn] = res.data.result;
-            if (res.data.status == 2) {
+            if (res.data.status === 2) {
                 iat_ws.close();
 
                 iat_server_connected = false;
                 connectServerCb(false);
 
-                // res.data.status ==2 说明数据全部返回完毕，可以关闭连接，释放资源 
+                // res.data.status ==2 说明数据全部返回完毕，可以关闭连接，释放资源
                 currentSid = res.sid
                 iatResult.forEach(i => {
                     if (i != null) {
@@ -172,7 +172,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             } else {
                 str += "-> 中间识别结果"
             }
-            if (res.data.result.pgs == 'rpl') {
+            if (res.data.result.pgs === 'rpl') {
                 res.data.result.rg.forEach(i => {
                     iatResult[i] = null
                 })
@@ -243,7 +243,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             return frame;
         }
 
-        // test... 
+        // test...
         // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`));
 
         let overTimer = null;
@@ -278,7 +278,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     iat_ws.send(JSON.stringify(frame));
                 })
                 .on("end", () => {
-                    overTimer = setTimeout(() => { 
+                    overTimer = setTimeout(() => {
                         dataTransOver = true;
                     }, 500)
                 });

@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -30,7 +30,7 @@ const Audio_sender = require("../../utils/audio_sender");
  * @param {Buffer}    is_over       是否完毕
  * @param {Buffer}    audio         音频流
  * @param {WebSocket} tts_task_id   WebSocket 连接key
- * @param {WebSocket} ws            WebSocket 连接 
+ * @param {WebSocket} ws            WebSocket 连接
 */
 async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text_is_over, need_record, frameOnTTScb, is_create_cache, audio_sender }) {
     try {
@@ -54,24 +54,24 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             }))
         });
         !is_create_cache && frameOnTTScb && frameOnTTScb(audio, is_over);
- 
+
         ws_client.isAlive = true;
-  
+
         audio.length && audio_sender.sendAudio(audio);
-        // 告诉客户端本 TTS chunk 播放完毕 
-        if (is_over) { 
+        // 告诉客户端本 TTS chunk 播放完毕
+        if (is_over) {
             devLog && log.tts_info('-> TTS 片段转换完毕，数量: ', audio.length);
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
 
             // 这个和会话ID不同，这都是追加的方式。
-            if (text_is_over) { 
+            if (text_is_over) {
                 audio_sender.sendAudio(Buffer.from(need_record ? G_session_ids["tts_all_end_align"] : G_session_ids["tts_all_end"], 'utf-8'));
-            } else { 
+            } else {
                 audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
             }
         }
- 
+
     } catch (err) {
         console.log(err);
         log.error(`[${device_id}] TTS 回调错误： ${err}`)
@@ -82,27 +82,27 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
 
 /**
  * TTS 模块
- * @param {String} device_id 设备id 
- * @param {String} text 待播报的文本  
+ * @param {String} device_id 设备id
+ * @param {String} text 待播报的文本
  * @param {Boolean} reRecord TTS播放完毕后是再次进入iat识别环节，服务端控制
  * @param {Boolean} session_id 会话id(这里绝不是从设备信息中取，设备信息会实时更新)
  * @param {Boolean} text_is_over 文本是否完整，或者文本是否是最后一段
  * @param {Boolean} need_record  是否需要重新识别，由客户端控制
  * @param {Boolean} frameOnTTScb 上层要进行流监听时提供的回调
- * @param {Boolean} is_create_cache 创造缓存数据二执行的函数 
+ * @param {Boolean} is_create_cache 创造缓存数据二执行的函数
  * @return {Function} (pcm)=> Promise<Boolean>
- * 
+ *
 */
 function TTSFN(device_id, opts) {
     return new Promise((resolve) => {
         try {
             const { devLog, plugins = [], tts_params_set, onTTS } = G_config;
             const {
-                ws: ws_client, error_catch, tts_list, 
+                ws: ws_client, error_catch, tts_list,
                 user_config: { iat_server, llm_server, tts_server, tts_config }
             } = G_devices.get(device_id);
             const { text, reRecord, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
-            const plugin = plugins.find(item => item.name == tts_server && item.type === "TTS")?.main;
+            const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
 
             const TTS_FN = plugin || require(`./${tts_server}`);
 
@@ -113,7 +113,7 @@ function TTSFN(device_id, opts) {
                 devLog && log.tts_info('-> 开始缓存TTS: ', text);
             } else {
                 devLog && log.tts_info('-> 开始请求TTS: ', text);
-            } 
+            }
             const audio_sender = new Audio_sender(ws_client, device_id)
 
             !is_create_cache && onTTS && onTTS({
@@ -161,7 +161,7 @@ function TTSFN(device_id, opts) {
                     ...G_devices.get(device_id),
                     tts_server_connect_ing: true,
                 })
-            } 
+            }
 
             /**
             * 连接 tts 服务后的回调
@@ -178,11 +178,11 @@ function TTSFN(device_id, opts) {
                     !is_create_cache && ws_client && ws_client.send(JSON.stringify({
                         type: "session_status",
                         status: "tts_chunk_start",
-                    })); 
+                    }));
                     // 启动音频发送任务
-                    audio_sender.startSend(session_id, () => {  
-                        resolve(true); 
-                    }); 
+                    audio_sender.startSend(session_id, () => {
+                        resolve(true);
+                    });
                 } else {
                     if (!G_devices.get(device_id)) {
                         return  resolve(true);
@@ -191,8 +191,8 @@ function TTSFN(device_id, opts) {
                         ...G_devices.get(device_id),
                         tts_server_connected: false,
                         tts_server_connect_ing: false,
-                    }) 
-                    !is_create_cache && ws_client && ws_client.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));   
+                    })
+                    !is_create_cache && ws_client && ws_client.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));
                 }
             }
 
@@ -203,11 +203,11 @@ function TTSFN(device_id, opts) {
                 error_catch("TTS", "302", err);
                 tts_list.delete(tts_task_id)
                 log.error(err)
- 
+
                 resolve(true);
             }
 
-            ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id })); 
+            ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
             TTS_FN({
                 text,
                 device_id,
@@ -226,7 +226,7 @@ function TTSFN(device_id, opts) {
             })
         } catch (err) {
             console.log(err);
-            log.error(`TTS 错误： ${err}`) 
+            log.error(`TTS 错误： ${err}`)
         }
 
     })

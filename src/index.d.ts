@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -64,7 +64,7 @@ interface IntentionType {
     /***
      * 音乐指令 __play_music__ 专用
      * 音乐播放服务
-     * 用于返回音乐地址的服务，`esp-ai` 目前不提供音乐服务 
+     * 用于返回音乐地址的服务，`esp-ai` 目前不提供音乐服务
     */
     music_server?: (name?: string, arg?: any) => Promise<MusicFnResponse>;
     /**
@@ -75,7 +75,7 @@ interface IntentionType {
     * @param {object} arg.seek          音频开始播放时间，其实也就是 music_server 函数中返回的 seek 值
     * @param {object} arg.start_time    开始播放音频的 Unix 毫秒数时间戳
     * @param {object} arg.end_time      结束播放音频的 Unix 毫秒数时间戳
-    * @param {object} arg.event         结束原因： "user_break" 用户打断 | play_end 播放完毕 | ws_disconnect 设备断开  | foo 未知事件 
+    * @param {object} arg.event         结束原因： "user_break" 用户打断 | play_end 播放完毕 | ws_disconnect 设备断开  | foo 未知事件
     * @return {MusicFnResponse}         返回音频信息时会继续播放，如果返回空则结束播放
    */
     on_end: (arg: {
@@ -122,19 +122,19 @@ export interface Config {
 
     /**
      * 可以根据业务需求用这个方法去库中请求配置等
-     * 客户端配置生成，主要是生成 IAT/LLM/TTS 配置。客户端首次连接时会执行或者在某个空闲时刻内部会有自动更新策略   
+     * 客户端配置生成，主要是生成 IAT/LLM/TTS 配置。客户端首次连接时会执行或者在某个空闲时刻内部会有自动更新策略
      * @param {string} params.send_error_to_client  向客户端发送自定义错误信息，客户端使用 onError 回调可以监听到。eg: send_data(500, "服务错误")
      * @param {string} params.ws  ws 对象，不建议使用
      * @param {string} params.client_params  配网页面配置的客户端参数
-     * 
+     *
      * 返回 success: false 客户端 onError 可监听到错误, 如 Promise.resolve({ success: false, message:"ak无效" }) 可使客户端鉴权失败. 5s 后服务端将会自动释放资源与断开连接
-     * 
+     *
      */
     gen_client_config: (params: Record<string, any>) => Promise<{ success: false, message: string } | {
         /**
          * 语音识别服务、TTS服务、LLM 服务的提供方, 默认为 xun_fei
          * @value xun_fei           讯飞的服务
-         * @value dashscope         阿里-积灵  
+         * @value dashscope         阿里-积灵
          * @value volcengine        火山引擎（豆包等）
          * @value [string]          自定义插件
         */
@@ -184,7 +184,7 @@ export interface Config {
     /**
      * 客户端鉴权, 客户端首次连接与每一次调用接口都会进行回调。
      * 返回 success: false 客户端 onError 可监听到错误, 如 Promise.resolve({ success: false, message:"ak无效" }) 可使客户端鉴权失败. 5s 后服务端将会自动释放资源与断开连接
-     * 返回 success: true,  如 Promise.resolve({ success: true }) 可使客户端鉴权成功 
+     * 返回 success: true,  如 Promise.resolve({ success: true }) 可使客户端鉴权成功
      * @param {string} params.type 什么场景下的鉴权, "connect" 连接时， "start_session" 开始会话时
      * @param {string} params.send_error_to_client  向客户端发送自定义错误信息，客户端使用 onError 回调可以监听到。eg: send_data(500, "服务错误")
      * @param {string} params.ws  ws 对象，不建议使用
@@ -215,9 +215,9 @@ export interface Config {
 
 
     /**
-     * 新设备连接服务的回调 
+     * 新设备连接服务的回调
      * @param {string} device_id 设备id
-     * @param {string} client_version 客户端版本 
+     * @param {string} client_version 客户端版本
      * @param {string} client_params  配网页面配置的客户端参数
      * @param {string} instance       ESP-AI 实例
      */
@@ -233,15 +233,15 @@ export interface Config {
     /**
      * iat 回调: 语音识别过程中的回调
      * @param {string}    device_id     设备id
-     * @param {string}    text          语音转的文字 
+     * @param {string}    text          语音转的文字
      * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、
-     * 
-     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
+     *
+     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 ****
      * void on_command(String command_id, String data) {
-     *      if (command_id == "on_iat_cb") {
+     *      if (command_id === "on_iat_cb") {
      *          // some code...
      *      }
-     * } 
+     * }
      * void setup() {
      *      ...
      *      esp_ai.onEvent(on_command);
@@ -253,7 +253,7 @@ export interface Config {
     * iat 回调: 语音识别完毕的回调，可以在这里面发出最后一帧到语音识别服务器等操作，
     * 推荐使用 onIATcb 来代替, 这个属性只有在特殊情况会调用一下
     * @param {string} device_id 设备id
-    * @param {string} text 语音转的文字 
+    * @param {string} text 语音转的文字
    */
     onIATEndcb?: (arg: { device_id: string, text: string, ws: WebSocket, instance: Instance }) => void;
 
@@ -265,13 +265,13 @@ export interface Config {
      * @param {Boolean}  is_over         是否完毕
      * @param {Buffer}   text            待转换文字
      * @param {()=>void} sendToClient    调用这个方法后可以直接将音频流发送到客户端，客户端使用 onEvent 接收，无论客户端要用音频流做什么都可以。
-     * 
-     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收文字 **** 
+     *
+     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收文字 ****
      * void on_command(String command_id, String data) {
-     *      if (command_id == "on_tts") {
+     *      if (command_id === "on_tts") {
      *          // some code...
      *      }
-     * } 
+     * }
      * void setup() {
      *      ...
      *      esp_ai.onEvent(on_command);
@@ -285,61 +285,61 @@ export interface Config {
      * @param {Boolean}  is_over         是否完毕
      * @param {Buffer}   audio           音频流, mp3 格式, 使用 base64 格式进行封装。自行解码为二进制即可。
      * @param {()=>void} sendToClient    调用这个方法后可以直接将音频流发送到客户端，客户端使用 onEvent 接收，无论客户端要用音频流做什么都可以。
-     * 
-     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
+     *
+     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 ****
      * void on_command(String command_id, String data) {
-     *      if (command_id == "on_tts_cb") {
+     *      if (command_id === "on_tts_cb") {
      *          // some code...
      *      }
-     * } 
+     * }
      * void setup() {
      *      ...
      *      esp_ai.onEvent(on_command);
      * }
-     * 
+     *
     */
     onTTScb?: (arg: { device_id: string, is_over: boolean, audio: Buffer, ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
-     * llm 服务调用前的回调 
+     * llm 服务调用前的回调
      * @param {string}    device_id     设备id
-     * @param {string}    text          输入的文本，也就是 asr 识别结果  
-     * @param {object[]}  llm_historys  对话历史 
+     * @param {string}    text          输入的文本，也就是 asr 识别结果
+     * @param {object[]}  llm_historys  对话历史
      * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收、 。如果调用时传入了一段文本，那会把文本发给客户端，而不是发送 llm 的推理结果
-     * 
-     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
+     *
+     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 ****
      * void on_command(String command_id, String data) {
-     *      if (command_id == "on_cb") {
+     *      if (command_id === "on_cb") {
      *          // some code...
      *      }
-     * } 
+     * }
      * void setup() {
      *      ...
      *      esp_ai.onEvent(on_command);
      * }
-     * 
+     *
     */
     onLLM?: (arg: { device_id: string, text: string, ws: WebSocket, sendToClient: (text: String) => void, instance: Instance }) => void;
 
     /**
      * LLM 推理后的回调，拿到的文字是推理结果。
      * @param {string}    device_id     设备id
-     * @param {string}    text          大语言模型推理出来的文本片段 
-     * @param {boolean}   is_over       是否回答完毕 
-     * @param {object[]}  llm_historys  对话历史  
+     * @param {string}    text          大语言模型推理出来的文本片段
+     * @param {boolean}   is_over       是否回答完毕
+     * @param {object[]}  llm_historys  对话历史
      * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收。
-     * 
-     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 **** 
+     *
+     * *****  调用 sendToClient() 后，客户端代码向下面这样写即可接收到音频流 ****
      * void on_command(String command_id, String data) {
-     *      if (command_id == "on_llm_cb") {
+     *      if (command_id === "on_llm_cb") {
      *          // some code...
      *      }
-     * } 
+     * }
      * void setup() {
      *      ...
      *      esp_ai.onEvent(on_command);
      * }
-     * 
+     *
     */
     onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
@@ -393,7 +393,7 @@ export interface Instance {
 
     /**
      * 终止会话，包括：语音识别、TTS、LLM
-     * 
+     *
      * @param at 主要用户日志输出，在什么xxx时候断开的会话
     */
     stop(device_id: string, at?: string): Promise<boolean>;
@@ -407,14 +407,14 @@ export interface Instance {
 
     /**
     * 匹配某个命令，如果匹配上会执行
-    * 
+    *
     *@param reply 回复语，如果是用户手动按按钮的情况下，一般不使用 message，而是使用自定义的提示语
    */
     matchIntention(device_id: string, text: string, reply: string): Promise<IntentionType>;
 
 
     /**
-     * 重启设备 
+     * 重启设备
     */
     restart(device_id: string): Promise<void>;
 
@@ -433,7 +433,7 @@ export interface Instance {
 
     /**
      * 获取用户的上下文，在设置上下文时一般需要将当前上下文先存起来，否则切换回来时会丢失
-     * @return llm_historys {"role": "user" | "assistant" | "system", "content":string}[]   
+     * @return llm_historys {"role": "user" | "assistant" | "system", "content":string}[]
     */
     getLLMHistorys(device_id: string): LLM_historysType;
 
@@ -458,7 +458,7 @@ export interface Instance {
 
     /**
      * 读取引脚电平
-     * 功能和 Arduino 的 digitalRead 一样，使用前必须使用 pinMode 将引脚设置为 INPUT 模式。 注意：本方法存在 100ms 的延时 
+     * 功能和 Arduino 的 digitalRead 一样，使用前必须使用 pinMode 将引脚设置为 INPUT 模式。 注意：本方法存在 100ms 的延时
      * 使用场景：读取按钮是否按下等等
     */
     digitalRead(device_id: string, pin: number, onChange: (val: VoltageType) => void): void;
@@ -472,7 +472,7 @@ export interface Instance {
 
     /**
      * 读取引脚模拟输入
-     * 功能和 Arduino 的 analogRead 一样。注意：本方法存在 100ms 的延时 
+     * 功能和 Arduino 的 analogRead 一样。注意：本方法存在 100ms 的延时
      * 使用场景： 读取电位器的值等等
     */
     analogRead(device_id: string, pin: number, onChange: (val: number) => void): void;
