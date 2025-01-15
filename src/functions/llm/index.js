@@ -150,7 +150,7 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     const matches = [...str.matchAll(punctuationRegex)];
    
     if (!isLast && matches.length === 0) return {};
-    const notSpeek = /[\*|\\n]/g;
+    const notSpeak = /[\*|\n]/g;
     // 获取最后一个匹配的标点符号的索引
     const lastIndex = matches[matches.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
@@ -160,14 +160,13 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
         if ((res.length < min_len) && !isLast) {
             return {}
         }
-        let speak_text = res.length > 0 ? res.replace(notSpeek, '') : "";
+        let speak_text = res.length > 0 ? res.replace(notSpeak, '') : "";
         return { speak_text, org_text: res }
     } else {
+        // 如果没有找到标点符号，并且是最后一段文字，则返回整个字符串
         if (!isLast) {
             return {};
         }
-        // 如果没有找到标点符号，并且是最后一段文字，则返回整个字符串
-        const notSpeak = /[\*|\\n]/g;
         // 表情符号目前还没有好的方式去处理...
         const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
 
