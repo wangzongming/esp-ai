@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -27,13 +27,13 @@ const getServerURL = require("../../getServerURL");
 
 /**
  * TTS 插件封装 - 讯飞 TTS
- * @param {String}      device_id           设备ID   
- * @param {String}      text                待播报的文本   
- * @param {Object}      tts_config          用户配置的 apikey 等信息 
- * @param {String}      iat_server          用户配置的 iat 服务 
- * @param {String}      llm_server          用户配置的 llm 服务 
- * @param {String}      tts_server          用户配置的 tts 服务 
- * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志   
+ * @param {String}      device_id           设备ID
+ * @param {String}      text                待播报的文本
+ * @param {Object}      tts_config          用户配置的 apikey 等信息
+ * @param {String}      iat_server          用户配置的 iat 服务
+ * @param {String}      llm_server          用户配置的 llm 服务
+ * @param {String}      tts_server          用户配置的 tts 服务
+ * @param {Number}      devLog              日志输出等级，为0时不应该输出任何日志
  * @param {Function}    tts_params_set      用户自定义传输给 TTS 服务的参数，eg: tts_params_set(参数体)
  * @param {Function}    connectServerBeforeCb 连接 tts 服务逻辑开始前需要调用这个方法告诉框架：eg: connectServerBeforeCb()
  * @param {Function}    connectServerCb     连接 tts 服务后需要调用这个方法告诉框架：eg: connectServerCb(true)
@@ -72,22 +72,22 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
             if (res.code != 0) {
                 ttsServerErrorCb(`讯飞tts接口错误 ${res.code}: ${res.message}`)
                 connectServerCb(false);
-                ws.close() 
+                ws.close()
                 return
             }
 
             const audio = res.data.audio;
-            if (!audio) { 
+            if (!audio) {
                 // 这种情况算结束
                 cb({ is_over: true, audio: "", ws: ws });
-                connectServerCb(false); 
+                connectServerCb(false);
                 return
-            } 
-            let audioBuf = Buffer.from(audio, 'base64'); 
+            }
+            let audioBuf = Buffer.from(audio, 'base64');
             cb({
                 // 根据服务控制
-                is_over: res.code == 0 && res.data.status == 2,
-                audio: audioBuf, 
+                is_over: res.code === 0 && res.data.status === 2,
+                audio: audioBuf,
                 ws: ws
             });
 
@@ -101,14 +101,14 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         // 连接错误
         ws.on('error', (err) => {
             ttsServerErrorCb(`tts错误："websocket connect err: ${err}`)
-            connectServerCb(false); 
+            connectServerCb(false);
         })
         // 传输数据
         function send() {
             const business = {
                 volume: 100,
                 "vcn": "aisbabyxu",
-                ...other_config, 
+                ...other_config,
                 aue: "lame",
                 sfl: 1,
                 "auf": "audio/L16;rate=16000",

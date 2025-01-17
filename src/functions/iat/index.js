@@ -19,8 +19,8 @@ const log = require("../../utils/log");
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -55,7 +55,7 @@ async function cb({ device_id, text }) {
                 // 其他情况交给 LLM
                 LLM_FN(device_id, { text })
             }
-        } else {  
+        } else {
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 first_session: true,
@@ -77,7 +77,7 @@ module.exports = async (device_id, connected_cb) => {
         devLog && log.info('');
         devLog && log.iat_info('-> 开始请求语音识别');
 
-        const plugin = plugins.find(item => item.name == iat_server && item.type === "IAT")?.main;
+        const plugin = plugins.find(item => item.name === iat_server && item.type === "IAT")?.main;
         const IAT_FN = plugin || require(`./${iat_server}`);
         onIAT && onIAT({ device_id, ws: ws_client });
 
@@ -98,7 +98,7 @@ module.exports = async (device_id, connected_cb) => {
         const connectServerCb = (connected) => {
             if (!G_devices.get(device_id)) return;
             // const { session_id: now_session_id } = G_devices.get(device_id)
-            // console.log('是否是同一个会话：', now_session_id === session_id, connected) 
+            // console.log('是否是同一个会话：', now_session_id === session_id, connected)
             if (connected) {
                 if (!G_devices.get(device_id)) return;
                 G_devices.set(device_id, {
@@ -185,11 +185,11 @@ module.exports = async (device_id, connected_cb) => {
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 stoped: true,
-            }) 
+            })
         }
 
         /**
-         * iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
+         * iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别
         */
         const iatEndQueueCb = (fn) => {
             if (!G_devices.get(device_id)) return;

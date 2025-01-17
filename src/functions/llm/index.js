@@ -16,14 +16,14 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
 
-const log = require("../../utils/log"); 
+const log = require("../../utils/log");
 
 /**
  * 接下来的 session_id 都当前形参为准
@@ -53,7 +53,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
         });
 
 
-        // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少 
+        // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
 
         if (is_over) {
@@ -80,8 +80,8 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
             } else {
                 // 特殊结束任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`); 
-                    ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8')); 
+                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`);
+                    ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
                     return true;
                 })
             }
@@ -148,15 +148,15 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
     const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
     const matches = [...str.matchAll(punctuationRegex)];
-   
+
     if (!isLast && matches.length === 0) return {};
     const notSpeak = /[\*|\n]/g;
     // 获取最后一个匹配的标点符号的索引
     const lastIndex = matches[matches.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
-        // 这里是否考虑提供配置让用户决策   
-        const min_len =  (index === 1 ? 10 : Math.min(index * 30, 300)); 
+        // 这里是否考虑提供配置让用户决策
+        const min_len =  (index === 1 ? 10 : Math.min(index * 30, 300));
         if ((res.length < min_len) && !isLast) {
             return {}
         }
@@ -188,7 +188,7 @@ module.exports = (device_id, opts) => {
         } = G_devices.get(device_id);
 
         const { text } = opts;
-        const plugin = plugins.find(item => item.name == llm_server && item.type === "LLM")?.main;
+        const plugin = plugins.find(item => item.name === llm_server && item.type === "LLM")?.main;
         let LLM_FN = null;
 
         devLog && log.info("");
