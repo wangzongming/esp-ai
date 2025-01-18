@@ -200,6 +200,29 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String message = (const char *)parseRes["message"];
                     String code = (const char *)parseRes["code"];
                     Serial.println("[Error] -> 服务错误：" + at_pos + " " + code + " " + message);
+
+                    if (code == "4002")
+                    { 
+                        esp_ai_dec.end();
+                        delay(100);
+                        esp_ai_dec.begin();
+                        esp_ai_dec.write(yu_e_bu_zuo, yu_e_bu_zuo_len);
+                    }
+                    else if (code == "4001")
+                    { 
+                        esp_ai_dec.end();
+                        delay(100);
+                        esp_ai_dec.begin();
+                        esp_ai_dec.write(e_du_ka_bu_cun_zai, e_du_ka_bu_cun_zai_len);
+                    }
+                    else if (code == "4000")
+                    { 
+                        esp_ai_dec.end();
+                        delay(100);
+                        esp_ai_dec.begin();
+                        esp_ai_dec.write(chao_ti_wei_qi_yong,  chao_ti_wei_qi_yong_len);
+                    }
+
                     if (onErrorCb != nullptr)
                     {
                         onErrorCb(code, at_pos, message);
@@ -323,8 +346,8 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         char session_id_string[5];
         memcpy(session_id_string, payload, 4);
         session_id_string[4] = '\0';
-        String sid = String(session_id_string); 
-
+        String sid = String(session_id_string);
+ 
         /**
          * sid
          * 0000 -> 嘟提示音数据
@@ -383,7 +406,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // 提取音频数据
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
-
+ 
         if (sid == "1000")
         {
             esp_ai_cache_audio_du.insert(esp_ai_cache_audio_du.end(), audioData, audioData + audioLength);

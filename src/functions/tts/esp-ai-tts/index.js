@@ -121,9 +121,22 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
                 const silenceSize = sampleRate * silenceDuration * 2;
                 const silenceBuffer = Buffer.alloc(silenceSize, 0);
                 const audioStream = response.data;
-
                 const stream = new PassThrough();
                 audioStream.pipe(stream);
+
+                // tts 服务需要改为流标志...
+                stream.on('data', (chunk) => {
+                    if (chunk) {
+                        try {
+                            const res = JSON.parse(chunk.toString());
+                            if (res?.success === false) {
+                                console.error(`ESP-AI-TTS 服务错误：${res.message}`);
+                                ttsServerErrorCb(`ESP-AI-TTS  服务错误：${res.message}`, res.code);
+                                connectServerCb(false);
+                            }
+                        } catch (error) { }
+                    }
+                })
 
                 try {
                     ffmpeg(stream)
@@ -135,10 +148,10 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
                         .on('error', (error) => {
                             console.error(`MP3 转换出错 ${error}`);
                             ttsServerErrorCb(`MP3 转换出错 ${error}`);
-                            connectServerCb(false); 
+                            connectServerCb(false);
                         })
                         .pipe()
-                        .on('data', (chunk) => {
+                        .on('data', (chunk) => { 
                             dataSender.addData(chunk);
                             // fileWriter.write(chunk);  // 写入数据到文件 
                         })

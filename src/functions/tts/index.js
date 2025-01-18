@@ -83,8 +83,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
 /**
  * TTS 模块
  * @param {String} device_id 设备id
- * @param {String} text 待播报的文本
- * @param {Boolean} reRecord TTS播放完毕后是再次进入iat识别环节，服务端控制
+ * @param {String} text 待播报的文本 
  * @param {Boolean} session_id 会话id(这里绝不是从设备信息中取，设备信息会实时更新)
  * @param {Boolean} text_is_over 文本是否完整，或者文本是否是最后一段
  * @param {Boolean} need_record  是否需要重新识别，由客户端控制
@@ -101,7 +100,7 @@ function TTSFN(device_id, opts) {
                 ws: ws_client, error_catch, tts_list,
                 user_config: { iat_server, llm_server, tts_server, tts_config }
             } = G_devices.get(device_id);
-            const { text, reRecord, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
+            const { text, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
             const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
 
             const TTS_FN = plugin || require(`./${tts_server}`);
@@ -138,7 +137,7 @@ function TTSFN(device_id, opts) {
             //         cb({
             //             audio: cache_TTS,
             //             is_over: true,
-            //             tts_task_id, device_id, reRecord, session_id, text_is_over, need_record, frameOnTTScb
+            //             tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb
             //         })
             //         resolve(true);
             //     });
@@ -199,8 +198,8 @@ function TTSFN(device_id, opts) {
             /**
              * tts 服务发生错误时调用
             */
-            const ttsServerErrorCb = (err) => {
-                error_catch("TTS", "302", err);
+            const ttsServerErrorCb = (err, code) => {
+                error_catch("TTS", code || "302", err);
                 tts_list.delete(tts_task_id)
                 log.error(err)
 
@@ -217,7 +216,7 @@ function TTSFN(device_id, opts) {
                 log,
                 iat_server, llm_server, tts_server,
                 cb: (arg) => cb({
-                    ...arg, tts_task_id, device_id, reRecord, session_id, text_is_over, need_record, frameOnTTScb, is_cache, is_create_cache, audio_sender
+                    ...arg, tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb, is_cache, is_create_cache, audio_sender
                 }),
                 logWSServer,
                 ttsServerErrorCb,

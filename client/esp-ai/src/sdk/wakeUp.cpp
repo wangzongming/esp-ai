@@ -35,33 +35,21 @@ void ESP_AI::wakeUp(String scene)
         // 结束解码
         esp_ai_dec.end();
         delay(100);
-
-        // 清空缓冲区
-        if (esp_ai_asr_sample_buffer_before && !esp_ai_asr_sample_buffer_before->empty())
-        {
-            esp_ai_asr_sample_buffer_before->clear();
-        } else {
-            DEBUG_PRINTLN(debug, ("[ERROR] -> 尝试清理空的esp_ai_asr_sample_buffer_before"));
-        }
-
-
+ 
         esp_ai_dec.begin();
         // 播放问候语
         if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
         {
             esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
+            delay(300);
         }
 
         // 播放提示音
         if (!esp_ai_cache_audio_du.empty())
         {
             esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
-        }
-
-        // 提示音播放完后发送 start
-        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
-        esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
-        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
+            delay(300);
+        } 
 
         last_silence_time = 0;
         wakeup_time = millis();
@@ -69,6 +57,21 @@ void ESP_AI::wakeUp(String scene)
         // 继续采集音频
         esp_ai_start_get_audio = true;
         esp_ai_is_first_send = true;
+
+        // 清空缓冲区
+        if (esp_ai_asr_sample_buffer_before && !esp_ai_asr_sample_buffer_before->empty())
+        {
+            esp_ai_asr_sample_buffer_before->clear();
+        }
+        else
+        {
+            DEBUG_PRINTLN(debug, ("[ERROR] -> 尝试清理空的esp_ai_asr_sample_buffer_before"));
+        }
+ 
+        // 提示音播放完后发送 start
+        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
+        esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
+        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
 
         // 内置状态处理
         if (scene == "wakeup")

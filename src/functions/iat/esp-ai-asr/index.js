@@ -89,7 +89,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         iat_ws.on('message', (event) => { 
             if (shouldClose) return;
             if (!event) return;
-            const data = JSON.parse(event);
+            const data = JSON.parse(event); 
             switch (data.type) {
                 case 'result':
                     realStr += data.text;
@@ -107,7 +107,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 case 'error': 
                     if (shouldClose) return;
                     log.error(`ESP-AI-ASR 服务错误： ${data.text}`)
-                    iatServerErrorCb(`ESP-AI-ASR 服务错误： ${data.text}`);
+                    iatServerErrorCb(`ESP-AI-ASR 服务错误： ${data.text}`, data.code);
                     connectServerCb(false);
                     shouldClose = true;
                     iat_server_connected = false;

@@ -153,10 +153,10 @@ module.exports = async (device_id, connected_cb) => {
         /**
          * 服务发生错误时调用
         */
-        const iatServerErrorCb = (err) => {
+        const iatServerErrorCb = (err, code) => {
             if (!G_devices.get(device_id)) return;
             log.error("IAT error: " + err)
-            error_catch("IAT", "102", err);
+            error_catch("IAT", code || "102", err);
             // ws_client.send(JSON.stringify(c));
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),

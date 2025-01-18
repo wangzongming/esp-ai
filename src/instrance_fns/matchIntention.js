@@ -25,6 +25,8 @@
 
 const log = require("../utils/log");
 const play_audio = require("../audio_temp/play_audio");
+const axios = require('axios');
+
 /**
  * 匹配某个命令，如果匹配上会执行
  * 
@@ -47,14 +49,18 @@ async function matchIntention(device_id, text, reply) {
                 break intention_for;
             }
         } else {
-            if (key.includes(text)) {
+            // 完全匹配
+            const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
+            const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
+            const _text = text.replace(punctuationRegex, '').replace(emojiRegex, '');
+            if (key.includes(_text)) {
                 task_info = item;
                 break intention_for;
             }
         }
     }
     if (task_info) {
-        const { instruct, message, data, pin, __name__, music_server, on_end } = task_info;
+        const { instruct, message, data, pin, __name__, music_server, on_end, target_device_id, api_key } = task_info;
         if (typeof instruct === "function") {
             const resText = await instruct({
                 text,
@@ -63,18 +69,18 @@ async function matchIntention(device_id, text, reply) {
             });
             let _t = (typeof resText) === "string" ? resText : message;
             _t && await TTS_FN(device_id, {
-                text: _t, 
+                text: _t,
                 need_record: false,
             });
         } else {
             switch (instruct) {
                 case "__sleep__":
-                    if (!G_devices.get(device_id)) return; 
+                    if (!G_devices.get(device_id)) return;
                     // 所有 LLM 用下面的 key 为准
                     llm_historys.push(
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || sleep_reply || "我先退下了，有需要再叫我。" }
-                    ); 
+                    );
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         first_session: true,
@@ -84,18 +90,32 @@ async function matchIntention(device_id, text, reply) {
                     break;
                 case "__io_high__":
                     !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
-
                     // 所有 LLM 用下面的 key 为准
                     llm_historys.push(
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || "好的" }
                     );
-                    G_Instance.digitalWrite(device_id, pin, "HIGH");
+                    if (target_device_id) {
+                        const response = await axios.post(`https://api.espai.fun/sdk/io_high`, { target_device_id, api_key }, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const { success, message } = response.data;
+                        if (!success) {
+                            await TTS_FN(device_id, {
+                                text: message,
+                                need_record: false,
+                                text_is_over: true,
+                            });
+                            return;
+                        }
+                    } else {
+                        G_Instance.digitalWrite(device_id, pin, "HIGH");
+                    }
                     await TTS_FN(device_id, {
-                        text: message || "好的", 
-                        need_record: false, 
+                        text: message || "好的",
+                        need_record: false,
+                        text_is_over: true,
                     });
-                    ws_client && ws_client.send("session_end");
 
                     break;
                 case "__io_low__":
@@ -105,15 +125,29 @@ async function matchIntention(device_id, text, reply) {
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || "好的" }
                     );
-                    G_Instance.digitalWrite(device_id, pin, "LOW");
+                    if (target_device_id) {
+                        const response = await axios.post(`https://api.espai.fun/sdk/io_low`, { target_device_id, api_key }, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const { success, message } = response.data;
+                        if (!success) {
+                            await TTS_FN(device_id, {
+                                text: message,
+                                need_record: false,
+                                text_is_over: true,
+                            });
+                            return;
+                        }
+                    } else {
+                        G_Instance.digitalWrite(device_id, pin, "LOW");
+                    }
                     await TTS_FN(device_id, {
-                        text: message || "好的", 
-                        need_record: false, 
+                        text: message || "好的",
+                        need_record: false,
+                        text_is_over: true,
                     });
-                    ws_client && ws_client.send("session_end");
                     break;
                 case "__play_music__":
-
                     // 所有 LLM 用下面的 key 为准
                     llm_historys.push(
                         { "role": "user", "content": text },
@@ -126,15 +160,16 @@ async function matchIntention(device_id, text, reply) {
                     })
 
                     await TTS_FN(device_id, {
-                        text: reply || message || "好的", 
-                        need_record: false, 
+                        text: reply || message || "好的",
+                        need_record: false,
+                        text_is_over: true,
                     });
                     // 不延时不能保证播放队列
                     setTimeout(async () => {
                         const { url, seek, message: errMessage } = await music_server(__name__, { user_config });
                         if (!url) {
                             await TTS_FN(device_id, {
-                                text: errMessage || "没有找到相关的结果，换个关键词试试吧！", 
+                                text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
                                 need_record: true,
                             });
                             return;
@@ -144,7 +179,7 @@ async function matchIntention(device_id, text, reply) {
                         } catch (err) {
                             log.error(`音频播放过程失败： ${err}`)
                             await TTS_FN(device_id, {
-                                text: "音频播放出错啦，重新换一首吧！", 
+                                text: "音频播放出错啦，重新换一首吧！",
                                 need_record: true,
                             });
                         }
@@ -159,8 +194,9 @@ async function matchIntention(device_id, text, reply) {
                         name: __name__
                     }));
                     (message || reply) && await TTS_FN(device_id, {
-                        text: reply || message, 
+                        text: reply || message,
                         need_record: true,
+                        text_is_over: true,
                     });
                     break;
             }

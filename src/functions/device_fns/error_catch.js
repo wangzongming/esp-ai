@@ -57,6 +57,10 @@
  *  301    |  未知 TTS 服务连接失败
  *  302    |  未知 TTS 服务调用错误
  * 
+ *  4000   |  ESP-AI 开放平台超体被禁用，或者已经删除
+ *  4001   |  ESP-AI 开放平台额度卡不存在
+ *  4002   |  ESP-AI 开放平台额度不足
+ * 
 */
 function error_catch_hoc(ws) {
     return (type, code, message) => {

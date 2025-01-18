@@ -198,7 +198,43 @@ void ESP_AI::capture_samples()
         /* read data at once from i2s */
         i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100);
         _is_silence = is_silence(mic_sample_buffer, bytes_read);
-         
+        
+        // test...
+        // if (_is_silence)
+        // {
+        //     // 不是静默环境
+        //     if (last_silence_time_wakeup == 0)
+        //     {
+        //         last_not_silence_time_wekeup = 0;
+        //         last_silence_time_wakeup = millis();
+        //         if (esp_ai_sleep)
+        //         {
+        //             esp_ai_sleep = false; 
+        //         }
+        //     }
+        //     // 计算静默时间
+        //     else if ((millis() - last_silence_time_wakeup) > 500)
+        //     { 
+        //         // Enter sleep ing...
+        //         if (!esp_ai_sleep && ((millis() - last_silence_time_wakeup) / 1000 > 1000 * 60 * 1))
+        //         {
+        //             esp_ai_sleep = true; 
+        //         }
+        //     }
+        // }
+        // else
+        // {
+        //     // 不是有声环境
+        //     if (last_not_silence_time_wekeup == 0)
+        //     {
+        //         last_not_silence_time_wekeup = millis();
+        //     }
+        //     // 计算有声时间
+        //     else if ((millis() - last_not_silence_time_wekeup) > 500)
+        //     {
+        //         last_silence_time_wakeup = 0; 
+        //     }
+        // }
 
         if (esp_ai_start_get_audio)
         {
