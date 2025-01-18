@@ -307,9 +307,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String fn_name = (const char *)parseRes["fn_name"];
                     String str_val = (const char *)parseRes["str_val"];
                     int num_val = (int)parseRes["num_val"];
-
+                    
                     if (fn_name == "pinMode")
-                    {
+                    { 
                         str_val == "OUTPUT" && (pinMode(pin, OUTPUT), true);
                         str_val == "INPUT" && (pinMode(pin, INPUT), true);
                         str_val == "INPUT_PULLUP" && (pinMode(pin, INPUT_PULLUP), true);

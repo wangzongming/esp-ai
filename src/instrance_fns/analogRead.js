@@ -34,7 +34,7 @@ async function digitalRead(device_id, pin, onChange) {
         read_pin_cbs.set(pin, onChange);
         ws && ws.send(JSON.stringify({
             type: "hardware-fns",
-            pin: pin,
+            pin: Number(pin),
             fn_name: "analogRead", 
         }));
         return true;

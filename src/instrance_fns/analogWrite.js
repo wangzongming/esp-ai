@@ -32,7 +32,7 @@ async function analogWrite(device_id, pin, value) {
         const { ws } = G_devices.get(device_id);
         ws && ws.send(JSON.stringify({
             type: "hardware-fns",
-            pin: pin,
+            pin: Number(pin),
             fn_name: "analogWrite",
             num_val: value,
         }));

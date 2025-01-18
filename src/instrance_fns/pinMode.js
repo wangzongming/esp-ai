@@ -32,7 +32,7 @@ async function pinMode(device_id, pin, type) {
         const { ws } = G_devices.get(device_id);
         ws && ws.send(JSON.stringify({
             type: "hardware-fns",
-            pin: pin,
+            pin: Number(pin),
             fn_name: "pinMode",
             str_val: type,
         }));
