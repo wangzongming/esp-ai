@@ -85,15 +85,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         reset_btn_config = config.reset_btn_config;
     }
     if (reset_btn_config.power == "high")
-    {
-        pinMode(wake_up_config.pin, INPUT_PULLDOWN);
+    {  
+        pinMode(reset_btn_config.pin, INPUT_PULLDOWN);
     }
     else if (reset_btn_config.power == "low")
     {
-        pinMode(wake_up_config.pin, INPUT_PULLUP);
+        pinMode(reset_btn_config.pin, INPUT_PULLUP);
     }
 
-    // wake_up_scheme
     if (strcmp(config.wake_up_config.wake_up_scheme, "") != 0)
     {
         wake_up_config = config.wake_up_config;
@@ -112,15 +111,15 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             wake_up_config.vad_first = 5000;
         }
         if (!wake_up_config.vad_course)
-        { 
-            wake_up_config.vad_course = 1500; 
+        {
+            wake_up_config.vad_course = 1500;
         }
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
 
     // 将按钮默认拉低
-    if (wake_up_scheme != "pin_high" && wake_up_scheme != "pin_low" && reset_btn_config.power != "high" && reset_btn_config.power != "low")
-    {
+    if (wake_up_scheme != "pin_high" && wake_up_scheme != "pin_low" && config.reset_btn_config.power != "high" && config.reset_btn_config.power != "low") 
+    {  
         pinMode(wake_up_config.pin, INPUT_PULLDOWN);
     }
 

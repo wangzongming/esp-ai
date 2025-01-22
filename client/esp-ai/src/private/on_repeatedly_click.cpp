@@ -39,7 +39,7 @@ void ESP_AI::on_repeatedly_click()
 
     long last_btn_time = 0;
     int click_count = 0;
-    int click_max_delay = 1000;
+    int click_max_delay = 1000; 
 
     while (true)
     {
@@ -47,7 +47,7 @@ void ESP_AI::on_repeatedly_click()
         long curTime = millis();
         int target_val = reset_btn_config.power == "high" ? 1 : 0;
         if (reading == target_val)
-        {
+        { 
             if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
             {
                 esp_ai_last_debounce_time = curTime;

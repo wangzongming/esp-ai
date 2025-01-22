@@ -55,8 +55,7 @@ void ESP_AI::get_position()
     if (httpCode2 > 0)
     {
         String payload = esp_ai_get_position_http.getString();
-        Serial.printf("[HTTPS] GET code: %d\n", httpCode2);
-        Serial.printf("[HTTPS] GET res: %d\n", payload);
+        Serial.printf("[HTTPS] GET code: %d\n", httpCode2); 
         JSONVar parse_res = JSON.parse(payload);
         if (parse_res.hasOwnProperty("desc"))
         {
