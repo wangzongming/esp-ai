@@ -97,8 +97,8 @@ async function fn({ device_id }) {
 
         ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
 
-        intention.forEach(({ instruct, pin }) => {
-            if (instruct === "__io_high__" || instruct === "__io_low__") {
+        intention.forEach(({ instruct, pin, target_device_id }) => {
+            if (!target_device_id && (instruct === "__io_high__" || instruct === "__io_low__" || instruct === "__pwm__")) {
                 !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
                 G_Instance.pinMode(device_id, pin, "OUTPUT");
             }

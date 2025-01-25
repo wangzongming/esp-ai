@@ -89,63 +89,36 @@ async function matchIntention(device_id, text, reply) {
                     devLog && console.log('\n\n === 会话结束 ===\n\n')
                     break;
                 case "__io_high__":
-                    !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
-                    // 所有 LLM 用下面的 key 为准
-                    llm_historys.push(
-                        { "role": "user", "content": text },
-                        { "role": "assistant", "content": message || "好的" }
-                    );
-                    if (target_device_id) {
-                        const response = await axios.post(`https://api.espai.fun/sdk/io_high`, { target_device_id, api_key }, {
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        const { success, message } = response.data;
-                        if (!success) {
-                            await TTS_FN(device_id, {
-                                text: message,
-                                need_record: false,
-                                text_is_over: true,
-                            });
-                            return;
-                        }
-                    } else {
-                        G_Instance.digitalWrite(device_id, pin, "HIGH");
-                    }
-                    await TTS_FN(device_id, {
-                        text: message || "好的",
-                        need_record: false,
-                        text_is_over: true,
-                    });
-
-                    break;
                 case "__io_low__":
-                    !pin && log.error(`__io_low__ 指令必须配置 pin 数据`);
+                    !pin && log.error(`__io_high__、__io_low__ 指令必须配置 pin 数据`);
                     // 所有 LLM 用下面的 key 为准
                     llm_historys.push(
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || "好的" }
                     );
-                    if (target_device_id) {
-                        const response = await axios.post(`https://api.espai.fun/sdk/io_low`, { target_device_id, api_key }, {
+                    if (target_device_id) { 
+                        !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);  
+                        // const response = await axios.get(`http://192.168.3.23:7002/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
+                        const response = await axios.get(`https://api.espai.fun/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
                             headers: { 'Content-Type': 'application/json' }
                         });
-                        const { success, message } = response.data;
+                        const { success, message: res_msg } = response.data;
                         if (!success) {
                             await TTS_FN(device_id, {
+                                text: res_msg,
+                                need_record: false,
+                                text_is_over: true,
+                            });
+                        } else {
+                            message && await TTS_FN(device_id, {
                                 text: message,
                                 need_record: false,
                                 text_is_over: true,
                             });
-                            return;
-                        }
+                        } 
                     } else {
-                        G_Instance.digitalWrite(device_id, pin, "LOW");
+                        G_Instance.digitalWrite(device_id, pin, instruct === "__io_high__" ? "HIGH" : "LOW");
                     }
-                    await TTS_FN(device_id, {
-                        text: message || "好的",
-                        need_record: false,
-                        text_is_over: true,
-                    });
                     break;
                 case "__play_music__":
                     // 所有 LLM 用下面的 key 为准

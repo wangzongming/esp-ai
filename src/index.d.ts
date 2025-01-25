@@ -60,7 +60,7 @@ interface IntentionType {
     // 附加参数, 不管什么数据，都需要写为 string 类型，且不建议放较大的数据在这里
     data?: string;
     // io 或者 pwm 时需要配置的引脚
-    io?: number; 
+    pin?: number; 
     // 超体 api_key, 该超体下如果没有指定的设备ID将会报错
     api_key?: string; 
     // 远程设备

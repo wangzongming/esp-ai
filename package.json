@@ -1,6 +1,6 @@
 {
     "name": "esp-ai",
-    "version": "2.41.30",
+    "version": "2.42.31",
     "description": "Provide a complete set of AI dialogue solutions for your development board, including but not limited to the IAT+LLM+TTS integration solution for the ESP32 series development board. | 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT+LLM+TTS` 集成方案。",
     "repository": "https://github.com/wangzongming/esp-ai",
     "main": "src/index.js",
