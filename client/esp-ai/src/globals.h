@@ -159,6 +159,7 @@ struct ESP_AI_wifi_config
     char ap_name[30];
     // 自定义页面
     String html_str;
+    // std::vector<char> html_str;
 };
 
 struct ESP_AI_server_config
@@ -228,7 +229,7 @@ extern String esp_ai_session_id;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
-extern bool esp_ai_is_first_send; 
+extern bool esp_ai_is_first_send;
 // 聆听模式
 extern bool esp_ai_is_listen_model;
 

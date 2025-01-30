@@ -24,17 +24,6 @@
  */
 #include "speaker_i2s_setup.h"
 
-int myAvailable(Stream *p_stream){
-   int result = p_stream->available();
-   if (result==0){
-    Serial.println("播放完毕！");
-    //   File *fp = (File*)p_stream;
-    //   fp->seek(0);
-    //   result = p_stream->available();
-   }
-   return result;
-}
-
 void ESP_AI::speaker_i2s_setup()
 {
     AudioLogger::instance().begin(Serial, AudioLogger::Info);

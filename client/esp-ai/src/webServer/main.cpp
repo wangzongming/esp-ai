@@ -104,7 +104,7 @@ void ESP_AI::set_config()
         esp_ai_net_status = "0";
         ap_connect_err = "1";
         DEBUG_PRINTLN(debug, ("配网页面设置 WIFI 连接失败"));
-        esp_ai_dec.write(lian_jie_shi_bai,lian_jie_shi_bai_len);
+        esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
         web_server_setCrossOrigin();
         String json_response = "{\"success\":false,\"message\":\"wifi连接失败，请检查账号密码，将会自动重启设备。\"}";
         esp_ai_server.send(200, "application/json", json_response);
@@ -138,7 +138,7 @@ void ESP_AI::set_config()
         web_server_setCrossOrigin();
         String json_response = "{\"success\":true,\"message\":\"wifi 连接成功，设备激活成功, 即将重启设备。\"}";
         esp_ai_server.send(200, "application/json", json_response);
-        esp_ai_dec.write(pei_wang_cheng_gong,pei_wang_cheng_gong_len);
+        esp_ai_dec.write(pei_wang_cheng_gong, pei_wang_cheng_gong_len);
     }
 
     if (is_bind_ok)
@@ -306,11 +306,9 @@ void ESP_AI::web_server_init()
                      { this->clear_config(); });
 
     esp_ai_server.begin();
-}
+} 
 
-void ESP_AI::web_server_page_index()
-{
-    std::string content = R"rawliteral(
+const char esp_ai_html_str[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang='en'>
 
@@ -599,12 +597,13 @@ void ESP_AI::web_server_page_index()
     }
 </script>
     )rawliteral";
-
-    if (String(wifi_config.html_str) != "")
-    {
-        content = wifi_config.html_str.c_str();
-    }
-
+void ESP_AI::web_server_page_index()
+{ 
     web_server_setCrossOrigin();
-    esp_ai_server.send(200, "text/html", content.c_str());
+    if (wifi_config.html_str[0] != '\0')
+    { 
+        esp_ai_server.send(200, "text/html", wifi_config.html_str.c_str());
+    }else{ 
+        esp_ai_server.send(200, "text/html", esp_ai_html_str);
+    }
 }

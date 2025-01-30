@@ -73,7 +73,7 @@ void ESP_AI::loop()
 
     if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
     {
-        int reading = digitalRead(wake_up_config.pin);
+        int reading = digitalRead(wake_up_config.pin);  
         long curTime = millis();
         int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
         if (reading == target_val)

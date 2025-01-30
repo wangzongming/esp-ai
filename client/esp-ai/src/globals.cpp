@@ -26,7 +26,7 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.41.32";
+String ESP_AI_VERSION = "2.42.32";
 
 String esp_ai_start_ed = "0"; 
 bool esp_ai_ws_connected = false;

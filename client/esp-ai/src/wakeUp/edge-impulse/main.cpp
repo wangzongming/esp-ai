@@ -141,15 +141,10 @@ bool ESP_AI::microphone_inference_start(uint32_t n_samples)
     inference.buf_count = 0;
     inference.n_samples = n_samples;
     inference.buf_ready = 0;
-
-    // if (mic_i2s_init(EI_CLASSIFIER_FREQUENCY))
-    // {
-    //     ei_printf("[Error] Failed to start I2S!");
-    // }
-    // ei_sleep(100);
-
+  
     esp_ai_wakeup_record_status = true;
-    xTaskCreate(ESP_AI::capture_samples_wrapper, "capture_samples", 1024 * 32, this, 10, NULL);
+ 
+    xTaskCreate(ESP_AI::capture_samples_wrapper, "capture_samples", 1024 * 6, this, 10, NULL);
     return true;
 }
 
@@ -199,6 +194,7 @@ void ESP_AI::capture_samples()
         i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100);
         _is_silence = is_silence(mic_sample_buffer, bytes_read);
         
+         
         if (esp_ai_start_get_audio)
         {
             int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;

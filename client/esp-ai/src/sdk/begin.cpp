@@ -85,7 +85,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         reset_btn_config = config.reset_btn_config;
     }
     if (reset_btn_config.power == "high")
-    {  
+    {
         pinMode(reset_btn_config.pin, INPUT_PULLDOWN);
     }
     else if (reset_btn_config.power == "low")
@@ -118,17 +118,21 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
 
     // 将按钮默认拉低
-    if (wake_up_scheme != "pin_high" && wake_up_scheme != "pin_low" && config.reset_btn_config.power != "high" && config.reset_btn_config.power != "low") 
-    {  
+    if (wake_up_scheme != "pin_high" && wake_up_scheme != "pin_low" && config.reset_btn_config.power != "high" && config.reset_btn_config.power != "low")
+    {
         pinMode(wake_up_config.pin, INPUT_PULLDOWN);
     }
+ 
 
     // ws2812
     esp_ai_pixels.begin();
     esp_ai_pixels.setBrightness(100); // 亮度设置
     esp_ai_pixels.clear();            // 将所有像素颜色设置为“off”
     esp_ai_pixels.show();             // Initialize all pixels to 'off'
+ 
+
     speaker_i2s_setup();
+ 
 
     // 内置状态处理
     status_change("0");
@@ -150,21 +154,34 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     String loc_ext5 = get_local_data("ext5");
     String loc_ext6 = get_local_data("ext6");
     String loc_ext7 = get_local_data("ext7");
-    DEBUG_PRINTLN(debug, ("==================== Local Data ===================="));
-    DEBUG_PRINTLN(debug, "[Info] loc_device_id: " + loc_device_id);
-    DEBUG_PRINTLN(debug, "[Info] loc_wifi_name: " + loc_wifi_name);
-    DEBUG_PRINTLN(debug, "[Info] loc_wifi_pwd: " + loc_wifi_pwd);
-    DEBUG_PRINTLN(debug, "[Info] loc_api_key: " + loc_api_key);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext1: " + loc_ext1);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext2: " + loc_ext2);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext3: " + loc_ext3);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext4: " + loc_ext4);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext5: " + loc_ext5);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext6: " + loc_ext6);
-    DEBUG_PRINTLN(debug, "[Info] loc_ext7: " + loc_ext7);
-    DEBUG_PRINTLN(debug, ("====================================================="));
+    DEBUG_PRINTLN(debug, F("==================== Local Data ===================="));
+    DEBUG_PRINT(debug, F("[Info] loc_device_id: "));
+    DEBUG_PRINTLN(debug, loc_device_id);
+    DEBUG_PRINT(debug, F("[Info] loc_wifi_name: "));
+    DEBUG_PRINTLN(debug, loc_wifi_name);
+    DEBUG_PRINT(debug, F("[Info] loc_wifi_pwd: "));
+    DEBUG_PRINTLN(debug, loc_wifi_pwd);
+    DEBUG_PRINT(debug, F("[Info] loc_api_key: "));
+    DEBUG_PRINTLN(debug, loc_api_key);
+    DEBUG_PRINT(debug, F("[Info] loc_ext1: "));
+    DEBUG_PRINTLN(debug, loc_ext1);
+    DEBUG_PRINT(debug, F("[Info] loc_ext2: "));
+    DEBUG_PRINTLN(debug, loc_ext2);
+    DEBUG_PRINT(debug, F("[Info] loc_ext3: "));
+    DEBUG_PRINTLN(debug, loc_ext3);
+    DEBUG_PRINT(debug, F("[Info] loc_ext4: "));
+    DEBUG_PRINTLN(debug, loc_ext4);
+    DEBUG_PRINT(debug, F("[Info] loc_ext5: "));
+    DEBUG_PRINTLN(debug, loc_ext5);
+    DEBUG_PRINT(debug, F("[Info] loc_ext6: "));
+    DEBUG_PRINTLN(debug, loc_ext6);
+    DEBUG_PRINT(debug, F("[Info] loc_ext7: "));
+    DEBUG_PRINTLN(debug, loc_ext7);
+    DEBUG_PRINTLN(debug, F("====================================================="));
+ 
 
     xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 2, this, 1, NULL);
+ 
 
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
@@ -178,14 +195,17 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         _wifi_pwd = wifi_config.wifi_pwd;
     }
+ 
 
     if (_wifi_name == "")
     {
-        DEBUG_PRINTLN(debug, ("\n[Info] 没有wifi信息，请配网"));
+        DEBUG_PRINTLN(debug, F("\n[Info] 没有wifi信息，请配网"));
         open_ap();
         return;
     }
+ 
     esp_ai_dec.write(lian_jie_zhong, lian_jie_zhong_len);
+ 
 
     DEBUG_PRINTLN(debug, "[Info] wifi name: " + _wifi_name);
     DEBUG_PRINTLN(debug, "[Info] wifi pwd: " + _wifi_pwd);
@@ -197,7 +217,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     WiFi.mode(WIFI_STA);
     WiFi.begin(_wifi_name, _wifi_pwd);
 
-    DEBUG_PRINT(debug, F("[Info] connect wifi ing.."));
+    DEBUG_PRINT(debug, F("[Info] connect wifi ing..")); 
 
     int connect_count = 0;
     int try_count = 30;
@@ -233,9 +253,11 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
         return;
-    }
+    } 
+
     esp_ai_dec.write(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
     esp_ai_dec.write(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
+ 
 
     // 内置状态处理
     status_change("2");
@@ -247,6 +269,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     WiFi.setSleep(false);
+ 
 
     DEBUG_PRINTLN(debug, "");
     DEBUG_PRINT(debug, F("[Info] wifi 连接成功。"));
@@ -257,17 +280,20 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     DEBUG_PRINTLN(debug, ("==============================================="));
+ 
 
     if (mic_i2s_init(16000))
     {
         DEBUG_PRINTLN(debug, ("[Error] Failed to start MIC I2S!"));
-    }
-
+    } 
     if (wake_up_scheme == "edge_impulse")
     {
-        wakeup_init();
-        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 60, this, 1, NULL);
+        wakeup_init(); 
+ 
+        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, NULL);
+ 
     }
+
 
     if (String(server_config.ip) == "custom-made")
     {
@@ -278,6 +304,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             return;
         }
     }
+ 
 
     xTaskCreate(
         ESP_AI::reporting_sensor_data_wrapper,
@@ -286,6 +313,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
+ 
 
     xTaskCreate(
         ESP_AI::send_audio_wrapper,
@@ -294,6 +322,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
+ 
 
     xTaskCreate(
         ESP_AI::lights_wrapper,
@@ -318,6 +347,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
+ 
 
     if (volume_config.enable)
     {
@@ -329,5 +359,5 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             1,
             NULL);
     }
-    connect_ws();
+    connect_ws(); 
 }
