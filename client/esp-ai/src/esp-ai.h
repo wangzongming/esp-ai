@@ -33,7 +33,7 @@
  * |   i2s_listener          |     -kb       |
  * |   volume                |     -kb        |
  * |   ws2812                |     -kb        |
- * |   reporting sensor data |     -kb        | 
+ * |   reporting sensor data |     -kb        |
  *
  *
  */
@@ -54,11 +54,19 @@ public:
     void setVolume(float volume);
 
     /**
-     * 手动设置 wifi账号/wifi密码/api_key/ext1/ext2/ext3/ext4/ext5/ext6/ext7 配置，设置后会重新连接wifi
-     * 除了 wifi 账号和和密码外其他都是可选的，不改是传入空字符串即可
+     * 手动设置 wifi账号/wifi密码/api_key/本地缓存数据，设置后会重新连接wifi 
      * 设置成功会返回 true，失败返回 false
-     */
-    bool setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7);
+     * 
+     * 使用案例：
+     * 
+     *  JSONVar data;
+     *  data["wifi_name"] = "111";
+     *  data["wifi_pwd"] = "111";
+     *  data["api_key"] = "xxx";
+     *  data["其他自定义数据"] = "xxx"; 
+     *  esp_ai.setWifiConfig(data);
+     */ 
+    bool setWifiConfig(JSONVar data);
 
     /**
      * 接收到控制命令后的后调
@@ -100,8 +108,7 @@ public:
      * "2"      |  未连接服务
      * "3"      |  已连接服务器
      */
-    void onNetStatus(void (*func)(String status));
-    // void onNetStatus(std::function<void(String)> func);
+    void onNetStatus(void (*func)(String status)); 
 
     /**
      * 设备会话状态回调
@@ -122,6 +129,8 @@ public:
     /**
      * 用户配网成功后会执行一次，开发者可以在本函数中发出设备绑定的请求
      * 比如用户填入 etx1(设定为你服务的 api_key) 后，服务端将 device_id 和 etx1 在业务服务仅绑定
+     * data 参数是配网页面中给到 set_config 接口的数据，直接使用 data["xxx"] 来读取数据，如：data["wifi_name"]
+     * 
      *
      * 返回 true 则绑定设备成功，将会自动保存wifi等信息
      * 返回 false 则绑定设备失败，将提示用绑定设备失败的提示
@@ -129,22 +138,29 @@ public:
      * 返回 json 字符串， message 会直接在配网页面弹出
      * "{\"success\":false,\"message\":\"设备绑定失败，重启设备试试呢。\"}"
      * "{\"success\":true,\"message\":\"设备激活成功，即将重启设备。\"}"
-     */
-    void onBindDevice(String (*func)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7));
+     */ 
+    void onBindDevice(String (*func)(JSONVar data));
 
     /**
      * 获取存储在芯片中的数据
      * String ext1 = getLocalData("ext1");
-     * 可读取的数据项 device_id |  wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5
+     * 可读取的数据项 device_id |  wifi_name | wifi_pwd | api_key | 其他自定义参数
      */
     String getLocalData(String field_name);
 
     /**
      * 设置存储在芯片中的数据
      * set_local_data("ext1", "自定义数据xxx");
-     * 可设置的数据项 wifi_name | wifi_pwd | api_key | ext1 | ext2 | ext3 | ext4 | ext5
+     * 可设置的数据项 wifi_name | wifi_pwd | api_key | 其他自定义参数
      */
     void setLocalData(String field_name, String new_value);
+
+    /**
+     * 获取存储在芯片中的全部数据
+     * JSONVar data = getLocalAllData(); 
+     * Serial.println(data["wifi_name"]);
+     */
+    JSONVar getLocalAllData();
 
     /**
      * 手动控制设备输出语音
@@ -197,7 +213,8 @@ private:
     void (*onConnectedWifiCb)(String device_ip) = nullptr;
     void (*onSessionStatusCb)(String status) = nullptr;
     void (*onPositionCb)(String ip, String nation, String province, String city) = nullptr;
-    String (*onBindDeviceCb)(String device_id, String wifi_name, String wifi_pwd, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7) = nullptr;
+   
+    String (*onBindDeviceCb)(JSONVar data) = nullptr;
     void (*onRepeatedlyClickCb)() = nullptr;
 
     void speaker_i2s_setup();
@@ -206,23 +223,22 @@ private:
     int mic_i2s_init(uint32_t sampling_rate);
     void open_ap();
     void connect_ws();
- 
+
     static void volume_listener_wrapper(void *arg);
     void volume_listener();
 
     static void lights_wrapper(void *arg);
     void lights();
-    
-  
+
     bool microphone_inference_start(uint32_t n_samples);
     void microphone_inference_end(void);
 
     static void capture_samples_wrapper(void *arg);
     void capture_samples();
-  
-    void wakeup_init(); 
+
+    void wakeup_init();
     static void wakeup_inference_wrapper(void *arg);
-    void wakeup_inference(); 
+    void wakeup_inference();
 
     static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr);
     void status_change(String status);
@@ -235,7 +251,7 @@ private:
 
     void get_ssids();
     void re_scan_ssids();
- 
+
     void clear_config();
     bool get_server_config();
 
@@ -249,17 +265,14 @@ private:
     void on_repeatedly_click();
 
     static void send_audio_wrapper(void *arg);
-    void send_audio(); 
+    void send_audio();
 
     static void play_audio_wrapper(void *arg);
-    void play_audio(); 
+    void play_audio();
 
     void audio_inference_callback(uint32_t n_bytes);
     int i2s_deinit(void);
 
-    
-
     static void reporting_sensor_data_wrapper(void *arg);
     void reporting_sensor_data();
-    
 };

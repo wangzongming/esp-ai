@@ -27,12 +27,15 @@
 /**
  * 重新设置 WiFi、api_key 信息， 设置后会重新连接wifi
  */
-bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, String ext1, String ext2, String ext3, String ext4, String ext5, String ext6, String ext7)
+bool ESP_AI::setWifiConfig(JSONVar data)
 {
     DEBUG_PRINTLN(debug, ("==================== 调用 setWifiConfig 方法设置信息 ===================="));
+    JSONVar keys = data.keys();
+    String wifi_name = data["wifi_name"];
+    String wifi_pwd = data["wifi_pwd"];
 
     WiFi.begin(wifi_name, wifi_pwd);
-    DEBUG_PRINT(debug, "connect wifi ing.."); 
+    DEBUG_PRINT(debug, "connect wifi ing..");
 
     int connect_count = 0;
     // 10s 连不上Wifi的话
@@ -61,54 +64,25 @@ bool ESP_AI::setWifiConfig(String wifi_name, String wifi_pwd, String api_key, St
     // 连接失败并且没有存储wifi信息就重启板子
     if (WiFi.status() != WL_CONNECTED)
     {
-        DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败, 即将重启板子"));
-        ESP.restart(); 
+        DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败, 即将重启设备"));
+        ESP.restart();
         return false;
     }
     DEBUG_PRINTLN(debug, "");
     DEBUG_PRINT(debug, F("IP address: "));
     DEBUG_PRINTLN(debug, WiFi.localIP());
+
+    for (int i = 0; i < keys.length(); i++)
+    {
+        String key = keys[i];
+        JSONVar value = data[key];
+        set_local_data(key, String((const char *)value));
+    }
+    delay(250);
+    DEBUG_PRINTLN(debug, ("WIFI 连接成功, 即将重启设备更新设置。"));
+    ESP.restart();
+
     DEBUG_PRINTLN(debug, ("==============================================="));
-    // 持久保存， 这一步都是可选的
-    if (String(wifi_name).length() > 0)
-    {
-        set_local_data("wifi_name", String(wifi_name));
-    }
-    if (String(wifi_pwd).length() > 0)
-    {
-        set_local_data("wifi_pwd", String(wifi_pwd));
-    }
-    if (String(api_key).length() > 0)
-    {
-        set_local_data("api_key", String(api_key));
-    }
-    if (String(ext1).length() > 0)
-    {
-        set_local_data("ext1", String(ext1));
-    }
-    if (String(ext2).length() > 0)
-    {
-        set_local_data("ext2", String(ext2));
-    }
-    if (String(ext3).length() > 0)
-    {
-        set_local_data("ext3", String(ext3));
-    }
-    if (String(ext4).length() > 0)
-    {
-        set_local_data("ext4", String(ext4));
-    }
-    if (String(ext5).length() > 0)
-    {
-        set_local_data("ext5", String(ext5));
-    }
-    if (String(ext6).length() > 0)
-    {
-        set_local_data("ext6", String(ext6));
-    }
-    if (String(ext7).length() > 0)
-    {
-        set_local_data("ext7", String(ext7));
-    }
+
     return true;
 }

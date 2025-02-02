@@ -28,15 +28,15 @@
 
 String ESP_AI_VERSION = "2.42.32";
 
-String esp_ai_start_ed = "0"; 
+String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
 String esp_ai_session_id = "";
 String esp_ai_tts_task_id = "";
-String esp_ai_status = ""; 
-bool esp_ai_is_listen_model = true; 
+String esp_ai_status = "";
+bool esp_ai_is_listen_model = true;
 bool esp_ai_user_has_spoken = false;
 bool esp_ai_sleep = false;
-bool esp_ai_is_first_send = true; 
+bool esp_ai_is_first_send = true;
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;
@@ -57,12 +57,11 @@ WebSocketsClient esp_ai_webSocket;
 
 I2SStream esp_ai_spk_i2s;
 VolumeStream esp_ai_volume(esp_ai_spk_i2s);
-EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); 
-
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix());
 
 void esp_ai_asr_callback(uint8_t *mp3_data, size_t len)
-{ 
-    esp_ai_asr_sample_buffer_before->insert(esp_ai_asr_sample_buffer_before->end(), mp3_data, mp3_data + len); 
+{
+    esp_ai_asr_sample_buffer_before->insert(esp_ai_asr_sample_buffer_before->end(), mp3_data, mp3_data + len);
 }
 
 liblame::MP3EncoderLAME esp_ai_mp3_encoder(esp_ai_asr_callback);
@@ -100,10 +99,10 @@ std::vector<uint8_t> esp_ai_cache_audio_sleep_reply;
 
 long wakeup_time = 0;
 long last_silence_time = 0;
-long last_not_silence_time = 0; 
+long last_not_silence_time = 0;
 long last_silence_time_wakeup = 0;
-long last_not_silence_time_wekeup = 0; 
-String play_cache = ""; 
+long last_not_silence_time_wekeup = 0;
+String play_cache = "";
 
 String wake_up_scheme = "edge_impulse";
 
@@ -160,22 +159,52 @@ String get_device_id()
 }
 
 /**
- * 获取本地存储信息，不传入指定字段时返回全部数据
+ * 获取本地存储信息
  * get_local_data("wifi_name"); // oldwang
  */
 String get_local_data(const String &field_name = "")
 {
-    if(field_name == "device_id"){
+    if (field_name == "device_id")
+    {
         return get_device_id();
     }
     esi_ai_prefs.begin("esp-ai-kv", true);
     String val = "";
+
     if (esi_ai_prefs.isKey(field_name.c_str()))
     {
         val = esi_ai_prefs.getString(field_name.c_str()).c_str();
     }
     esi_ai_prefs.end();
     return val;
+}
+
+JSONVar get_local_all_data()
+{
+    esi_ai_prefs.begin("esp-ai-kv", true);
+    JSONVar data;
+
+    String keys_list = esi_ai_prefs.getString("_keys_list_", "");
+    if (keys_list != "")
+    { 
+        int start = 0;
+        int end = keys_list.indexOf(',');
+        while (end != -1)
+        {
+            String key = keys_list.substring(start, end);
+            String value = esi_ai_prefs.getString(key.c_str());
+            data[key] = value;
+            start = end + 1;
+            end = keys_list.indexOf(',', start);
+        }
+        // 添加最后一个键值对
+        String key = keys_list.substring(start);
+        String value = esi_ai_prefs.getString(key.c_str());
+        data[key] = value;
+    }
+ 
+    esi_ai_prefs.end();
+    return data;
 }
 
 /**
@@ -185,6 +214,18 @@ String get_local_data(const String &field_name = "")
 void set_local_data(String field_name, String new_value)
 {
     esi_ai_prefs.begin("esp-ai-kv", false);
+
+    String keys_list = esi_ai_prefs.getString("_keys_list_", "");
+    if (keys_list.indexOf(field_name) == -1)
+    {
+        if (keys_list != "")
+        {
+            keys_list += ",";
+        }
+        keys_list += field_name;
+        esi_ai_prefs.putString("_keys_list_", keys_list);
+    }
+
     esi_ai_prefs.putString(field_name.c_str(), new_value.c_str());
     esi_ai_prefs.end();
 }
@@ -205,17 +246,17 @@ bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
         {
             energy += samples[i] * samples[i]; // 信号平方和
         }
-        energy /= num_samples; // 平均能量 
+        energy /= num_samples; // 平均能量
         // Serial.print("能量: ");
         // Serial.println(energy);
 
-        // 判断是否有语音活动 
+        // 判断是否有语音活动
         if (energy > 10000)
-        {  
+        {
             return false;
         }
         else
-        { 
+        {
             return true;
         }
     }
@@ -223,4 +264,4 @@ bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
 }
 
 std::vector<int> digital_read_pins;
-std::vector<int> analog_read_pins; 
+std::vector<int> analog_read_pins;

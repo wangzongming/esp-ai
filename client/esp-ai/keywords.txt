@@ -17,9 +17,12 @@ wakeUp     KEYWORD2
 localIP    KEYWORD2 
 setLocalData KEYWORD2
 getLocalData KEYWORD2
+getLocalAllData KEYWORD2
 clear_config KEYWORD2
+clearData KEYWORD2
 stopSession KEYWORD2
 tts KEYWORD2
+onRepeatedlyClick KEYWORD2
  
  
 #constant (LITERAL1)

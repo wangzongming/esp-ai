@@ -22,10 +22,5 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#include "onBindDevice.h" 
- 
-void ESP_AI::onBindDevice(String (*func)(JSONVar data))
-{
-    onBindDeviceCb = func;
-}
-
+#pragma once
+#include "esp-ai.h"

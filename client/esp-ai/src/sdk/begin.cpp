@@ -180,7 +180,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINTLN(debug, F("====================================================="));
  
 
-    xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 2, this, 1, NULL);
+    xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 4, this, 1, NULL);
  
 
     DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));

@@ -258,17 +258,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
                 else if (type == "set_wifi_config")
                 {
-                    String wifi_name = (const char *)parseRes["configs"]["wifi_name"];
-                    String wifi_pwd = (const char *)parseRes["configs"]["wifi_pwd"];
-                    String api_key = (const char *)parseRes["configs"]["api_key"];
-                    String ext1 = (const char *)parseRes["configs"]["ext1"];
-                    String ext2 = (const char *)parseRes["configs"]["ext2"];
-                    String ext3 = (const char *)parseRes["configs"]["ext3"];
-                    String ext4 = (const char *)parseRes["configs"]["ext4"];
-                    String ext5 = (const char *)parseRes["configs"]["ext5"];
-                    String ext6 = (const char *)parseRes["configs"]["ext6"];
-                    String ext7 = (const char *)parseRes["configs"]["ext7"];
-                    bool is_ok = setWifiConfig(wifi_name, wifi_pwd, api_key, ext1, ext2, ext3, ext4, ext5, ext6, ext7);
+ 
+                    JSONVar JSON_data = parseRes["configs"];
+                    bool is_ok = setWifiConfig(JSON_data);
 
                     JSONVar set_wifi_config_res;
                     set_wifi_config_res["type"] = "set_wifi_config_res";

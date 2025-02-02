@@ -22,10 +22,11 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#include "onBindDevice.h" 
- 
-void ESP_AI::onBindDevice(String (*func)(JSONVar data))
+#include "getLocalAllData.h" 
+
+JSONVar ESP_AI::getLocalAllData()
 {
-    onBindDeviceCb = func;
+    return get_local_all_data();
 }
+
 

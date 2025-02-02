@@ -325,6 +325,7 @@ typedef struct
 } saved_info;
 String get_local_data(const String &field_name);
 void set_local_data(String field_name, String new_value);
+JSONVar get_local_all_data();
 String get_device_id();
 bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
 
