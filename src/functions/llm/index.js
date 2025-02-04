@@ -28,7 +28,7 @@ const log = require("../../utils/log");
 /**
  * 接下来的 session_id 都当前形参为准
 */
-async function cb(device_id, { text, is_over, texts, chunk_text, session_id, shouldClose }) {
+async function cb(device_id, { text, user_text, is_over, texts, chunk_text, session_id }) {
     try {
         const { devLog, onLLMcb, llm_qa_number } = G_config;
         if (!G_devices.get(device_id)) return;
@@ -43,6 +43,8 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
         onLLMcb && onLLMcb({
             device_id,
             text: chunk_text,
+            user_text,
+            llm_text: texts.count_text,
             is_over, llm_historys, ws: ws_client,
             instance: G_Instance,
             sendToClient: (_chunk_text) => ws_client && ws_client.send(JSON.stringify({
@@ -92,7 +94,7 @@ async function cb(device_id, { text, is_over, texts, chunk_text, session_id, sho
                 { "role": "assistant", "content": texts.all_text }
             );
 
-            if (llm_historys.length > (llm_qa_number * 2)) {
+            if (llm_historys.length > (llm_qa_number * 2)) { 
                 llm_historys.shift();
                 llm_historys.shift();
             }
@@ -156,7 +158,7 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
         // 这里是否考虑提供配置让用户决策
-        const min_len =  (index === 1 ? 10 : Math.min(index * 30, 300));
+        const min_len = (index === 1 ? 10 : Math.min(index * 30, 300));
         if ((res.length < min_len) && !isLast) {
             return {}
         }
@@ -292,7 +294,7 @@ module.exports = (device_id, opts) => {
             llmServerErrorCb,
             connectServerBeforeCb,
             connectServerCb,
-            cb: (args) => cb(device_id, { ...args, session_id })
+            cb: (args) => cb(device_id, { ...args, user_text: text, session_id })
         })
     } catch (err) {
         console.log(err);

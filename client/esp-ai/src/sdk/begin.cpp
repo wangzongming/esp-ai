@@ -258,7 +258,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     esp_ai_dec.write(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
     esp_ai_dec.write(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
  
-
+    esp_ai_played_connected = false;
     // 内置状态处理
     status_change("2");
     // 设备状态回调

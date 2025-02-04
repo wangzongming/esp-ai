@@ -80,7 +80,7 @@ class AudioSender {
  * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
-function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
+function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
         const { url = 'https://espai.natapp4.cc/v1/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)

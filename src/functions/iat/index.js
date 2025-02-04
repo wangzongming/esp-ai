@@ -27,11 +27,11 @@ const log = require("../../utils/log");
  */
 async function cb({ device_id, text }) {
     try {
-        const { onIATcb } = G_config;
+        const { onIATcb, onSleep } = G_config;
         const TTS_FN = require(`../tts`);
         const LLM_FN = require(`../llm`);
         if (!G_devices.get(device_id)) return;
-        const { first_session, ws: ws_client, user_config: { sleep_reply } } = G_devices.get(device_id);
+        const { ws: ws_client, client_params } = G_devices.get(device_id);
 
         ws_client && ws_client.send(JSON.stringify({
             type: "log",
@@ -56,6 +56,7 @@ async function cb({ device_id, text }) {
                 LLM_FN(device_id, { text })
             }
         } else {
+            onSleep && onSleep({ instance: G_Instance, device_id, client_params });
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 first_session: true,
@@ -71,7 +72,7 @@ async function cb({ device_id, text }) {
 module.exports = async (device_id, connected_cb) => {
     try {
         const TTS_FN = require(`../tts`);
-        const { devLog, plugins = [], onIAT } = G_config;
+        const { devLog, plugins = [], onIAT, onSleep } = G_config;
         const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config, sleep_reply } } = G_devices.get(device_id)
 
         devLog && log.info('');
@@ -97,8 +98,6 @@ module.exports = async (device_id, connected_cb) => {
         */
         const connectServerCb = (connected) => {
             if (!G_devices.get(device_id)) return;
-            // const { session_id: now_session_id } = G_devices.get(device_id)
-            // console.log('是否是同一个会话：', now_session_id === session_id, connected)
             if (connected) {
                 if (!G_devices.get(device_id)) return;
                 G_devices.set(device_id, {
@@ -174,13 +173,14 @@ module.exports = async (device_id, connected_cb) => {
          * 当 IAT 服务连接成功了，但是长时间不响应时
         */
         const serverTimeOutCb = () => {
-            const { iat_ws, ws: ws_client, iat_server_connected, iat_end_frame_timer, session_id: now_session_id } = G_devices.get(device_id)
+            const { iat_ws, ws: ws_client, client_params, iat_server_connected, iat_end_frame_timer, session_id: now_session_id } = G_devices.get(device_id)
 
             clearTimeout(iat_end_frame_timer);
             if (!iat_server_connected) return;
             iat_ws && iat_ws.close();
             connectServerCb(false);
 
+            onSleep && onSleep({ instance: G_Instance, device_id, client_params });
             devLog && log.iat_info('-> IAT服务响应超时，会话结束');
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),

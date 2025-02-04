@@ -26,17 +26,19 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.42.32";
+String ESP_AI_VERSION = "2.46.32";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
 String esp_ai_session_id = "";
+String esp_ai_prev_session_id = "";
 String esp_ai_tts_task_id = "";
 String esp_ai_status = "";
 bool esp_ai_is_listen_model = true;
 bool esp_ai_user_has_spoken = false;
 bool esp_ai_sleep = false;
 bool esp_ai_is_first_send = true;
+bool esp_ai_played_connected = false;
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;

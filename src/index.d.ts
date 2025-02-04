@@ -60,11 +60,24 @@ interface IntentionType {
     // 附加参数, 不管什么数据，都需要写为 string 类型，且不建议放较大的数据在这里
     data?: string;
     // io 或者 pwm 时需要配置的引脚
-    pin?: number; 
+    pin?: number;
     // 超体 api_key, 该超体下如果没有指定的设备ID将会报错
-    api_key?: string; 
+    // 配置 api_key 后字符串类型的指令会进行NLP推理。
+    api_key?: string;
+    /***
+     * nlp 服务地址，默认为 https://espai.natapp4.cc/v1/semantic。 注意，必须配置 api_key 才会去请求这个服务
+     * 请求体为 json： {
+     *      
+     *   "api_key": api_key,
+     *   "texts": ["开灯", "帮我开灯"]
+     * }
+     * 
+     * 接口需要返回： true || false
+     * 
+    */
+    nlp_server?: string;
     // 远程设备
-    target_device_id?: string; 
+    target_device_id?: string;
     /***
      * 音乐指令 __play_music__ 专用
      * 音乐播放服务
@@ -228,6 +241,23 @@ export interface Config {
     onDeviceConnect?: (arg: { device_id: string, client_version: string; client_params: Record<string, any>, instance: Instance }) => void;
 
     /**
+     * 设备断开连接的回调
+     * @param {string} device_id 设备id 
+     * @param {string} client_params  配网页面配置的客户端参数
+     * @param {string} instance       ESP-AI 实例
+     */
+    onDeviceDisConnect?: (arg: { device_id: string, instance: Instance, client_params: Record<string, any>, }) => void;
+
+    /**
+     * 设备休息时的回调
+     * @param {string} device_id 设备id 
+     * @param {string} client_params  配网页面配置的客户端参数
+     * @param {string} instance       ESP-AI 实例
+     */
+    onSleep?: (arg: { device_id: string, instance: Instance, client_params: Record<string, any> }) => void;
+
+
+    /**
      * 用户发出 iat 服务回调请求之前的回调
      * @param {string} device_id      设备id
      * @param {string} instance       ESP-AI 实例
@@ -329,6 +359,8 @@ export interface Config {
      * LLM 推理后的回调，拿到的文字是推理结果。
      * @param {string}    device_id     设备id
      * @param {string}    text          大语言模型推理出来的文本片段
+     * @param {string}    user_text     用户问题 
+     * @param {string}    llm_text      大模型推理出来的完整文本  
      * @param {boolean}   is_over       是否回答完毕
      * @param {object[]}  llm_historys  对话历史
      * @param {()=>void}  sendToClient  调用这个方法后可以直接将文字发送到客户端，客户端使用 onEvent 接收。
@@ -345,7 +377,7 @@ export interface Config {
      * }
      *
     */
-    onLLMcb?: (arg: { device_id: string, text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
+    onLLMcb?: (arg: { device_id: string, user_text: string, text: string, llm_text: string, is_over: boolean, llm_historys: Record<string, any>[], ws: WebSocket, sendToClient: () => void, instance: Instance }) => void;
 
     /**
      * 插件

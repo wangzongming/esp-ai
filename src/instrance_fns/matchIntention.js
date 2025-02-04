@@ -34,9 +34,9 @@ const axios = require('axios');
 */
 async function matchIntention(device_id, text, reply) {
     !device_id && log.error(`调用 matchIntention 方法时，请传入 device_id`);
-    const { devLog } = G_config;
+    const { devLog, onSleep } = G_config;
     const TTS_FN = require(`../functions/tts`);
-    const { ws: ws_client, session_id, user_config, llm_historys = [], prev_play_audio_ing, user_config: { sleep_reply, intention = [] } } = G_devices.get(device_id);
+    const { ws: ws_client, client_params, session_id, user_config, llm_historys = [], prev_play_audio_ing, user_config: { sleep_reply, intention = [] } } = G_devices.get(device_id);
     if (!text) return null;
     let task_info = null;
     intention_for: for (const item of intention) {
@@ -49,13 +49,32 @@ async function matchIntention(device_id, text, reply) {
                 break intention_for;
             }
         } else {
-            // 完全匹配
             const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
             const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
             const _text = text.replace(punctuationRegex, '').replace(emojiRegex, '');
             if (key.includes(_text)) {
+                // 完全匹配
                 task_info = item;
                 break intention_for;
+            } else if (item.api_key) {
+                // AI 推理 
+                const response = await axios.post(item.nlp_server || `https://espai.natapp4.cc/v1/semantic`, {
+                    "api_key": item.api_key,
+                    "texts": [key[0], _text]
+                }, {
+                    headers: { 'Content-Type': 'application/json' },
+                }); 
+                const { success, message: res_msg, data } = response.data;
+                if (!success) {
+                    await TTS_FN(device_id, {
+                        text: res_msg,
+                        need_record: false,
+                        text_is_over: true,
+                    });
+                } else if (data === true) {
+                    task_info = item;
+                    break intention_for;
+                }
             }
         }
     }
@@ -86,6 +105,7 @@ async function matchIntention(device_id, text, reply) {
                         first_session: true,
                     })
                     ws_client && ws_client.send("session_end");
+                    onSleep && onSleep({ instance: G_Instance, device_id, client_params });
                     devLog && console.log('\n\n === 会话结束 ===\n\n')
                     break;
                 case "__io_high__":
@@ -96,8 +116,8 @@ async function matchIntention(device_id, text, reply) {
                         { "role": "user", "content": text },
                         { "role": "assistant", "content": message || "好的" }
                     );
-                    if (target_device_id) { 
-                        !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);  
+                    if (target_device_id) {
+                        !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);
                         // const response = await axios.get(`http://192.168.3.23:7002/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
                         const response = await axios.get(`https://api.espai.fun/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
                             headers: { 'Content-Type': 'application/json' }
@@ -115,9 +135,14 @@ async function matchIntention(device_id, text, reply) {
                                 need_record: false,
                                 text_is_over: true,
                             });
-                        } 
+                        }
                     } else {
                         G_Instance.digitalWrite(device_id, pin, instruct === "__io_high__" ? "HIGH" : "LOW");
+                        message && await TTS_FN(device_id, {
+                            text: message,
+                            need_record: false,
+                            text_is_over: true,
+                        });
                     }
                     break;
                 case "__play_music__":

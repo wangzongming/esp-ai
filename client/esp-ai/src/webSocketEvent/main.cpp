@@ -63,7 +63,6 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         data_1["type"] = "play_audio_ws_conntceed";
         String sendData = JSON.stringify(data_1);
         esp_ai_webSocket.sendTXT(sendData);
-
         // 内置状态处理
         status_change("3");
         // 设备状态回调
@@ -202,25 +201,25 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     Serial.println("[Error] -> 服务错误：" + at_pos + " " + code + " " + message);
 
                     if (code == "4002")
-                    { 
+                    {
                         esp_ai_dec.end();
                         delay(100);
                         esp_ai_dec.begin();
                         esp_ai_dec.write(yu_e_bu_zuo, yu_e_bu_zuo_len);
                     }
                     else if (code == "4001")
-                    { 
+                    {
                         esp_ai_dec.end();
                         delay(100);
                         esp_ai_dec.begin();
                         esp_ai_dec.write(e_du_ka_bu_cun_zai, e_du_ka_bu_cun_zai_len);
                     }
                     else if (code == "4000")
-                    { 
+                    {
                         esp_ai_dec.end();
                         delay(100);
                         esp_ai_dec.begin();
-                        esp_ai_dec.write(chao_ti_wei_qi_yong,  chao_ti_wei_qi_yong_len);
+                        esp_ai_dec.write(chao_ti_wei_qi_yong, chao_ti_wei_qi_yong_len);
                     }
 
                     if (onErrorCb != nullptr)
@@ -258,7 +257,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
                 else if (type == "set_wifi_config")
                 {
- 
+
                     JSONVar JSON_data = parseRes["configs"];
                     bool is_ok = setWifiConfig(JSON_data);
 
@@ -299,9 +298,9 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String fn_name = (const char *)parseRes["fn_name"];
                     String str_val = (const char *)parseRes["str_val"];
                     int num_val = (int)parseRes["num_val"];
-                    
+
                     if (fn_name == "pinMode")
-                    { 
+                    {
                         str_val == "OUTPUT" && (pinMode(pin, OUTPUT), true);
                         str_val == "INPUT" && (pinMode(pin, INPUT), true);
                         str_val == "INPUT_PULLUP" && (pinMode(pin, INPUT_PULLUP), true);
@@ -339,10 +338,11 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         memcpy(session_id_string, payload, 4);
         session_id_string[4] = '\0';
         String sid = String(session_id_string);
- 
+
         /**
          * sid
          * 0000 -> 嘟提示音数据
+         * 0001 -> 服务连接成功提示语
          * 1000 -> 提示音缓存数据
          * 1001 -> 唤醒问候语缓存数据
          * 1002 -> 休息时回复缓存数据
@@ -374,7 +374,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             }
         }
         else if (sid == "2001")
-        {
+        {  
+            if (esp_ai_played_connected == false && esp_ai_prev_session_id == "0001")
+            {
+                esp_ai_played_connected = true;
+            }
+
             esp_ai_tts_task_id = "";
             // 内置状态处理
             status_change("tts_real_end");
@@ -387,18 +392,24 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
                 DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS 数据全部接收完毕，无需继续对话。"));
             }
+            esp_ai_prev_session_id = sid;
             return;
         }
         else if (sid == "2002")
         {
             DEBUG_PRINTLN(debug, ("\n[TTS] -> TTS CHUNK 接收完毕。"));
             esp_ai_tts_task_id = "";
+        } 
+        
+        if (sid == "0001" && esp_ai_played_connected == true)
+        {
+            esp_ai_prev_session_id = sid;
+            return;
         }
-
         // 提取音频数据
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
- 
+
         if (sid == "1000")
         {
             esp_ai_cache_audio_du.insert(esp_ai_cache_audio_du.end(), audioData, audioData + audioLength);
@@ -412,11 +423,13 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_cache_audio_sleep_reply.insert(esp_ai_cache_audio_sleep_reply.end(), audioData, audioData + audioLength);
         }
 
-        if (session_id_string && sid != "0000" && sid != esp_ai_session_id)
+        if (session_id_string && sid != "0000" && sid != "0001" && sid != esp_ai_session_id)
         {
+            esp_ai_prev_session_id = sid;
             return;
         }
         esp_ai_dec.write(audioData, audioLength);
+        esp_ai_prev_session_id = sid;
         break;
     }
     // case WStype_PING:

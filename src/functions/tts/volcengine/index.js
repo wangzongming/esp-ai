@@ -100,8 +100,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
         connectServerBeforeCb();
         const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
         logWSServer({
-            close(){
-                console.log(curTTSWs.OPEN) 
+            close(){ 
                 curTTSWs.OPEN && curTTSWs.close();
             }
         })

@@ -33,7 +33,7 @@ const du_cache = require("../../audio_temp/du_cache");
 async function fn({ device_id }) {
     try {
         const { devLog, gen_client_config } = G_config;
-        const { ws, client_params, client_version, error_catch, tts_buffer_chunk_queue } = G_devices.get(device_id);
+        const { ws, client_params, client_version, error_catch } = G_devices.get(device_id);
         const user_config = await gen_client_config({
             client_params,
             ws,
@@ -105,18 +105,18 @@ async function fn({ device_id }) {
         })
  
         // await TTS_FN(device_id, {
-        //     text: "哦，听起来不太好受。记得多穿衣服保暖，", 
+        //     text: "哦，听起来不太好受。记得多穿衣服保暖。", 
         //     text_is_over: true,
         //     tts_task_id: "connected_reply"
         // }) 
- 
+        // return;
 
         // 缓存提示音 
         du_cache(ws);
         // 缓存问候语 
         const f_reply = _user_config.f_reply;
         if (f_reply !== false) {
-             TTS_FN(device_id, {
+            await TTS_FN(device_id, {
                 text: f_reply, 
                 text_is_over: true,
                 session_id: G_session_ids.cache_hello,
@@ -125,7 +125,7 @@ async function fn({ device_id }) {
         }
         const sleep_reply = _user_config.sleep_reply;
         if (sleep_reply !== false) {
-             TTS_FN(device_id, {
+            await TTS_FN(device_id, {
                 text: sleep_reply, 
                 text_is_over: true,
                 session_id: G_session_ids.cache_sleep_reply,

@@ -177,9 +177,9 @@ function TTSFN(device_id, opts) {
                     !is_create_cache && ws_client && ws_client.send(JSON.stringify({
                         type: "session_status",
                         status: "tts_chunk_start",
-                    }));
-                    // 启动音频发送任务
-                    audio_sender.startSend(session_id, () => {
+                    })); 
+                    // 启动音频发送任务 
+                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
                         resolve(true);
                     });
                 } else {

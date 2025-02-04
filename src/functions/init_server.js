@@ -27,12 +27,12 @@ const log = require("../utils/log");
 const getIPV4 = require("../utils/getIPV4");
 const parseUrlParams = require("../utils/parseUrlParams");
 const isOutTimeErr = require("../utils/isOutTimeErr");
-const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue"); 
+const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue");
 const {
     audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn,
     client_out_audio_over, cts_time, set_wifi_config_res, digitalRead, analogRead, iat_end
-} = require("../functions/client_messages"); 
-const error_catch_hoc = require("./device_fns/error_catch") 
+} = require("../functions/client_messages");
+const error_catch_hoc = require("./device_fns/error_catch")
 
 // 音频测试
 // const fs = require('fs');
@@ -42,7 +42,7 @@ const error_catch_hoc = require("./device_fns/error_catch")
 
 function init_server() {
     try {
-        const { port, devLog, onDeviceConnect, auth, gen_client_config } = G_config;
+        const { port, devLog, onDeviceConnect, onDeviceDisConnect, auth, gen_client_config } = G_config;
         if (!gen_client_config) {
             log.error("请配置 gen_client_config 函数");
             return;
@@ -69,7 +69,7 @@ function init_server() {
                 await G_Instance.stop(device_id, "打断会话时");
                 ws.terminate();
                 G_devices.delete(device_id);
-            } 
+            }
 
             G_devices.set(device_id, {
                 started: false,
@@ -82,9 +82,9 @@ function init_server() {
                 tts_list: new Map(),
                 await_out_tts: [],
                 client_params,
-                client_version, 
+                client_version,
                 error_catch: error_catch_hoc(ws),
-                tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id), 
+                tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id),
                 // 已输出流量 kb
                 useed_flow: 0,
                 read_pin_cbs: new Map(),
@@ -92,6 +92,7 @@ function init_server() {
 
             ws.isAlive = true;
             ws.device_id = device_id;
+            ws.client_params = client_params;
 
             onDeviceConnect && onDeviceConnect({
                 ws, device_id, client_version, client_params,
@@ -127,7 +128,7 @@ function init_server() {
                                 break;
                             case "client_out_audio_over":
                                 client_out_audio_over(comm_args);
-                                break; 
+                                break;
                             case "play_audio_ws_conntceed":
                                 play_audio_ws_conntceed(comm_args)
                                 break;
@@ -196,16 +197,13 @@ function init_server() {
                 };
             }
 
-            ws.on('close', (code, reason) => {
+            ws.on('close', (code, reason) => { 
                 devLog && log.info(``);
                 devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
                 devLog && log.info(``);
-                // ws.send(JSON.stringify({ type: "sever-close" }));
-                // ws?.close();
-                // 清空该设备的所有任务
-                G_Instance.stop(device_id, "设备断开服务时");
-
-                // 删除设备记录
+                onDeviceDisConnect && onDeviceDisConnect({ device_id, client_params, instance: G_Instance });
+ 
+                G_Instance.stop(device_id, "设备断开服务时"); 
                 G_devices.delete(device_id);
             });
             ws.on('error', function (error) {
@@ -225,6 +223,7 @@ function init_server() {
             wss.clients.forEach(function each(ws) {
                 const bufferedAmount = ws.bufferedAmount.valueOf()
                 if (bufferedAmount === 0 && ws.isAlive === false) {
+                    onDeviceDisConnect && onDeviceDisConnect({ device_id: ws.device_id, client_params: ws.client_params, instance: G_Instance });
                     log.t_info(`[${ws.device_id}] 设备掉线了，关闭连接`);
                     return ws.terminate()
                 };
@@ -235,7 +234,7 @@ function init_server() {
         }, 60 * 1000);
 
         setInterval(function () {
-            log.info("当前客户端数量：" + wss.clients.size) 
+            log.info("当前客户端数量：" + wss.clients.size)
         }, 30 * 1000);
 
         wss.on('close', function close() {

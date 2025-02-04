@@ -226,12 +226,14 @@ extern String ESP_AI_VERSION;
 extern String esp_ai_start_ed;
 extern bool esp_ai_ws_connected;
 extern String esp_ai_session_id;
+extern String esp_ai_prev_session_id; 
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
 extern bool esp_ai_is_first_send;
 // 聆听模式
 extern bool esp_ai_is_listen_model;
+extern bool esp_ai_played_connected;
 
 // 用户已经发话
 extern bool esp_ai_user_has_spoken;
