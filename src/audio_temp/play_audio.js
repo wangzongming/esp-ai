@@ -97,7 +97,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             // 真正结束
             const end_time = Date.now(); // 结束时间
             const play_time = end_time - start_audio_time; // 播放时间
-            const end_res = await on_end({
+            const end_res = on_end && await on_end({
                 start_time: start_audio_time,
                 end_time: end_time,
                 play_time: Math.floor(play_time / 1000),
@@ -107,7 +107,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             }) 
             
             // 特殊发一组标志 
-            this.ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8')); 
+            client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8')); 
 
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -126,7 +126,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             ...G_devices.get(device_id),
             play_audio_ing: true,
             play_audio_on_end: (...arg) => { 
-                this.ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));  
+                client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));  
                 return on_end && on_end(...arg);
             },
             play_audio_seek: seek || 0,

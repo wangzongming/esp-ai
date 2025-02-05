@@ -42,7 +42,7 @@ async function matchIntention(device_id, text, reply) {
     intention_for: for (const item of intention) {
         const { key = [] } = item;
         if (typeof key === "function") {
-            const res = await key(text, { llm_historys, prev_play_audio_ing });
+            const res = await key(text, { llm_historys, prev_play_audio_ing, instance: G_Instance, device_id });
             if (res) {
                 task_info = item;
                 task_info["__name__"] = res;
@@ -164,7 +164,7 @@ async function matchIntention(device_id, text, reply) {
                     });
                     // 不延时不能保证播放队列
                     setTimeout(async () => {
-                        const { url, seek, message: errMessage } = await music_server(__name__, { user_config });
+                        const { url, seek, message: errMessage } = await music_server(__name__, { user_config, instance: G_Instance, device_id });
                         if (!url) {
                             await TTS_FN(device_id, {
                                 text: errMessage || "没有找到相关的结果，换个关键词试试吧！",

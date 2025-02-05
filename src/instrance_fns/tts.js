@@ -41,7 +41,8 @@ async function tts(device_id, text, opts) {
             need_record: false, 
             ...opts
         }) 
-        ws && ws.send("session_end");
+        // 这里不应发送这个标志。
+        // ws && ws.send("session_end");
         return true;
     } catch (err) {
         console.log(err);
