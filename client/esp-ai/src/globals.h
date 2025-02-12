@@ -29,10 +29,8 @@
 #include <Arduino.h>
 #include <driver/i2s.h>
 #include <WiFi.h>
-#include <WebSocketsClient.h>
-
+#include <WebSocketsClient.h> 
 #include "AudioTools.h"
-
 // 使用 libhelix 对mp3编码
 // 要安装插件： https://github.com/pschatzmann/arduino-libhelix
 // 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行 --1.x 版本作者已经注释
@@ -75,19 +73,25 @@
 
 // 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
+#if defined(ARDUINO_XIAO_ESP32S3) 
+#define esp_ai_serial_tx 43
+#else 
 #define esp_ai_serial_tx 11
 #endif
-#ifndef esp_ai_serial_rx
+#endif
+
+#ifndef esp_ai_serial_rx 
+#if defined(ARDUINO_XIAO_ESP32S3) 
+#define esp_ai_serial_rx 44
+#else 
 #define esp_ai_serial_rx 12
 #endif
-
-#ifndef LED_BUILTIN
-#define LED_BUILTIN 18
 #endif
 
-#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
-#define MIC_i2s_num I2S_NUM_1
-#define YSQ_i2s_num I2S_NUM_0
+
+#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT 
+#define MIC_i2s_num I2S_NUM_0
+#define YSQ_i2s_num I2S_NUM_1
 
 extern HardwareSerial Esp_ai_serial;
 extern Preferences esi_ai_prefs;
@@ -226,7 +230,7 @@ extern String ESP_AI_VERSION;
 extern String esp_ai_start_ed;
 extern bool esp_ai_ws_connected;
 extern String esp_ai_session_id;
-extern String esp_ai_prev_session_id; 
+extern String esp_ai_prev_session_id;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;

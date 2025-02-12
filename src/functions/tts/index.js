@@ -121,10 +121,10 @@ function TTSFN(device_id, opts) {
                 text,
                 text_is_over,
                 instance: G_Instance,
-                sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+                sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
                     type: "instruct",
                     command_id: "on_tts",
-                    data: text
+                    data: _text || text
                 }))
             });
 

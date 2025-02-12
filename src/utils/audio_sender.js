@@ -41,7 +41,8 @@ class Audio_sender {
                 } else {
                     data = this.accumulated_data.slice(0, this.send_num);
                 }
-                const  { session_id: now_session_id } = G_devices.get(this.device_id); 
+                if(!G_devices.get(this.device_id)) return;
+                const { session_id: now_session_id } = G_devices.get(this.device_id); 
                 if(now_session_id && session_id && now_session_id !== session_id) return;
                 
                 const _session_id = session_id ? `${session_id}` : "0000";

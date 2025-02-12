@@ -72,7 +72,7 @@ void ESP_AI::wakeup_inference()
             signal_t signal;
             signal.total_length = EI_CLASSIFIER_SLICE_SIZE;
             signal.get_data = &microphone_audio_signal_get_data;
-            ei_impulse_result_t result = {0}; 
+            ei_impulse_result_t result = {0};
 
             EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
             if (r != EI_IMPULSE_OK)
@@ -85,8 +85,8 @@ void ESP_AI::wakeup_inference()
                 float noise = result.classification[0].value;
                 float unknown = result.classification[1].value;
                 float xmtx = result.classification[2].value;
-
-                bool wakeup_condition1 = xmtx >= wake_up_config.threshold; 
+  
+                bool wakeup_condition1 = xmtx >= wake_up_config.threshold;
                 if (wakeup_condition1)
                 {
                     DEBUG_PRINT(debug, "\n[Info] √ 唤醒成功 => 得分: ")
@@ -141,9 +141,9 @@ bool ESP_AI::microphone_inference_start(uint32_t n_samples)
     inference.buf_count = 0;
     inference.n_samples = n_samples;
     inference.buf_ready = 0;
-  
+
     esp_ai_wakeup_record_status = true;
- 
+
     xTaskCreate(ESP_AI::capture_samples_wrapper, "capture_samples", 1024 * 6, this, 10, NULL);
     return true;
 }
@@ -191,14 +191,16 @@ void ESP_AI::capture_samples()
     {
 
         /* read data at once from i2s */
-        i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100);
+        i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100); 
+
         _is_silence = is_silence(mic_sample_buffer, bytes_read);
-         
+
+          
         if (esp_ai_start_get_audio)
         {
             int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
             if (esp_ai_start_send_audio && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
-            { 
+            {
                 // 静默时间过长
                 esp_ai_start_get_audio = false;
                 esp_ai_start_send_audio = false;
@@ -224,7 +226,7 @@ void ESP_AI::capture_samples()
                             last_silence_time = 0;
                         }
                         else
-                        { 
+                        {
                             if (last_not_silence_time == 0)
                             {
                                 last_not_silence_time = millis();
@@ -233,7 +235,7 @@ void ESP_AI::capture_samples()
                     }
                 }
 
-                size_t sample_count = bytes_read / sizeof(mic_sample_buffer[0]); 
+                size_t sample_count = bytes_read / sizeof(mic_sample_buffer[0]);
                 int gain_factor = 16;
                 for (size_t i = 0; i < sample_count; i++)
                 {

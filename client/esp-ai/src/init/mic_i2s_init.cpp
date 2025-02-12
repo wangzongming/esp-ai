@@ -27,24 +27,28 @@
 int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
 {
     i2s_config_t i2s_config = {
-        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX), 
         .sample_rate = sampling_rate,
         .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
         .channel_format = I2S_MIC_CHANNEL,
         .communication_format = I2S_COMM_FORMAT_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
         .dma_buf_count = 16,
-        .dma_buf_len = 512,
+        .dma_buf_len = 512, 
         .use_apll = false,
         .tx_desc_auto_clear = false,
         .fixed_mclk = 0};
 
-    i2s_pin_config_t i2s_mic_pins = {
-        .bck_io_num = i2s_config_mic.bck_io_num,
-        .ws_io_num = i2s_config_mic.ws_io_num,
-        .data_out_num = I2S_PIN_NO_CHANGE,
-        .data_in_num = i2s_config_mic.data_in_num,
-    };
+        #if defined(ARDUINO_XIAO_ESP32S3)
+            i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_PDM);
+        #endif
+
+        i2s_pin_config_t i2s_mic_pins = {
+            .bck_io_num = i2s_config_mic.bck_io_num,
+            .ws_io_num = i2s_config_mic.ws_io_num,
+            .data_out_num = I2S_PIN_NO_CHANGE,
+            .data_in_num = i2s_config_mic.data_in_num,
+        }; 
 
     esp_err_t ret = 0;
     ret = i2s_driver_install(MIC_i2s_num, &i2s_config, 0, NULL);
@@ -70,9 +74,9 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
     esp_ai_mp3_info.channels = 1;
     esp_ai_mp3_info.sample_rate = sampling_rate;
     esp_ai_mp3_info.bits_per_sample = 16;
-    esp_ai_mp3_info.quality = 0;  
-     
-    esp_ai_mp3_encoder.begin(esp_ai_mp3_info); 
+    esp_ai_mp3_info.quality = 0;
+
+    esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
 
     return int(ret);
 }

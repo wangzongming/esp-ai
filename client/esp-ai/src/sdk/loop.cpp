@@ -171,7 +171,7 @@ void ESP_AI::loop()
         }
         else
         { 
-            size_t bytes_read; 
+            size_t bytes_read;  
             i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, esp_ai_asr_sample_buffer_size, &bytes_read, 100); 
 
             if (esp_ai_start_send_audio && !esp_ai_is_listen_model)

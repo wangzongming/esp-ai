@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -38,9 +38,11 @@ void ESP_AI::speaker_i2s_setup()
     auto config = esp_ai_spk_i2s.defaultConfig(TX_MODE);
     config.sample_rate = i2s_config_speaker.sample_rate ? i2s_config_speaker.sample_rate : 16000;
     config.bits_per_sample = 16;
-    config.port_no = YSQ_i2s_num; // 这里别和麦克风冲突了，esp32 有两个可用通道
-    config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
-    config.i2s_format = I2S_MSB_FORMAT; // 这里最好看看源码中的类型定义
+    config.port_no = YSQ_i2s_num; 
+    config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT; 
+
+    // 这里最好看看源码中的类型定义
+    config.i2s_format = I2S_MSB_FORMAT;
     config.buffer_count = 8;
     config.buffer_size = 1024;
     config.auto_clear = true;
@@ -48,9 +50,9 @@ void ESP_AI::speaker_i2s_setup()
     config.pin_ws = i2s_config_speaker.ws_io_num;     // LCK
     config.pin_bck = i2s_config_speaker.bck_io_num;   // BCK
     config.pin_data = i2s_config_speaker.data_in_num; // DIN
-    esp_ai_spk_i2s.begin(config); 
+    esp_ai_spk_i2s.begin(config);
 
     esp_ai_dec.begin();
     esp_ai_volume.begin(config); // we need to provide the bits_per_sample and channels
-    esp_ai_volume.setVolume(volume_config.volume); 
+    esp_ai_volume.setVolume(volume_config.volume);
 }

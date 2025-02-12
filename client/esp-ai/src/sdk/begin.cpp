@@ -27,7 +27,16 @@
 
 void ESP_AI::begin(ESP_AI_CONFIG config)
 {
-    delay(100);
+    // xiao 需要延迟一定的时间
+    delay(500);
+
+    #if defined(ARDUINO_XIAO_ESP32S3)
+        Serial.println("检测到 XIAO ESP32S3 开发板");
+    #elif defined(ARDUINO_ESP32S3_DEV)
+        Serial.println("检测到 ESP32-S3 开发板");
+    #else
+        Serial.println(F("您的开发板可能不受支持！"));  
+    #endif
 
     esp_ai_asr_sample_buffer_before = new std::vector<uint8_t>();
     esp_ai_asr_sample_buffer_before->reserve(48000 * sizeof(int16_t)); // 预分配
@@ -122,17 +131,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         pinMode(wake_up_config.pin, INPUT_PULLDOWN);
     }
- 
 
     // ws2812
     esp_ai_pixels.begin();
     esp_ai_pixels.setBrightness(100); // 亮度设置
     esp_ai_pixels.clear();            // 将所有像素颜色设置为“off”
     esp_ai_pixels.show();             // Initialize all pixels to 'off'
- 
 
     speaker_i2s_setup();
- 
 
     // 内置状态处理
     status_change("0");
@@ -178,12 +184,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     DEBUG_PRINT(debug, F("[Info] loc_ext7: "));
     DEBUG_PRINTLN(debug, loc_ext7);
     DEBUG_PRINTLN(debug, F("====================================================="));
- 
 
     xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 4, this, 1, NULL);
- 
 
-    DEBUG_PRINTLN(debug, ("==================== Connect WIFI ===================="));
+    DEBUG_PRINTLN(debug, F("==================== Connect WIFI ===================="));
     String _wifi_name = loc_wifi_name;
     String _wifi_pwd = loc_wifi_pwd;
     ap_connect_err = "0";
@@ -195,7 +199,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         _wifi_pwd = wifi_config.wifi_pwd;
     }
- 
 
     if (_wifi_name == "")
     {
@@ -203,9 +206,8 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         open_ap();
         return;
     }
- 
+
     esp_ai_dec.write(lian_jie_zhong, lian_jie_zhong_len);
- 
 
     DEBUG_PRINTLN(debug, "[Info] wifi name: " + _wifi_name);
     DEBUG_PRINTLN(debug, "[Info] wifi pwd: " + _wifi_pwd);
@@ -217,7 +219,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     WiFi.mode(WIFI_STA);
     WiFi.begin(_wifi_name, _wifi_pwd);
 
-    DEBUG_PRINT(debug, F("[Info] connect wifi ing..")); 
+    DEBUG_PRINT(debug, F("[Info] connect wifi ing.."));
 
     int connect_count = 0;
     int try_count = 30;
@@ -253,11 +255,11 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
         return;
-    } 
+    }
 
     esp_ai_dec.write(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
     esp_ai_dec.write(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
- 
+
     esp_ai_played_connected = false;
     // 内置状态处理
     status_change("2");
@@ -269,7 +271,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     WiFi.setSleep(false);
- 
 
     DEBUG_PRINTLN(debug, "");
     DEBUG_PRINT(debug, F("[Info] wifi 连接成功。"));
@@ -279,21 +280,19 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         onConnectedWifiCb(ip_str);
     }
 
-    DEBUG_PRINTLN(debug, ("==============================================="));
- 
+    DEBUG_PRINTLN(debug, F("==============================================="));
 
     if (mic_i2s_init(16000))
     {
         DEBUG_PRINTLN(debug, ("[Error] Failed to start MIC I2S!"));
-    } 
-    if (wake_up_scheme == "edge_impulse")
-    {
-        wakeup_init(); 
- 
-        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, NULL);
- 
     }
 
+    if (wake_up_scheme == "edge_impulse")
+    {
+        wakeup_init();
+
+        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, NULL);
+    }
 
     if (String(server_config.ip) == "custom-made")
     {
@@ -304,7 +303,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             return;
         }
     }
- 
 
     xTaskCreate(
         ESP_AI::reporting_sensor_data_wrapper,
@@ -313,7 +311,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
- 
 
     xTaskCreate(
         ESP_AI::send_audio_wrapper,
@@ -322,7 +319,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
- 
 
     xTaskCreate(
         ESP_AI::lights_wrapper,
@@ -347,7 +343,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
- 
 
     if (volume_config.enable)
     {
@@ -359,5 +354,5 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             1,
             NULL);
     }
-    connect_ws(); 
+    connect_ws();
 }

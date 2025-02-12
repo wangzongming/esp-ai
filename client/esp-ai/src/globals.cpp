@@ -26,7 +26,7 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.46.32";
+String ESP_AI_VERSION = "2.47.32";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
@@ -71,20 +71,31 @@ liblame::AudioInfo esp_ai_mp3_info;
 
 WebServer esp_ai_server(80);
 
+#if defined(ARDUINO_XIAO_ESP32S3)
+// 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
+ESP_AI_i2s_config_mic default_i2s_config_mic = {I2S_PIN_NO_CHANGE, 42, 41};
+// 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
+ESP_AI_i2s_config_speaker default_i2s_config_speaker = {2, 3, 1, 16000};
+// 重置按钮 { 输入引脚，电平： high | low}
+ESP_AI_reset_btn_config default_reset_btn_config = {9, "high"};
+#else
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
 // 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
 ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15, 16000};
+// 重置按钮 { 输入引脚，电平： high | low}
+ESP_AI_reset_btn_config default_reset_btn_config = {10, "high"};
+#endif
+
+// 音量配置 { 输入引脚，输入最大值，默认音量 }
+ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false};
+
 // 默认离线唤醒方案
 ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.9};
 // { wifi 账号， wifi 密码 }
 ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", ""};
 // { ip， port, api_key }
 ESP_AI_server_config default_server_config = {"https", "node.espai.fun", 443, "", ""};
-// 音量配置 { 输入引脚，输入最大值，默认音量 }
-ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false};
-// 重置按钮 { 输入引脚，电平： high | low}
-ESP_AI_reset_btn_config default_reset_btn_config = {10, "high"};
 
 inference_t inference;
 // Set this to true to see e.g. features generated from the raw signal
@@ -108,8 +119,12 @@ String play_cache = "";
 
 String wake_up_scheme = "edge_impulse";
 
+#if defined(ARDUINO_XIAO_ESP32S3)
+Adafruit_NeoPixel esp_ai_pixels(1, 4, NEO_GRB + NEO_KHZ800);
+#else
 // 灯的数量, 灯带的连接引脚, 使用RGB模式控制ws2812类型灯带，灯带的频率为800KH
 Adafruit_NeoPixel esp_ai_pixels(1, 18, NEO_GRB + NEO_KHZ800);
+#endif
 
 /**
  * 生成34位uiud
@@ -188,7 +203,7 @@ JSONVar get_local_all_data()
 
     String keys_list = esi_ai_prefs.getString("_keys_list_", "");
     if (keys_list != "")
-    { 
+    {
         int start = 0;
         int end = keys_list.indexOf(',');
         while (end != -1)
@@ -204,7 +219,7 @@ JSONVar get_local_all_data()
         String value = esi_ai_prefs.getString(key.c_str());
         data[key] = value;
     }
- 
+
     esi_ai_prefs.end();
     return data;
 }

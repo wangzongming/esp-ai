@@ -202,10 +202,10 @@ module.exports = (device_id, opts) => {
             text,
             ws: ws_client,
             instance: G_Instance,
-            sendToClient: () => ws_client && ws_client.send(JSON.stringify({
+            sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
                 type: "instruct",
                 command_id: "on_llm",
-                data: text
+                data: _text || text
             }))
         });
 
