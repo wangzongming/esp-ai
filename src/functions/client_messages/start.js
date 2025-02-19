@@ -32,7 +32,7 @@ const isOutTimeErr = require("../../utils/isOutTimeErr");
 async function fn({ device_id }) {
     try {
         const IAT_FN = require(`../iat`);
-        const TTS_FN = require(`../tts`);
+        // const TTS_FN = require(`../tts`);
 
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
@@ -70,8 +70,7 @@ async function fn({ device_id }) {
                 return;
             };
         }
-
-
+  
         await G_Instance.stop(device_id, "打断会话时");
         await G_Instance.newSession(device_id);
 
@@ -80,6 +79,9 @@ async function fn({ device_id }) {
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 started: true,
+                backlog_instruction: [],
+                // 异步停止下一次会话
+                stop_next_session: false
             })
  
             return IAT_FN(device_id, connect_cb);

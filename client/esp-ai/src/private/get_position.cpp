@@ -44,9 +44,12 @@ void ESP_AI::get_position()
     String nation = "";
     String province = "";
     String city = "";
+    String latitude = "";
+    String longitude = "";
 
     DEBUG_PRINTLN(debug, "[Info] 定位中..."); 
-    String api2 = "https://g3.letv.com/r?format=1";
+
+    String api2 = "https://api.espai.fun/sdk/position"; 
     esp_ai_get_position_http.begin(api2);
     esp_ai_get_position_http.addHeader("Content-Type", "application/json");
     esp_ai_get_position_http.setTimeout(10000);   
@@ -57,25 +60,15 @@ void ESP_AI::get_position()
         String payload = esp_ai_get_position_http.getString();
         Serial.printf("[HTTPS] GET code: %d\n", httpCode2); 
         JSONVar parse_res = JSON.parse(payload);
-        if (parse_res.hasOwnProperty("desc"))
-        {
+        if (parse_res.hasOwnProperty("success"))
+        { 
 
-            String address = (const char *)parse_res["desc"];
-
-            int index = 0;
-            String parts[4];
-            int pos = address.indexOf("-");
-            while (pos != -1 && index < 4)
-            {
-                parts[index++] = address.substring(0, pos);
-                address = address.substring(pos + 1);
-                pos = address.indexOf("-");
-            }
-
-            ip = (const char *)parse_res["host"];
-            nation = parts[0];
-            province = parts[1];
-            city = parts[2];  
+            ip = (const char *)parse_res["data"]["ip"];
+            nation = (const char *)parse_res["data"]["country_name"];
+            province = (const char *)parse_res["data"]["region"];
+            city = (const char *)parse_res["data"]["city"];
+            latitude = (const char *)parse_res["data"]["latitude"];
+            longitude = (const char *)parse_res["data"]["longitude"]; 
             DEBUG_PRINT(debug, "[Info] 定位完毕：");
             DEBUG_PRINT(debug, nation);
             DEBUG_PRINT(debug, "/");
@@ -87,7 +80,7 @@ void ESP_AI::get_position()
             delay(100);
             if (onPositionCb != nullptr)
             {
-                onPositionCb(ip, nation, province, city);
+                onPositionCb(ip, nation, province, city, latitude, longitude);
             }
             // 删除任务
             vTaskDelete(NULL);
@@ -105,6 +98,6 @@ void ESP_AI::get_position()
         DEBUG_PRINTLN(debug, "[Info] 定位请求失败");
         esp_ai_get_position_http.end();
     }
- 
+     
     vTaskDelete(NULL);
 }

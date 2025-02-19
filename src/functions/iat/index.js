@@ -1,6 +1,4 @@
 const log = require("../../utils/log");
-// const play_audio = require("../../audio_temp/play_audio");
-
 /**
  * Copyright (c) 2024 小明IO
  *
@@ -28,7 +26,6 @@ const log = require("../../utils/log");
 async function cb({ device_id, text }) {
     try {
         const { onIATcb, onSleep } = G_config;
-        const TTS_FN = require(`../tts`);
         const LLM_FN = require(`../llm`);
         if (!G_devices.get(device_id)) return;
         const { ws: ws_client, client_params } = G_devices.get(device_id);
@@ -50,11 +47,8 @@ async function cb({ device_id, text }) {
 
 
         if (text.length) {
-            const task_info = await G_Instance.matchIntention(device_id, text);
-            if (!task_info) {
-                // 其他情况交给 LLM
-                LLM_FN(device_id, { text })
-            }
+            G_Instance.matchIntention(device_id, text);
+            LLM_FN(device_id, { text })
         } else {
             onSleep && onSleep({ instance: G_Instance, device_id, client_params });
             G_devices.set(device_id, {
@@ -73,7 +67,7 @@ module.exports = async (device_id, connected_cb) => {
     try {
         const TTS_FN = require(`../tts`);
         const { devLog, plugins = [], onIAT, onSleep } = G_config;
-        const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config, sleep_reply } } = G_devices.get(device_id)
+        const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config } } = G_devices.get(device_id)
 
         devLog && log.info('');
         devLog && log.iat_info('-> 开始请求语音识别');
@@ -100,6 +94,7 @@ module.exports = async (device_id, connected_cb) => {
             if (!G_devices.get(device_id)) return;
             if (connected) {
                 if (!G_devices.get(device_id)) return;
+                devLog && log.iat_info("-> ASR 服务连接成功: " + session_id)
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
                     iat_server_connected: true,
@@ -111,6 +106,9 @@ module.exports = async (device_id, connected_cb) => {
                     type: "session_status",
                     status: "iat_start",
                 }));
+
+                const LLM_FN = require(`../llm`);  
+                LLM_FN(device_id, { is_pre_connect: true }) 
             } else {
                 if (!G_devices.get(device_id)) return;
                 G_devices.set(device_id, {
@@ -156,7 +154,6 @@ module.exports = async (device_id, connected_cb) => {
             if (!G_devices.get(device_id)) return;
             log.error("IAT error: " + err)
             error_catch("IAT", code || "102", err);
-            // ws_client.send(JSON.stringify(c));
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 iat_ws: null,
@@ -173,9 +170,7 @@ module.exports = async (device_id, connected_cb) => {
          * 当 IAT 服务连接成功了，但是长时间不响应时
         */
         const serverTimeOutCb = () => {
-            const { iat_ws, ws: ws_client, client_params, iat_server_connected, iat_end_frame_timer, session_id: now_session_id } = G_devices.get(device_id)
-
-            clearTimeout(iat_end_frame_timer);
+            const { iat_ws, client_params, iat_server_connected } = G_devices.get(device_id)
             if (!iat_server_connected) return;
             iat_ws && iat_ws.close();
             connectServerCb(false);

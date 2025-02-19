@@ -194,8 +194,7 @@ void ESP_AI::capture_samples()
         i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100); 
 
         _is_silence = is_silence(mic_sample_buffer, bytes_read);
-
-          
+ 
         if (esp_ai_start_get_audio)
         {
             int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
@@ -220,7 +219,7 @@ void ESP_AI::capture_samples()
                     }
                     else
                     {
-                        if (last_not_silence_time > 0 && (millis() - last_not_silence_time > 500))
+                        if (last_not_silence_time > 0 && (millis() - last_not_silence_time > 200))
                         {
                             // 切换到非静音状态
                             last_silence_time = 0;

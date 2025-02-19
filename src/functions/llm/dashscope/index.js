@@ -23,8 +23,7 @@
  * @websit https://espai.fun
  */
 
-const https = require('https');
-const log = require("../../../utils/log");
+const https = require('https'); 
 
 /**
  * 大语言模型插件
@@ -45,12 +44,29 @@ const log = require("../../../utils/log");
  * @param {{role, content}[]}  llm_historys llm 历史对话数据
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.llm_info("llm 专属信息")
  *  
-*/  
-function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
+*/
+function LLM_FN({ devLog, is_pre_connect, log, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
     try {
         const { apiKey, llm, ...other_config } = llm_config;
         if (!apiKey) return log.error(`请配给 LLM 配置 apiKey 参数。`)
-        if (!llm) return log.error(`请配给 LLM 配置 llm 参数。`) 
+        if (!llm) return log.error(`请配给 LLM 配置 llm 参数。`)
+
+        const url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey,
+            'X-DashScope-SSE': 'enable'
+        };
+
+        // 预先连接函数
+        async function preConnect() { 
+            // 阿里没有太大作用...
+        }
+        if (is_pre_connect) {
+            preConnect()
+            return;
+        }
+
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
@@ -59,15 +75,7 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
             all_text: "",
             count_text: "",
             index: 0,
-        }
-
-        const url = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + apiKey,
-            'X-DashScope-SSE': 'enable'
-        };
-        // devLog && log.llm_info("对话记录：\n", JSON.stringify(llm_historys, null, 4))
+        } 
 
         connectServerBeforeCb();
         const r_params = {
@@ -87,30 +95,30 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
                 "result_format": "message"
             }
         };
-        const body = JSON.stringify(llm_params_set ? llm_params_set({...r_params}) : r_params); 
+        const body = JSON.stringify(llm_params_set ? llm_params_set({ ...r_params }) : r_params);
         const options = {
             method: 'POST',
             headers: headers
-        };
+        }; 
         const req = https.request(url, options, (res) => {
-            let httpResponse = ''; 
-            if(res.statusCode !== 200){
+            let httpResponse = '';
+            if (res.statusCode !== 200) {
                 connectServerCb(false);
                 llmServerErrorCb("积灵 LLM 报错: " + res.statusCode + ", statusMessage:" + res.statusMessage)
-            }else{
+            } else {
                 connectServerCb(true);
             }
-            
+
             res.on('data', (chunk) => {
                 try {
-                    const chunk_obj = JSON.parse(chunk.toString()); 
+                    const chunk_obj = JSON.parse(chunk.toString());
                     if (chunk_obj.code) {
                         llmServerErrorCb("积灵 LLM 报错: " + chunk.toString())
                     }
                 } catch (err) { }
-                if(shouldClose) return;
+                if (shouldClose) return;
                 httpResponse += chunk.toString();
-                const text_pattern = /"content":"(.*?)","role"/g; 
+                const text_pattern = /"content":"(.*?)","role"/g;
                 let match;
                 while (match = text_pattern.exec(chunk)) {
                     const chunk_text = match[1];
@@ -124,7 +132,7 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
             });
 
             res.on('end', () => {
-                if(shouldClose) return;
+                if (shouldClose) return;
                 cb({
                     text,
                     is_over: true,
@@ -133,15 +141,12 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
                 })
 
                 connectServerCb(false);
-                // devLog && log.llm_info('\n===\n', httpResponse, '\n===\n')
-                devLog && log.llm_info('===')
-                devLog && log.llm_info(texts["count_text"])
-                devLog && log.llm_info('===')
+                devLog && log.llm_info("LLM 结果： " + texts["count_text"])
                 devLog && log.llm_info('LLM connect close!\n')
             });
         });
 
-        req.on('error', (err) => { 
+        req.on('error', (err) => {
             connectServerCb(false);
             llmServerErrorCb("llm connect err: " + err)
         });
@@ -153,7 +158,7 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
                 req.abort()
             }
         })
-
+ 
         // 写入请求体
         req.write(body);
         req.end();

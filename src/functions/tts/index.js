@@ -60,16 +60,24 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
         audio.length && audio_sender.sendAudio(audio);
         // 告诉客户端本 TTS chunk 播放完毕
         if (is_over) {
-            devLog && log.tts_info('-> TTS 片段转换完毕，数量: ', audio.length);
+            devLog && log.tts_info('-> TTS 片段转换完毕');
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
-
             // 这个和会话ID不同，这都是追加的方式。
+            const { stop_next_session } = G_devices.get(device_id); 
             if (text_is_over) {
-                audio_sender.sendAudio(Buffer.from(need_record ? G_session_ids["tts_all_end_align"] : G_session_ids["tts_all_end"], 'utf-8'));
+                if (!stop_next_session) { 
+                    audio_sender.sendAudio(Buffer.from(need_record ? G_session_ids["tts_all_end_align"] : G_session_ids["tts_all_end"], 'utf-8'));
+                } else { 
+                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                }
             } else {
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
-            }
+                if (!stop_next_session) { 
+                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
+                }else{  
+                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8')); 
+                }
+            } 
         }
 
     } catch (err) {
@@ -100,13 +108,15 @@ function TTSFN(device_id, opts) {
                 ws: ws_client, error_catch, tts_list,
                 user_config: { iat_server, llm_server, tts_server, tts_config }
             } = G_devices.get(device_id);
-            const { text, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
+            const { text, is_pre_connect, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
             const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
 
             const TTS_FN = plugin || require(`./${tts_server}`);
 
-            if (!text || !(`${text}`.replace(/\s/g, ''))) {
-                return true;
+            if(!is_pre_connect){ 
+                if (!text || !(`${text}`.replace(/\s/g, ''))) {
+                    return true;
+                }
             }
             if (is_create_cache) {
                 devLog && log.tts_info('-> 开始缓存TTS: ', text);
@@ -127,21 +137,6 @@ function TTSFN(device_id, opts) {
                     data: _text || text
                 }))
             });
-
-            // test...
-            // const tts_cache_key = `${device_id}_${text}`;
-            // const cache_TTS = G_get_cahce_TTS(tts_cache_key);
-            // if (cache_TTS && !is_cache) {
-            //     console.log('使用缓存 TTS ')
-            //     return ()=> new Promise((resolve)=>{
-            //         cb({
-            //             audio: cache_TTS,
-            //             is_over: true,
-            //             tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb
-            //         })
-            //         resolve(true);
-            //     });
-            // }
 
             /**
              * 记录 tts 服务对象
@@ -168,6 +163,7 @@ function TTSFN(device_id, opts) {
             const connectServerCb = async (connected) => {
                 if (connected) {
                     if (!G_devices.get(device_id)) return;
+                    devLog && log.tts_info("-> TTS 服务连接成功！")
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
                         tts_server_connected: true,
@@ -177,14 +173,14 @@ function TTSFN(device_id, opts) {
                     !is_create_cache && ws_client && ws_client.send(JSON.stringify({
                         type: "session_status",
                         status: "tts_chunk_start",
-                    })); 
+                    }));
                     // 启动音频发送任务 
-                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
+                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {  
                         resolve(true);
                     });
                 } else {
                     if (!G_devices.get(device_id)) {
-                        return  resolve(true);
+                        return resolve(true);
                     };
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
@@ -210,6 +206,7 @@ function TTSFN(device_id, opts) {
             TTS_FN({
                 text,
                 device_id,
+                is_pre_connect,
                 devLog,
                 tts_config,
                 tts_params_set,

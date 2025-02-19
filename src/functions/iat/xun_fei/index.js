@@ -25,7 +25,7 @@
  */
 const WebSocket = require('ws')
 const getServerURL = require("../../getServerURL");
-const { PassThrough, Readable } = require('stream');
+const { Readable } = require('stream');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const fs = require('fs');
@@ -66,41 +66,27 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
 
-        let dataTransOver = false;
+        // 全部音频 
+        const audioBuffers = [];
+        let sendTimer = null;
 
         // console.log('开始连接 IAT 服务...')
         const iatResult = [];
         connectServerBeforeCb();
         const iat_ws = new WebSocket(getServerURL("IAT", { iat_server, llm_server, tts_server, appid, apiSecret, apiKey }))
-        let endTimer = null;
-        let endCheckCount = 0;
+
         logWSServer({
             close: () => {
                 shouldClose = true;
-                log.t_red_info('框架调用 IAT 关闭:' + session_id);
+                devLog && log.iat_info('框架调用 IAT 关闭:' + session_id);
                 iat_ws.close()
             },
             end: () => {
-                log.iat_info('IAT 服务结束:' + session_id);
+                devLog && log.iat_info('IAT 服务结束:' + session_id);
                 if (iat_server_connected && send_pcm) {
-                    if (dataTransOver) {
-                        iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
-                        send_pcm("");
-                    } else {
-                        const checkFn = () => {
-                            if(endCheckCount > 10){
-                                return;
-                            }
-                            if (dataTransOver) {
-                                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
-                                send_pcm("");
-                            } else {
-                                endTimer = setTimeout(checkFn, 300);
-                                endCheckCount ++;
-                            }
-                        };
-                        endTimer = setTimeout(checkFn, 300);
-                    }
+                    iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
+                    clearInterval(sendTimer);
+                    sender();
                 }
             }
         });
@@ -114,26 +100,63 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let iat_server_connected = false;
         let iat_status = XF_IAT_FRAME.STATUS_FIRST_FRAME;
 
+        const sender = () => {
+            if (audioBuffers.length) {  
+                const sends = audioBuffers.splice(0, audioBuffers.length);
+                const stream = Readable.from(Buffer.concat(sends));
+                // test...
+                // writeStreamMP3.write(Buffer.concat(sends));  
+
+                clearTimeout(overTimer);
+                ffmpeg(stream)
+                    .setFfmpegPath(ffmpegPath)
+                    .inputFormat('mp3')
+                    .audioCodec('pcm_s16le')
+                    .audioFrequency(16000)
+                    .audioFilters('volume=10')
+                    .outputOptions(['-ac 1'])
+                    .outputFormat('s16le')
+                    .on('error', (error) => {
+                        console.error(`MP3 转换出错 ${error}`);
+                    })
+                    .pipe()
+                    .on('data', (chunk) => { 
+                        const frame = build_frame(chunk);
+                        iat_ws.send(JSON.stringify(frame));
+                    })
+                // .on("end", () => {
+                //     clearTimeout(overTimer);
+                //     overTimer = setTimeout(() => {
+                //         dataTransOver = true;
+                //     }, 500)
+                // });
+
+            }
+        }
+
         // 连接建立完毕，读取数据进行识别
         iat_ws.on('open', (event) => {
             if (shouldClose) return;
-            devLog && log.iat_info("-> 讯飞 IAT 服务连接成功: " + session_id)
             iat_server_connected = true;
             connectServerCb(true);
+
+            clearInterval(sendTimer);
+            sendTimer = setInterval(sender, 500)
         })
 
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
             if (shouldClose) return;
             if (iat_server_connected && send_pcm) {
-                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
-                send_pcm("");
+                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME; 
+                clearInterval(sendTimer);
+                sender();
             }
         })
 
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
-        iat_ws.on('message', (data, err) => {
+        iat_ws.on('message', (data, err) => { 
             if (shouldClose) return;
             if (err) {
                 log.iat_info(`err:${err}`)
@@ -145,7 +168,6 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 log.iat_info(`error code ${res.code}, reason ${res.message}`)
                 return
             }
-
             let str = ""
             iatResult[res.data.result.sn] = res.data.result;
             if (res.data.status === 2) {
@@ -213,6 +235,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 audio: chunk ? chunk.toString('base64') : "",
                 "format": "audio/L16;rate=16000",
                 "encoding": "raw",
+                // "encoding": "lame",
             };
 
             let frame = {};
@@ -221,7 +244,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     frame = {
                         common: { app_id: appid },
                         business: {
-                            vad_eos: 1500,
+                            vad_eos: 1000,
                             language: "zh_cn",
                             domain: "iat",
                             accent: "mandarin",
@@ -255,34 +278,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 iat_ws.send(JSON.stringify(frame));
                 return;
             }
-
-            const stream = Readable.from(data);
-            // test...
-            // writeStreamMP3.write(data);
-            dataTransOver = false;
-            clearTimeout(overTimer);
-
-            ffmpeg(stream)
-                .setFfmpegPath(ffmpegPath)
-                .inputFormat('mp3')
-                .audioCodec('pcm_s16le')
-                .audioFrequency(16000)
-                .outputOptions(['-ac 1'])
-                .outputFormat('s16le')
-                .on('error', (error) => {
-                    console.error(`MP3 转换出错 ${error}`);
-                })
-                .pipe()
-                .on('data', (chunk) => {
-                    const frame = build_frame(chunk);
-                    iat_ws.send(JSON.stringify(frame));
-                })
-                .on("end", () => {
-                    overTimer = setTimeout(() => {
-                        dataTransOver = true;
-                    }, 500)
-                });
-
+            audioBuffers.push(data);
         }
 
         logSendAudio(send_pcm)

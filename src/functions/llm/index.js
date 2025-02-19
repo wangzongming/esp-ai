@@ -79,13 +79,20 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                     return tts_res;
                 })
                 texts.all_text += org_text;
-            } else {
+            } else {  
                 // 特殊结束任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                    devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`);
-                    ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+                    const { stop_next_session } = G_devices.get(device_id);
+                    if (!stop_next_session) {
+                        devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`);
+                        ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+                    } else {
+                        ws_client.send(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                    }
                     return true;
                 })
+
+
             }
 
             // 所有 LLM 用下面的 key 为准
@@ -94,7 +101,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                 { "role": "assistant", "content": texts.all_text }
             );
 
-            if (llm_historys.length > (llm_qa_number * 2)) { 
+            if (llm_historys.length > (llm_qa_number * 2)) {
                 llm_historys.shift();
                 llm_historys.shift();
             }
@@ -158,7 +165,7 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
         // 这里是否考虑提供配置让用户决策
-        const min_len = (index === 1 ? 10 : Math.min(index * 30, 300));
+        const min_len = (index === 1 ? 10 : Math.min(index * 30, 100));
         if ((res.length < min_len) && !isLast) {
             return {}
         }
@@ -186,29 +193,14 @@ module.exports = (device_id, opts) => {
         const {
             llm_historys = [],
             ws: ws_client, session_id, error_catch,
-            user_config: { iat_server, llm_server, tts_server, llm_config, llm_init_messages = [] }
+            user_config: { iat_server, llm_server, tts_server, llm_config, llm_init_messages = [], intention = [] }
         } = G_devices.get(device_id);
 
-        const { text } = opts;
+        const { text, is_pre_connect } = opts;
         const plugin = plugins.find(item => item.name === llm_server && item.type === "LLM")?.main;
         let LLM_FN = null;
 
-        devLog && log.info("");
-        devLog && log.llm_info('-> 开始请求 LLM 输入: ', text);
-
         LLM_FN = plugin || require(`./${llm_server}`);
-        onLLM && onLLM({
-            device_id,
-            text,
-            ws: ws_client,
-            instance: G_Instance,
-            sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
-                type: "instruct",
-                command_id: "on_llm",
-                data: _text || text
-            }))
-        });
-
         /**
          * llm 服务发生错误时调用
         */
@@ -227,6 +219,29 @@ module.exports = (device_id, opts) => {
             })
 
         }
+
+        // 预连接处理
+        if (is_pre_connect) {
+            return LLM_FN({ device_id, devLog, log, llmServerErrorCb, llm_params_set, llm_config, iat_server, llm_server, tts_server, is_pre_connect })
+        }
+
+
+        devLog && log.info("");
+        devLog && log.llm_info('-> 开始请求 LLM 输入: ', text);
+
+        onLLM && onLLM({
+            device_id,
+            text,
+            ws: ws_client,
+            instance: G_Instance,
+            sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
+                type: "instruct",
+                command_id: "on_llm",
+                data: _text || text
+            }))
+        });
+
+
         /**
          * 记录 llm 服务对象
          */
@@ -236,7 +251,6 @@ module.exports = (device_id, opts) => {
                 llm_ws: wsServer,
             })
         }
-
 
         /**
          * 开始连接 llm 服务的回调
@@ -256,6 +270,7 @@ module.exports = (device_id, opts) => {
         const connectServerCb = (connected) => {
             if (connected) {
                 if (!G_devices.get(device_id)) return;
+                devLog && log.llm_info("-> LLM 服务连接成功！")
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
                     llm_server_connected: true,
@@ -271,7 +286,9 @@ module.exports = (device_id, opts) => {
             }
         }
 
-        if (devLog) {
+
+
+        if (devLog === 2) {
             llm_historys.length && log.llm_info(`----------------------对话记录---------------------------`)
             for (let i = 0; i < llm_historys.length; i++) {
                 const item = llm_historys[i];
@@ -279,14 +296,20 @@ module.exports = (device_id, opts) => {
             }
             llm_historys.length && log.llm_info(`--------------------------------------------------------`)
         }
-
+ 
         return LLM_FN({
             device_id,
             devLog,
             log,
             text,
             llm_historys,
-            llm_init_messages,
+            llm_init_messages: [
+                {
+                    role: "system", 
+                    content: `User instructions have these: ${intention.filter(item => Array.isArray(item.key)).map(item => item.key.join(", ")).join(", ")}, you can help the user execute the instructions.`
+                },
+                ...llm_init_messages,
+            ],
             llm_params_set,
             llm_config,
             iat_server, llm_server, tts_server,

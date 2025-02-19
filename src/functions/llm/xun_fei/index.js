@@ -23,8 +23,7 @@
  * @websit https://espai.fun
  */
 const WebSocket = require('ws')
-const getServerURL = require("../../getServerURL");
-const log = require("../../../utils/log");
+const getServerURL = require("../../getServerURL"); 
 
 
 /**
@@ -47,12 +46,20 @@ const log = require("../../../utils/log");
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.llm_info("llm 专属信息")
  *  
 */
-function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_server, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
+ 
+function LLM_FN({ device_id, is_pre_connect, devLog, log, llm_config, iat_server, llm_server, tts_server, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
     try {
         const { llm, appid, apiSecret, apiKey, ...other_config } = llm_config;
         if (!apiKey) return log.error(`请配给 LLM 配置 apiKey 参数。`)
         if (!apiSecret) return log.error(`请配给 LLM 配置 apiSecret 参数。`)
         if (!appid) return log.error(`请配给 LLM 配置 appid 参数。`)
+
+        // 预先连接函数
+        async function preConnect() { }
+        if (is_pre_connect) {
+            preConnect()
+            return;
+        }
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
@@ -62,16 +69,17 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
             all_text: "",
             count_text: "",
         }
-        connectServerBeforeCb();
-        const llm_ws = new WebSocket(getServerURL("LLM", { appid, apiSecret, apiKey, llm, iat_server, llm_server, tts_server, }));
+        connectServerBeforeCb(); 
+        const llm_ws =  new WebSocket(getServerURL("LLM", { appid, apiSecret, apiKey, llm, iat_server, llm_server, tts_server, }));
+
         logWSServer({
-            close: () => {
+            close: () => { 
                 connectServerCb(false);
                 shouldClose = true;
                 llm_ws.close(1000, 'Normal closure');
             }
         })
-        llm_ws.on('open', () => {
+        llm_ws.on('open', () => { 
             connectServerCb(true);
             devLog && log.llm_info("-> llm 服务连接成功！")
             texts["all_text"] = "";
@@ -103,26 +111,23 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
                 is_over: jsonData.header.code === 0 && jsonData.header.status === 2,
                 texts,
                 shouldClose,
-                chunk_text: chunk_text 
+                chunk_text: chunk_text
             })
 
         })
 
         llm_ws.on('close', () => {
-            if (shouldClose) return;
-            // devLog && log.llm_info('\n===\n', texts["all_text"], '\n===\n')
+            if (shouldClose) return; 
             devLog && log.llm_info('LLM connect close!\n')
             connectServerCb(false);
         })
 
-        llm_ws.on('error', (err) => {
+        llm_ws.on('error', (err) => { 
             llmServerErrorCb("llm websocket connect err: " + err)
             connectServerCb(false);
         })
 
-        function send() {
-            // devLog && log.llm_info("对话记录：\n")
-            // devLog && console.log(llm_historys);
+        function send() { 
             const frame = {
                 "header": {
                     "app_id": appid,
@@ -156,10 +161,10 @@ function LLM_FN({ device_id, devLog, llm_config, iat_server, llm_server, tts_ser
                     }
                 }
             }
-            llm_ws.send(JSON.stringify(llm_params_set ? llm_params_set({...frame}) : frame))
+            llm_ws.send(JSON.stringify(llm_params_set ? llm_params_set({ ...frame }) : frame))
         }
     } catch (err) {
-        console.log("讯飞 LLM 插件错误：",err);
+        console.log("讯飞 LLM 插件错误：", err);
         log.error("讯飞 LLM 插件错误：", err)
         connectServerCb(false);
     }

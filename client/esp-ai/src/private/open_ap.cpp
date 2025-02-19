@@ -23,27 +23,35 @@
  * @websit https://espai.fun
  */
 #include "open_ap.h"
- 
+
 void ESP_AI::open_ap()
 {
     WiFi.mode(WIFI_AP);
     String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
-    WiFi.softAP(ap_name);
-    IPAddress ip = WiFi.softAPIP();
-    String ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-    String httpUrl = "http://" + ipStr;
+    WiFi.softAP(ap_name);  
+    IPAddress ip = WiFi.softAPIP(); 
+    String httpUrl = String("http://") + ip.toString();
     DEBUG_PRINTLN(debug, "[Info] WIFI名称：" + ap_name);
     DEBUG_PRINTLN(debug, "[Info] 配网地址：" + httpUrl);
-    
+
+    if (esp_ai_dns_server.start(53, "*", ip))
+    {
+        Serial.println("DNS 服务器启动成功");
+    }
+    else
+    {
+        Serial.println("DNS 服务器启动失败");
+    }
+
     esp_ai_dec.write(qing_pei_wang, qing_pei_wang_len);
- 
+
     xTaskCreate(ESP_AI::scan_wifi_wrapper, "scan_wifi", 1024 * 8, this, 1, NULL);
 
     // 启动配网服务
     web_server_init();
     if (onAPInfoCb != nullptr)
     {
-        onAPInfoCb(httpUrl, ipStr, ap_name);
+        onAPInfoCb(httpUrl, ip.toString(), ap_name);
     }
     // 内置状态处理
     status_change("0_ap");

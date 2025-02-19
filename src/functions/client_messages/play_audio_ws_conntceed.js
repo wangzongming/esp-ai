@@ -54,7 +54,7 @@ async function fn({ device_id }) {
                 message: `获取服务配置失败：${user_config.message}`
             }));
             setTimeout(() => {
-                ws.close(); 
+                ws.close();
             }, 5000)
             return;
         }
@@ -103,7 +103,7 @@ async function fn({ device_id }) {
                 G_Instance.pinMode(device_id, pin, "OUTPUT");
             }
         })
- 
+
         // await TTS_FN(device_id, {
         //     text: "哦，听起来不太好受。记得多穿衣服保暖。", 
         //     text_is_over: true,
@@ -112,37 +112,41 @@ async function fn({ device_id }) {
         // return;
 
         // 缓存提示音 
-        du_cache(ws);
+        if (user_config.iatDu !== false) {
+            du_cache(ws);
+        }
+
         // 缓存问候语 
         const f_reply = _user_config.f_reply;
         if (f_reply !== false) {
             await TTS_FN(device_id, {
-                text: f_reply, 
+                text: f_reply,
                 text_is_over: true,
                 session_id: G_session_ids.cache_hello,
                 is_create_cache: true,
             })
         }
-        const sleep_reply = _user_config.sleep_reply;
-        if (sleep_reply !== false) {
-            await TTS_FN(device_id, {
-                text: sleep_reply, 
-                text_is_over: true,
-                session_id: G_session_ids.cache_sleep_reply,
-                is_create_cache: true,
-            })
-        }
+ 
+        // const sleep_reply = _user_config.sleep_reply;
+        // if (sleep_reply !== false) {
+        //     await TTS_FN(device_id, {
+        //         text: sleep_reply, 
+        //         text_is_over: true,
+        //         session_id: G_session_ids.cache_sleep_reply,
+        //         is_create_cache: true,
+        //     })
+        // }
 
         // 播放ws连接成功语音
         if (connected_reply) {
             await TTS_FN(device_id, {
-                text: connected_reply, 
+                text: connected_reply,
                 text_is_over: true,
                 tts_task_id: "connected_reply"
             })
         }
 
- 
+
     } catch (err) {
         console.log(err);
         log.error(`[${device_id}] play_audio_ws_conntceed 消息错误： ${err}`)

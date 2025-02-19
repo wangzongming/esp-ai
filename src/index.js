@@ -78,7 +78,9 @@ function main(config = {}) {
          *       iat_end_frame_timer: null,       // 最后一帧发送倒计时
          *       send_pcm: (pcm)=> void           // 音频发送函数
          *       start_iat: ()=> void             // 音频发送函数
-         *       add_audio_out_over_queue: ()=> Promise<void>  // 音频流播放完毕的任务队列
+         *       add_audio_out_over_queue: ()=> Promise<void>  // 音频流播放完毕的任务队列 
+         *       backlog_instruction: [],// Backlog instruction 
+         *       stop_next_session: false // 异步停止下一次会话
          * }]
         */
         global.G_devices = new Map();
@@ -109,8 +111,8 @@ function main(config = {}) {
         const _config = IS_DEV ? require("./config_dev") : require("./config")    
 
         // 满足最高 44khz 不卡顿，超过44khz将无法满足~
-        // 如果只是满足 16k 可以 *4
-        global.G_max_audio_chunk_size = 1024 * 8;     
+        // 如果只是满足 16k 可以 *4  
+        global.G_max_audio_chunk_size = 1024 * 10;     
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };

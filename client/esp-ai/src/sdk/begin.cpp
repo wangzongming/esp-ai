@@ -30,13 +30,13 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // xiao 需要延迟一定的时间
     delay(500);
 
-    #if defined(ARDUINO_XIAO_ESP32S3)
-        Serial.println("检测到 XIAO ESP32S3 开发板");
-    #elif defined(ARDUINO_ESP32S3_DEV)
-        Serial.println("检测到 ESP32-S3 开发板");
-    #else
-        Serial.println(F("您的开发板可能不受支持！"));  
-    #endif
+#if defined(ARDUINO_XIAO_ESP32S3)
+    Serial.println("检测到 XIAO ESP32S3 开发板");
+#elif defined(ARDUINO_ESP32S3_DEV)
+    Serial.println("检测到 ESP32-S3 开发板");
+#else
+    Serial.println(F("您的开发板可能不受支持！"));
+#endif
 
     esp_ai_asr_sample_buffer_before = new std::vector<uint8_t>();
     esp_ai_asr_sample_buffer_before->reserve(48000 * sizeof(int16_t)); // 预分配
@@ -57,10 +57,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         Serial.println("PSRAM 无效，请确保您使用的是 esp32s3 开发板，并且开启了【设置/PSRAM/OPI PSRAM】");
         Serial.println("注意分区方案需要选择： 16MB Flash(3MB APP/9.9MB FATFS)");
     }
-
-    Serial.print("[Info] 剩余运行内存:");
-    Serial.print(esp_get_free_heap_size() / 1024 / 1024);
-    Serial.println(" mb");
 
     if (config.i2s_config_mic.bck_io_num)
     {
@@ -121,7 +117,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         }
         if (!wake_up_config.vad_course)
         {
-            wake_up_config.vad_course = 1500;
+            wake_up_config.vad_course = 500;
         }
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
@@ -311,15 +307,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         this,
         1,
         NULL);
-
+ 
     xTaskCreate(
-        ESP_AI::send_audio_wrapper,
-        "send_audio",
-        1024 * 2,
+        ESP_AI::on_wakeup_wrapper,
+        "on_wakeup",
+        1024 * 4,
         this,
-        1,
-        NULL);
-
+        1, NULL);
+ 
     xTaskCreate(
         ESP_AI::lights_wrapper,
         "lights",

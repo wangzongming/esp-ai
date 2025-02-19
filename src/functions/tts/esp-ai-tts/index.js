@@ -82,7 +82,7 @@ class AudioSender {
 */
 function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
-        const { url = 'https://espai.natapp4.cc/v1/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
+        const { url = 'https://api.espai.fun/ai_api/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
         if (!url) return log.error(`请配给 TTS 配置 url 参数。`);
         let shouldClose = false;
@@ -109,8 +109,7 @@ function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, lo
                 };
                 logWSServer(ws)
 
-                connectServerCb(true);
-                devLog && log.tts_info("-> ESP-AI TTS 服务连接成功！")
+                connectServerCb(true); 
 
                 const threshold = 1280 * 5;
                 let dataSender = new AudioSender(threshold, (data) => {
@@ -126,7 +125,7 @@ function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, lo
 
                 // tts 服务需要改为流标志...
                 stream.on('data', (chunk) => {
-                    if (chunk) {
+                    if (chunk) { 
                         try {
                             const res = JSON.parse(chunk.toString());
                             if (res?.success === false) {
@@ -146,8 +145,8 @@ function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, lo
                         .outputFormat('mp3')
                         .audioFrequency(sampleRate)
                         .on('error', (error) => {
-                            console.error(`MP3 转换出错 ${error}`);
-                            ttsServerErrorCb(`MP3 转换出错 ${error}`);
+                            console.error(`TTS MP3 转换出错 ${error}`);
+                            ttsServerErrorCb(`TTS MP3 转换出错 ${error}`);
                             connectServerCb(false);
                         })
                         .pipe()

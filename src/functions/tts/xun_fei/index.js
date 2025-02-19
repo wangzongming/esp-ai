@@ -56,8 +56,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
 
         // 连接建立完毕，读取数据进行识别
         ws.on('open', () => {
-            connectServerCb(true);
-            devLog && log.tts_info("-> 讯飞 TTS 服务连接成功！")
+            connectServerCb(true); 
             send()
         })
 

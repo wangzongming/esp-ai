@@ -27,7 +27,7 @@
 /**
  * 记录指令回调函数
  */ 
-void ESP_AI::onPosition(void (*func)(String ip, String nation, String province, String city))
+void ESP_AI::onPosition(void (*func)(String ip, String nation, String province, String city, String latitude, String longitude))
 {
     onPositionCb = func;
 }

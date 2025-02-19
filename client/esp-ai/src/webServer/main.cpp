@@ -51,8 +51,8 @@ void ESP_AI::set_config()
     {
         String key = keys[i];
         JSONVar value = data[key];
-        Serial.print("设置 " + key + " : ");
-        Serial.println((const char *)value);
+        // Serial.print("设置 " + key + " : ");
+        // Serial.println((const char *)value);
     }
 
     if (loc_wifi_name != wifi_name || loc_wifi_pwd != wifi_pwd)
@@ -160,7 +160,6 @@ void ESP_AI::get_config()
     String loc_device_id = get_device_id();
     JSONVar data = get_local_all_data();
 
-    
     JSONVar keys = data.keys();
     for (int i = 0; i < keys.length(); i++)
     {
@@ -168,7 +167,6 @@ void ESP_AI::get_config()
         Serial.print("获取 " + key + " : ");
         Serial.println((const char *)data[key]);
     }
-
 
     JSONVar json_response;
     json_response["success"] = true;
@@ -179,41 +177,6 @@ void ESP_AI::get_config()
     web_server_setCrossOrigin();
     esp_ai_server.send(200, "application/json", send_data);
 }
-
-// void ESP_AI::get_config()
-// {
-//     String loc_device_id = get_device_id();
-//     String loc_wifi_name = get_local_data("wifi_name");
-//     String loc_wifi_pwd = get_local_data("wifi_pwd");
-//     String loc_api_key = get_local_data("api_key");
-//     String loc_ext1 = get_local_data("ext1");
-//     String loc_ext2 = get_local_data("ext2");
-//     String loc_ext3 = get_local_data("ext3");
-//     String loc_ext4 = get_local_data("ext4");
-//     String loc_ext5 = get_local_data("ext5");
-//     String loc_ext6 = get_local_data("ext6");
-//     String loc_ext7 = get_local_data("ext7");
-
-//     JSONVar json_response;
-//     JSONVar json_response_data;
-//     json_response["success"] = true;
-//     json_response_data["device_id"] = loc_device_id;
-//     json_response_data["wifi_name"] = loc_wifi_name;
-//     json_response_data["wifi_pwd"] = loc_wifi_pwd;
-//     json_response_data["api_key"] = loc_api_key;
-//     json_response_data["ext1"] = loc_ext1;
-//     json_response_data["ext2"] = loc_ext2;
-//     json_response_data["ext3"] = loc_ext3;
-//     json_response_data["ext4"] = loc_ext4;
-//     json_response_data["ext5"] = loc_ext5;
-//     json_response_data["ext6"] = loc_ext6;
-//     json_response_data["ext7"] = loc_ext7;
-//     json_response["data"] = json_response_data;
-//     String send_data = JSON.stringify(json_response);
-
-//     web_server_setCrossOrigin();
-//     esp_ai_server.send(200, "application/json", send_data);
-// }
 
 bool is_scan_ing = false;
 bool is_scan_over = false;
@@ -307,6 +270,12 @@ void ESP_AI::web_server_setCrossOrigin()
     esp_ai_server.sendHeader(F("Access-Control-Allow-Methods"), F("PUT,POST,GET,OPTIONS"));
     esp_ai_server.sendHeader(F("Access-Control-Allow-Headers"), F("*"));
 };
+ 
+void handleCaptivePortal()
+{
+    esp_ai_server.sendHeader("Location", String("http://") + WiFi.softAPIP().toString(), true);
+    esp_ai_server.send(302, "text/plain", "");
+}
 
 void ESP_AI::web_server_init()
 {
@@ -327,6 +296,11 @@ void ESP_AI::web_server_init()
 
     esp_ai_server.on("/clear_config", [this]()
                      { this->clear_config(); });
+
+    esp_ai_server.on("/generate_204", handleCaptivePortal);  
+    esp_ai_server.on("/fwlink", handleCaptivePortal);        
+    esp_ai_server.on("/hotspot-detect.html", handleCaptivePortal); 
+    esp_ai_server.onNotFound(handleCaptivePortal);          
 
     esp_ai_server.begin();
 }

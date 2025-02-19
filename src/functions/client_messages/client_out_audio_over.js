@@ -27,15 +27,17 @@ const { tts_info } = require("../../utils/log");
 async function fn({ device_id, tts_task_id, session_id }) { 
     const { devLog } = G_config;
     if (!G_devices.get(device_id)) return;
-    const { ws } = G_devices.get(device_id); 
+    // const { ws } = G_devices.get(device_id); 
     devLog && tts_info("-> 客户端音频流播放完毕：", session_id || "无会话ID", tts_task_id || "无任务ID");
- 
-    if (tts_task_id === "play_music") {
-        ws && ws.send("session_end");
-    } 
+
+    const new_attr = {  client_out_audio_ing: false,  };
+    if(session_id === G_session_ids["tts_all_end"] || session_id === G_session_ids["tts_all_end_align"]){
+        new_attr["session_id"] = "";
+    }
+
     G_devices.set(device_id, {
         ...G_devices.get(device_id),
-        client_out_audio_ing: false,  
+        ...new_attr
     })
 }
 

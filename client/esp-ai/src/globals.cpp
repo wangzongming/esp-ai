@@ -26,7 +26,8 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.47.32";
+
+String ESP_AI_VERSION = "2.56.36";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
@@ -59,17 +60,18 @@ WebSocketsClient esp_ai_webSocket;
 
 I2SStream esp_ai_spk_i2s;
 VolumeStream esp_ai_volume(esp_ai_spk_i2s);
-EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix());
-
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix()); 
+ 
 void esp_ai_asr_callback(uint8_t *mp3_data, size_t len)
-{
-    esp_ai_asr_sample_buffer_before->insert(esp_ai_asr_sample_buffer_before->end(), mp3_data, mp3_data + len);
+{ 
+    esp_ai_webSocket.sendBIN(mp3_data, len); 
 }
 
 liblame::MP3EncoderLAME esp_ai_mp3_encoder(esp_ai_asr_callback);
 liblame::AudioInfo esp_ai_mp3_info;
 
 WebServer esp_ai_server(80);
+DNSServer esp_ai_dns_server;
 
 #if defined(ARDUINO_XIAO_ESP32S3)
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
@@ -224,8 +226,7 @@ JSONVar get_local_all_data()
     return data;
 }
 
-/**
- * 设置某个数据
+/** 
  * set_local_data("wifi_name", "oldwang");
  */
 void set_local_data(String field_name, String new_value)
@@ -248,7 +249,7 @@ void set_local_data(String field_name, String new_value)
 }
 
 /**
- * 静音检测
+ * silence detection
  */
 bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
 {
@@ -267,13 +268,13 @@ bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
         // Serial.print("能量: ");
         // Serial.println(energy);
 
-        // 判断是否有语音活动
-        if (energy > 10000)
-        {
+        // 判断是否有语音活动 
+        if (energy >= 3000)
+        { 
             return false;
         }
         else
-        {
+        { 
             return true;
         }
     }

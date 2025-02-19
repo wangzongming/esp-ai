@@ -35,6 +35,7 @@ const digitalWrite = require("./instrance_fns/digitalWrite")
 const digitalRead = require("./instrance_fns/digitalRead")
 const analogWrite = require("./instrance_fns/analogWrite")
 const analogRead = require("./instrance_fns/analogRead")
+const { reCache } = require("./functions/client_messages")
 
 
 class EspAiInstance {
@@ -74,6 +75,8 @@ class EspAiInstance {
         !device_id && log.error(`调用 updateClientConfig 方法时，请传入 device_id`);
         const oldConfig = G_devices.get(device_id);
         if (oldConfig) {
+            const { ws: ws_client } = G_devices.get(device_id);
+            ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
             G_devices.set(device_id, {
                 ...oldConfig,
                 user_config: {
@@ -100,7 +103,7 @@ class EspAiInstance {
     */
     async restart(device_id) {
         !device_id && log.error(`调用 restart 方法时，请传入 device_id`);
-        if(!G_devices.get(device_id)) return;
+        if (!G_devices.get(device_id)) return;
         const { ws: ws_client } = G_devices.get(device_id);
         ws_client && ws_client.send(JSON.stringify({ type: "restart" }));
     }
@@ -111,7 +114,7 @@ class EspAiInstance {
     */
     async setLocalData(device_id, field, value) {
         !device_id && log.error(`调用 setLocalData 方法时，请传入 device_id`);
-        if(!G_devices.get(device_id)) return;
+        if (!G_devices.get(device_id)) return;
         const { ws: ws_client } = G_devices.get(device_id);
         ws_client && ws_client.send(JSON.stringify({
             type: "set_local_data",

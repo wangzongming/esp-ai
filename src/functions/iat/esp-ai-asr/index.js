@@ -23,7 +23,7 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-const WebSocket = require('ws') 
+const WebSocket = require('ws')
 
 /**
  * 讯飞语音识别  
@@ -56,8 +56,12 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         // 这个标志必须设置
         let iat_server_connected = false;
 
+        // 全部音频 
+        const audioBuffers = [];
+        let sendTimer = null;
+
         connectServerBeforeCb();
-        const iat_ws = new WebSocket(`wss://espai.natapp4.cc/v1/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
+        const iat_ws = new WebSocket(`wss://api.espai.fun/ai_api/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
 
         logWSServer({
             close: () => {
@@ -65,37 +69,48 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 iat_server_connected = false;
                 iat_ws.close()
             },
-            end: ()=>{
-                iat_ws.send("end");  
+            end: () => {
+                devLog && log.iat_info('框架调用 IAT 关闭:' + session_id);
+                clearInterval(sendTimer);
+                audioBuffers.length && iat_ws.send(Buffer.concat(audioBuffers)) 
+                setTimeout(() => iat_ws.send("end"), 200) 
             }
         });
 
         // 连接建立完毕，读取数据进行识别
         iat_ws.on('open', (event) => {
             if (shouldClose) return;
-            devLog && log.iat_info("-> ESP-AI ASR 服务连接成功: " + session_id)
             iat_server_connected = true;
             connectServerCb(true);
+
+            clearInterval(sendTimer);
+            sendTimer = setInterval(() => {
+                if (audioBuffers.length) {
+                    const sends = audioBuffers.splice(0, audioBuffers.length);
+                    iat_ws.send(Buffer.concat(sends))
+                }
+            }, 500)
         })
 
         // 当达到静默时间后会自动执行这个任务
         iatEndQueueCb(() => {
             if (shouldClose) return;
-            iat_ws.send("end"); 
+            iat_ws.send("end");
+            clearInterval(sendTimer);
         })
 
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
-        iat_ws.on('message', (event) => { 
+        iat_ws.on('message', (event) => {
             if (shouldClose) return;
             if (!event) return;
-            const data = JSON.parse(event); 
+            const data = JSON.parse(event);
             switch (data.type) {
                 case 'result':
                     realStr += data.text;
                     devLog && log.iat_info(data.text)
                     break;
-                case 'final': 
+                case 'final':
                     if (shouldClose) return;
                     realStr += data.text;
                     devLog && log.iat_info(`IAT 已完成：${realStr}`)
@@ -103,8 +118,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     connectServerCb(false);
                     shouldClose = true;
                     iat_server_connected = false;
-                    break; 
-                case 'error': 
+                    break;
+                case 'error':
                     if (shouldClose) return;
                     log.error(`ESP-AI-ASR 服务错误： ${data.text}`)
                     iatServerErrorCb(`ESP-AI-ASR 服务错误： ${data.text}`, data.code);
@@ -120,6 +135,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             if (shouldClose) return;
             devLog && log.iat_info("-> ESP-AI-ASR 服务已关闭：", session_id)
             connectServerCb(false);
+            clearInterval(sendTimer);
         })
 
         // 建连错误
@@ -127,13 +143,14 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             if (shouldClose) return;
             iatServerErrorCb(err);
             connectServerCb(false);
+            clearInterval(sendTimer);
         })
 
 
         function send_pcm(data) {
             if (shouldClose) return;
-            if (!iat_server_connected) return;
-            iat_ws.send(data); 
+            if (!iat_server_connected) return; 
+            audioBuffers.push(data);
         }
 
         logSendAudio(send_pcm)

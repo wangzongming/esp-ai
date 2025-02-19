@@ -8,6 +8,7 @@ const set_wifi_config_res = require("./set_wifi_config_res")
 const digitalRead = require("./digitalRead")
 const analogRead = require("./analogRead")
 const iat_end = require("./iat_end")
+const reCache = require("./reCache")
 
 module.exports = {
     audio,
@@ -19,5 +20,6 @@ module.exports = {
     set_wifi_config_res,
     digitalRead,
     analogRead,
-    iat_end
+    iat_end,
+    reCache
 }

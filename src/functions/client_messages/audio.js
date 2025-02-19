@@ -38,42 +38,14 @@ const { iat_info, error } = require("../../utils/log");
 // let countSize = 0;
 
 function fn({ device_id, data }) {
-    try {
-        const { devLog, onIATEndcb } = G_config;
+    try { 
         if (!G_devices.get(device_id)) return;
-        const { started, send_pcm, iat_server_connected, iat_end_frame_timer, iat_end_queue, user_config, ws: ws_client } = G_devices.get(device_id);
+        const { 
+            started, send_pcm, iat_server_connected } = G_devices.get(device_id);
 
         if (started && data && data.length && send_pcm && iat_server_connected) { 
             // 发送数据 
-            send_pcm(data);
-
-            // 准备发送最后一帧
-            clearTimeout(iat_end_frame_timer);
-            G_devices.set(device_id, {
-                ...G_devices.get(device_id), 
-                iat_end_frame_timer: setTimeout(async () => {
-                    if (!G_devices.get(device_id)) return;
-                    const { iat_server_connected } = G_devices.get(device_id);
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        stoped: true,
-                        started: false,
-                    })
-                    if (!iat_server_connected) {
-                        return;
-                    }
-                    devLog && iat_info("IAT 超时未收到音频数据，执行主动结束回调。");
-                    iat_end_queue && await iat_end_queue();
-                    onIATEndcb && await onIATEndcb(
-                        {
-                            device_id,
-                            ws: ws_client,
-                            instance: G_Instance
-                        }
-
-                    );
-                }, (user_config.iat_config.vad_eos || 1500) - 300) // 需要比静默时间少,
-            })
+            send_pcm(data); 
         }
     } catch (err) {
         console.log(err);

@@ -23,6 +23,7 @@ clearData KEYWORD2
 stopSession KEYWORD2
 tts KEYWORD2
 onRepeatedlyClick KEYWORD2
+reCache KEYWORD2
  
  
 #constant (LITERAL1)

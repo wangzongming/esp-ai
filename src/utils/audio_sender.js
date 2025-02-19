@@ -42,10 +42,10 @@ class Audio_sender {
                     data = this.accumulated_data.slice(0, this.send_num);
                 }
                 if(!G_devices.get(this.device_id)) return;
-                const { session_id: now_session_id } = G_devices.get(this.device_id); 
+                const { session_id: now_session_id } = G_devices.get(this.device_id);  
                 if(now_session_id && session_id && now_session_id !== session_id) return;
-                
-                const _session_id = session_id ? `${session_id}` : "0000";
+                const _session_id = session_id ? `${session_id}` : "0000"; 
+
                 const end_str = data.slice(-4).toString();
                 if ([G_session_ids["tts_all_end_align"], G_session_ids["tts_all_end"], G_session_ids["tts_chunk_end"]].includes(end_str)) {
                     // 删除最后四个字节 

@@ -29,7 +29,7 @@ const parseUrlParams = require("../utils/parseUrlParams");
 const isOutTimeErr = require("../utils/isOutTimeErr");
 const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue");
 const {
-    audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn,
+    audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn, reCache,
     client_out_audio_over, cts_time, set_wifi_config_res, digitalRead, analogRead, iat_end
 } = require("../functions/client_messages");
 const error_catch_hoc = require("./device_fns/error_catch")
@@ -88,6 +88,8 @@ function init_server() {
                 // 已输出流量 kb
                 useed_flow: 0,
                 read_pin_cbs: new Map(),
+                // 异步停止下一次会话
+                stop_next_session: false
             });
 
             ws.isAlive = true;
@@ -147,6 +149,10 @@ function init_server() {
                             case "analogRead":
                                 analogRead(comm_args);
                                 break;
+                            case "re_cache":
+                                reCache(comm_args);
+                                break;
+
                         }
                     } else {
                         ws.isAlive = true;
@@ -197,13 +203,13 @@ function init_server() {
                 };
             }
 
-            ws.on('close', (code, reason) => { 
+            ws.on('close', (code, reason) => {
                 devLog && log.info(``);
                 devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
                 devLog && log.info(``);
                 onDeviceDisConnect && onDeviceDisConnect({ device_id, client_params, instance: G_Instance });
- 
-                G_Instance.stop(device_id, "设备断开服务时"); 
+
+                G_Instance.stop(device_id, "设备断开服务时");
                 G_devices.delete(device_id);
             });
             ws.on('error', function (error) {

@@ -41,22 +41,22 @@ function stop(device_id, at) {
             ws,
             tts_buffer_chunk_queue, iat_server_connect_ing, iat_server_connected, client_out_audio_ing,
             tts_list = [], iat_ws, llm_ws,
-            clear_audio_out_over_queue, play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek,
-            iat_end_frame_timer,
+            // iat_end_frame_timer, clear_audio_out_over_queue, 
+            play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek, 
             tts_server_connect_ing, tts_server_connected,
             llm_server_connect_ing, llm_server_connected
-        } = G_devices.get(device_id);
-        // console.log("iat_server_connect_ing", iat_server_connected)
-        // console.log("tts_server_connect_ing", tts_server_connected)
-        // console.log("llm_server_connect_ing", llm_server_connected) 
+        } = G_devices.get(device_id); 
         if (
             iat_server_connect_ing || iat_server_connected ||
             tts_server_connect_ing || tts_server_connected ||
             llm_server_connect_ing || llm_server_connected ||
             client_out_audio_ing || play_audio_ing
         ) {
-            devLog && log.t_info("打断会话");
-            ws && ws.send(JSON.stringify({ type: "session_stop" }));
+            // 播放音频时不应该断开连接
+            if(at !== "__play_music__"){ 
+                devLog && log.t_info("打断会话");
+                ws && ws.send(JSON.stringify({ type: "session_stop" }));
+            }
             try {
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
@@ -72,7 +72,7 @@ function stop(device_id, at) {
                     play_audio_seek: 0,
                 })
 
-                clearTimeout(iat_end_frame_timer);
+                // clearTimeout(iat_end_frame_timer);
                 tts_buffer_chunk_queue.clear();
                 const end_time = Date.now(); // 结束时间
                 const play_time = end_time - start_audio_time; // 播放时间 

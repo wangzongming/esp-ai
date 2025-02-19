@@ -46,13 +46,35 @@ const log = require("../../../utils/log");
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.llm_info("llm 专属信息")
  *  
 */
-// 避免每个用户重复创建对象
-const device_open_obj = {};
-function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
+function LLM_FN({ devLog, device_id, is_pre_connect, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb }) {
     try {
         const { apiKey, epId, ...other_config } = llm_config;
         if (!apiKey) return log.error(`请配给 LLM 配置 apiKey 参数。`)
         if (!epId) return log.error(`请配给 LLM 配置 epId 参数。`)
+
+        // 预先连接函数
+        async function preConnect() {
+            try { 
+                const params = {
+                    ...other_config,
+                    apiKey: apiKey,
+                    baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
+                };
+                const openai = new OpenAI(llm_params_set ? llm_params_set({ ...params }) : params); 
+                await openai.chat.completions.create({ 
+                    messages: [{ "role": "user", "content": "" }],
+                    model: epId,
+                    stream: false,
+                }); 
+            } catch (error) {
+                log.error('预先连接失败:', error);
+            }
+        }
+        if (is_pre_connect) {
+            preConnect()
+            return;
+        }
+
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
@@ -63,20 +85,16 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
             index: 0,
         }
 
-        let openai = device_open_obj[device_id];
-        if (!device_open_obj[device_id]) {
-            connectServerBeforeCb();
-            const params = {
-                ...other_config,
-                apiKey: apiKey,
-                baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
-            };  
-            openai = new OpenAI(llm_params_set ? llm_params_set({...params}) : params);
-        }
-
-
-        async function main() {
-            try {
+        connectServerBeforeCb(); 
+        const params = {
+            ...other_config,
+            apiKey: apiKey,
+            baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
+        };
+        const openai = new OpenAI(llm_params_set ? llm_params_set({ ...params }) : params); 
+ 
+        async function main() { 
+            try { 
                 const stream = await openai.chat.completions.create({
                     messages: [
                         ...llm_init_messages,
@@ -87,7 +105,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     ],
                     model: epId,
                     stream: true,
-                });
+                }); 
                 connectServerCb(true);
                 logWSServer({
                     close: () => {
@@ -99,12 +117,10 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                 for await (const part of stream) {
                     if (shouldClose) break;
                     const chunk_text = part.choices[0]?.delta?.content || '';
-                    // console.log('LLM 输出 ：', chunk_text);
                     devLog === 2 && log.llm_info('LLM 输出 ：', chunk_text);
                     texts["count_text"] += chunk_text;
                     cb({ text, texts, chunk_text: chunk_text })
                 }
-                // process.stdout.write('\n');
 
                 if (shouldClose) return;
                 cb({
@@ -114,10 +130,7 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
                     shouldClose,
                 })
                 connectServerCb(false);
-                // devLog && log.llm_info('\n===\n', httpResponse, '\n===\n')
-                devLog && log.llm_info('===')
-                devLog && log.llm_info(texts["count_text"])
-                devLog && log.llm_info('===')
+                devLog && log.llm_info("LLM 结果： " + texts["count_text"])
                 devLog && log.llm_info('LLM connect close!\n')
             } catch (error) {
                 console.log(error);
@@ -128,7 +141,6 @@ function LLM_FN({ devLog, device_id, llm_config, text, llmServerErrorCb, llm_ini
         }
 
         main();
-
     } catch (err) {
         console.log(err);
         log.error("火山引擎 LLM 插件错误：", err)

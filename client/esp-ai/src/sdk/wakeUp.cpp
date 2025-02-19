@@ -30,26 +30,35 @@ void ESP_AI::wakeUp(String scene)
     {
         esp_ai_session_id = "";
         esp_ai_tts_task_id = "";
-        esp_ai_start_get_audio = false;
-
-        // 结束解码
-        esp_ai_dec.end();
-        delay(100);
+        esp_ai_start_get_audio = false; 
  
-        esp_ai_dec.begin();
+        esp_ai_volume.setVolume(0); 
+        delay(30);
+        esp_ai_dec.flush();
+        delay(30);
+        // 结束解码
+        esp_ai_dec.end(); 
+        delay(30);  
+        esp_ai_volume.setVolume(volume_config.volume);
+        esp_ai_dec.begin();  
+ 
         // 播放问候语
         if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
         {
-            esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
-            delay(300);
+            size_t bytes_written = esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size()); 
+            int num_samples = esp_ai_cache_audio_greetings.size() / 2;
+            int duration_ms = (num_samples * 1000) / 16000;
+            delay(duration_ms);  
         }
-
+ 
         // 播放提示音
         if (!esp_ai_cache_audio_du.empty())
         {
-            esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
-            delay(300);
-        } 
+            esp_ai_dec.write(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size()); 
+            int num_samples = esp_ai_cache_audio_du.size() / 2;
+            int duration_ms = (num_samples * 1000) / 16000;
+            delay(duration_ms);  
+        }
 
         last_silence_time = 0;
         wakeup_time = millis();
@@ -63,11 +72,9 @@ void ESP_AI::wakeUp(String scene)
         {
             esp_ai_asr_sample_buffer_before->clear();
         }
-        else
-        {
-            DEBUG_PRINTLN(debug, ("[ERROR] -> 尝试清理空的esp_ai_asr_sample_buffer_before"));
-        }
  
+        esp_ai_dec.end(); 
+
         // 提示音播放完后发送 start
         DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
         esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");

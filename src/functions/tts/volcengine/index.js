@@ -27,8 +27,6 @@ const zlib = require('zlib');
 const { v4: uuidv4 } = require('uuid');
 
 // 本文件对接文档： https://www.volcengine.com/docs/6561/79823
-
-
 /**
  * TTS 插件封装 - 火山引擎 TTS 
  * @param {String}      device_id           设备ID   
@@ -46,12 +44,12 @@ const { v4: uuidv4 } = require('uuid');
  * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
+ 
 function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
         const { appid, accessToken, appConfig = {}, is_clone, ...other_config } = tts_config;
         if (!accessToken) return log.error(`请配给 TTS 配置 accessToken 参数。`)
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
-
         const host = "openspeech.bytedance.com";
         const api_url = `wss://${host}/api/v1/tts/ws_binary`;
         const default_header = Buffer.from([0x11, 0x10, 0x11, 0x00]);
@@ -64,6 +62,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             encoding: "mp3",
         }
 
+        const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
         // 复刻的音色有些参数不一样
         if (is_clone) {
             audio_config["rate"] = 24000; // 大模型复刻必须 24k
@@ -71,45 +70,17 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
         }
 
 
-        const request_json = {
-            app: {
-                cluster: "volcano_tts",
-                ...appConfig,
-                appid: appid,
-                token: accessToken,
-            },
-            user: {
-                uid: device_id
-            },
-            audio: tts_params_set ? tts_params_set(audio_config) : audio_config,
-            request: {
-                reqid: uuidv4(),
-                text: text,
-                text_type: "plain",
-                operation: "submit"
-            }
-        };
-
-
-        const submit_request_json = JSON.parse(JSON.stringify(request_json));
-        let payload_bytes = Buffer.from(JSON.stringify(submit_request_json));
-        payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
-        const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
-        full_client_request.writeUInt32BE(payload_bytes.length, 4);
-
         connectServerBeforeCb();
-        const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });
+
         logWSServer({
-            close(){ 
+            close() {
                 curTTSWs.OPEN && curTTSWs.close();
             }
         })
-
-        // 连接建立完毕，读取数据进行识别
-        curTTSWs.on('open', () => {
-            connectServerCb(true);
-            devLog && log.tts_info("-> 火山引擎 TTS 服务连接成功！")
-            send()
+ 
+        curTTSWs.on('open', () => { 
+            connectServerCb(true); 
+            send(text) 
         })
 
         curTTSWs.on('message', (res, err) => {
@@ -145,7 +116,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                 error_msg = error_msg.toString('utf-8');
                 console.log(`          Error message code: ${code}`);
                 console.log(`          Error message size: ${msg_size} bytes`);
-                console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
+                // console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
                 console.log(`               Error message: ${error_msg}`);
 
                 log.tts_info(`发送字符串：${text}`);
@@ -164,16 +135,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                 log.tts_info("undefined message type!");
                 done = true;
             }
-
-            cb({
-                // 根据服务控制
-                is_over: done,
-                audio: payload,
-
-                ws: curTTSWs,
-            });
-
-
+            cb({ is_over: done, audio: payload, ws: curTTSWs });
         })
 
         // 连接错误
@@ -182,7 +144,35 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             connectServerCb(false);
         })
         // 传输数据
-        function send() {
+        function send(text, _cb) {
+            if (_cb) {
+                cb = _cb;
+            }
+            const request_json = {
+                app: {
+                    cluster: "volcano_tts",
+                    ...appConfig,
+                    appid: appid,
+                    token: accessToken,
+                },
+                user: {
+                    uid: device_id
+                },
+                audio: tts_params_set ? tts_params_set(audio_config) : audio_config,
+                request: {
+                    reqid: uuidv4(),
+                    text: text,
+                    text_type: "plain",
+                    operation: "submit"
+                }
+            };
+
+            const submit_request_json = JSON.parse(JSON.stringify(request_json));
+            let payload_bytes = Buffer.from(JSON.stringify(submit_request_json));
+            payload_bytes = zlib.gzipSync(payload_bytes);  // if no compression, comment this line
+            const full_client_request = Buffer.concat([default_header, Buffer.alloc(4), payload_bytes]);
+            full_client_request.writeUInt32BE(payload_bytes.length, 4);
+
             curTTSWs && curTTSWs.send(full_client_request);
         }
     } catch (err) {

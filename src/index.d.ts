@@ -118,7 +118,7 @@ export interface Config {
     devLog?: number,
 
     /**
-     * 语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
+     * 全局语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
      * 只能播放本地 mp3 地址： iatDu: path.join(__dirname, `./du.mp3`) // nodejs 写法
      * 为 false 时关闭提示音，为 true 时使用默认提示音。
     */
@@ -193,7 +193,16 @@ export interface Config {
         /**
          * 初始化 LLM 时的提示语
         */
-        llm_init_messages: Record<string, string>[]
+        llm_init_messages: Record<string, string>[];
+
+        
+        /**
+         * 独立为本设备设置语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
+         * 只能播放本地 mp3 地址： iatDu: path.join(__dirname, `./du.mp3`) // nodejs 写法
+         * 为 false 时关闭提示音，为 true 时使用默认提示音。
+         * 目前仅仅能设置为 false 以关闭设备提示音
+        */
+        iatDu?: string | boolean;
 
     }>;
 

@@ -29,7 +29,7 @@
 #include <Arduino.h>
 #include <driver/i2s.h>
 #include <WiFi.h>
-#include <WebSocketsClient.h> 
+#include <WebSocketsClient.h>
 #include "AudioTools.h"
 // 使用 libhelix 对mp3编码
 // 要安装插件： https://github.com/pschatzmann/arduino-libhelix
@@ -55,7 +55,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
-
+#include <DNSServer.h>
+  
 #include "audio/zh/lian_jie_shi_bai.h"
 #include "audio/zh/lian_jie_zhong.h"
 #include "audio/zh/pei_wang_cheng_gong.h"
@@ -73,23 +74,22 @@
 
 // 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
-#if defined(ARDUINO_XIAO_ESP32S3) 
+#if defined(ARDUINO_XIAO_ESP32S3)
 #define esp_ai_serial_tx 43
-#else 
+#else
 #define esp_ai_serial_tx 11
 #endif
 #endif
 
-#ifndef esp_ai_serial_rx 
-#if defined(ARDUINO_XIAO_ESP32S3) 
+#ifndef esp_ai_serial_rx
+#if defined(ARDUINO_XIAO_ESP32S3)
 #define esp_ai_serial_rx 44
-#else 
+#else
 #define esp_ai_serial_rx 12
 #endif
 #endif
 
-
-#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT 
+#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_0
 #define YSQ_i2s_num I2S_NUM_1
 
@@ -214,6 +214,7 @@ extern String ap_connect_err;
 
 extern WebSocketsClient esp_ai_webSocket;
 extern WebServer esp_ai_server;
+extern DNSServer esp_ai_dns_server;
 
 extern I2SStream esp_ai_spk_i2s;
 extern EncodedAudioStream esp_ai_dec; // Decoding stream
@@ -235,6 +236,7 @@ extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
 extern bool esp_ai_is_first_send;
+ 
 // 聆听模式
 extern bool esp_ai_is_listen_model;
 extern bool esp_ai_played_connected;

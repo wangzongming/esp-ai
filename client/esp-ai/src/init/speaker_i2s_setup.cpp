@@ -26,7 +26,7 @@
 
 void ESP_AI::speaker_i2s_setup()
 {
-    AudioLogger::instance().begin(Serial, AudioLogger::Info);
+    AudioLogger::instance().begin(Serial, AudioLogger::Error);
     // AudioLogger::instance().begin(Serial, AudioLogger::Debug);
     DEBUG_PRINT(debug, F("扬声器采样率："));
     DEBUG_PRINTLN(debug, i2s_config_speaker.sample_rate);
@@ -55,4 +55,5 @@ void ESP_AI::speaker_i2s_setup()
     esp_ai_dec.begin();
     esp_ai_volume.begin(config); // we need to provide the bits_per_sample and channels
     esp_ai_volume.setVolume(volume_config.volume);
+  
 }

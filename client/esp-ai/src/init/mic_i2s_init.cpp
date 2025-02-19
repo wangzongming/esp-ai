@@ -73,8 +73,8 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
     // mp3 begin
     esp_ai_mp3_info.channels = 1;
     esp_ai_mp3_info.sample_rate = sampling_rate;
-    esp_ai_mp3_info.bits_per_sample = 16;
-    esp_ai_mp3_info.quality = 0;
+    esp_ai_mp3_info.bits_per_sample = 16; 
+    esp_ai_mp3_info.quality = 5;
 
     esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
 

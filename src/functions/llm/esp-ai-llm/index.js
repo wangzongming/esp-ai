@@ -22,9 +22,7 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-
-// const https = require('https');
-// const log = require("../../../utils/log");
+ 
 const axios = require('axios');
 
 /**
@@ -47,10 +45,28 @@ const axios = require('axios');
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.llm_info("llm 专属信息")
  *  
 */
-function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb, log }) {
+async function LLM_FN({ devLog, is_pre_connect, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb, log }) {
     try {
-        const { url = 'https://espai.natapp4.cc/v1/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
+        const { url = 'https://api.espai.fun/ai_api/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
         if (!api_key) return log.error(`请配给 LLM 配置 api_key 参数。`)
+
+            
+        // 预先连接函数
+        async function preConnect() {
+            try { 
+                await axios.post(url, {
+                    messages: [{ "role": "user", "content": "" }],
+                    "model": model, "api_key": api_key
+                }, { headers: { 'Content-Type': 'application/json' } }) 
+            } catch (error) {
+                log.error('预先连接失败:', error);
+            }
+        }
+        if (is_pre_connect) {
+            preConnect()
+            return;
+        }
+
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
@@ -81,20 +97,31 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
             }
         })
         connectServerBeforeCb();
-
+ 
         axios.post(url, llm_params_set ? llm_params_set({ ...data }) : data, {
             headers: { 'Content-Type': 'application/json' },
             responseType: 'stream'
-        }).then((response) => {
+        }).then((response) => { 
             connectServerCb(true);
             const stream = response.data;
             stream.on('data', chunk => {
                 if (shouldClose) return;
-                const chunk_text = chunk.toString();
-                devLog === 2 && log.llm_info('LLM 输出 ：', chunk_text);
-                // log.llm_info('LLM 输出 ：', chunk_text); 
+                let chunk_text = chunk.toString();
+                devLog === 2 && log.llm_info('LLM 输出 ：', chunk_text); 
+                try {
+                    const res = JSON.parse(chunk_text); 
+                    if (res?.success === false) {
+                        chunk_text = res.message;
+                        console.error(`ESP-AI-LLM 服务错误：${res.message}`);
+                        llmServerErrorCb(`ESP-AI-LLM  服务错误：${res.message}`, res.code);
+                        connectServerCb(false);
+                    }
+                } catch (error) {   }
+
+                
                 texts["count_text"] += chunk_text;
                 cb({ text, texts, chunk_text: chunk_text })
+                
             });
 
             stream.on('end', () => {
@@ -102,9 +129,7 @@ function LLM_FN({ devLog, llm_config, text, llmServerErrorCb, llm_init_messages 
                 cb({ text, is_over: true, texts, shouldClose })
 
                 connectServerCb(false);
-                devLog && log.llm_info('===')
-                devLog && log.llm_info(texts["count_text"])
-                devLog && log.llm_info('===')
+                devLog && log.llm_info("LLM 结果： " + texts["count_text"])
                 devLog && log.llm_info('LLM connect close!\n')
             });
 
