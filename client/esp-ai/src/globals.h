@@ -189,6 +189,12 @@ struct ESP_AI_reset_btn_config
     String power;
 };
 
+struct ESP_AI_lights_config
+{
+    // IO口
+    int pin; 
+};
+
 struct ESP_AI_CONFIG
 {
     // debug 模式，输出更多信息
@@ -207,6 +213,9 @@ struct ESP_AI_CONFIG
     ESP_AI_i2s_config_speaker i2s_config_speaker;
     // 重置信息按钮配置
     ESP_AI_reset_btn_config reset_btn_config;
+    // 灯光配置
+    ESP_AI_lights_config lights_config;
+    
 };
 
 extern String esp_ai_net_status;
@@ -278,6 +287,7 @@ extern ESP_AI_server_config default_server_config;
 extern ESP_AI_volume_config default_volume_config;
 // 重置按钮 { 输入引脚，输入最大值，默认音量 }
 extern ESP_AI_reset_btn_config default_reset_btn_config;
+extern ESP_AI_lights_config default_lights_config; 
 
 extern Adafruit_NeoPixel esp_ai_pixels;
 

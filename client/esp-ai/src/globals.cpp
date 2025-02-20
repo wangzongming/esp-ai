@@ -27,7 +27,7 @@
 #include <vector>
 
 
-String ESP_AI_VERSION = "2.56.36";
+String ESP_AI_VERSION = "2.58.36";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
@@ -80,6 +80,8 @@ ESP_AI_i2s_config_mic default_i2s_config_mic = {I2S_PIN_NO_CHANGE, 42, 41};
 ESP_AI_i2s_config_speaker default_i2s_config_speaker = {2, 3, 1, 16000};
 // 重置按钮 { 输入引脚，电平： high | low}
 ESP_AI_reset_btn_config default_reset_btn_config = {9, "high"};
+// 灯光配置
+ESP_AI_lights_config default_lights_config = { 18 }; 
 #else
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
@@ -87,6 +89,8 @@ ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6};
 ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15, 16000};
 // 重置按钮 { 输入引脚，电平： high | low}
 ESP_AI_reset_btn_config default_reset_btn_config = {10, "high"};
+// 灯光配置
+ESP_AI_lights_config default_lights_config = { 4 }; 
 #endif
 
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
@@ -120,7 +124,7 @@ long last_not_silence_time_wekeup = 0;
 String play_cache = "";
 
 String wake_up_scheme = "edge_impulse";
-
+ 
 #if defined(ARDUINO_XIAO_ESP32S3)
 Adafruit_NeoPixel esp_ai_pixels(1, 4, NEO_GRB + NEO_KHZ800);
 #else

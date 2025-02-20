@@ -206,6 +206,7 @@ function TTSFN(device_id, opts) {
             TTS_FN({
                 text,
                 device_id,
+                session_id,
                 is_pre_connect,
                 devLog,
                 tts_config,

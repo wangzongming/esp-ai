@@ -209,6 +209,7 @@ private:
     ESP_AI_wake_up_config wake_up_config;
     ESP_AI_volume_config volume_config;
     ESP_AI_reset_btn_config reset_btn_config;
+    ESP_AI_lights_config lights_config; 
     bool debug;
 
     void (*onEventCb)(String command_id, String data) = nullptr;

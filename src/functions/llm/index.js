@@ -192,8 +192,8 @@ module.exports = (device_id, opts) => {
         const { devLog, plugins = [], llm_params_set, onLLM } = G_config;
         const {
             llm_historys = [],
-            ws: ws_client, session_id, error_catch,
-            user_config: { iat_server, llm_server, tts_server, llm_config, llm_init_messages = [], intention = [] }
+            ws: ws_client, session_id, error_catch, intention_prompt = [],
+            user_config: { iat_server, llm_server, tts_server, llm_config, llm_init_messages = [] }
         } = G_devices.get(device_id);
 
         const { text, is_pre_connect } = opts;
@@ -296,18 +296,16 @@ module.exports = (device_id, opts) => {
             }
             llm_historys.length && log.llm_info(`--------------------------------------------------------`)
         }
- 
+        
         return LLM_FN({
             device_id,
+            session_id,
             devLog,
             log,
             text,
             llm_historys,
             llm_init_messages: [
-                {
-                    role: "system", 
-                    content: `User instructions have these: ${intention.filter(item => Array.isArray(item.key)).map(item => item.key.join(", ")).join(", ")}, you can help the user execute the instructions.`
-                },
+                ...intention_prompt,
                 ...llm_init_messages,
             ],
             llm_params_set,

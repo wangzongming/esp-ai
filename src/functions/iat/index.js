@@ -28,7 +28,7 @@ async function cb({ device_id, text }) {
         const { onIATcb, onSleep } = G_config;
         const LLM_FN = require(`../llm`);
         if (!G_devices.get(device_id)) return;
-        const { ws: ws_client, client_params } = G_devices.get(device_id);
+        const { ws: ws_client, client_params, user_config: { sleep_reply } } = G_devices.get(device_id);
 
         ws_client && ws_client.send(JSON.stringify({
             type: "log",
@@ -50,6 +50,7 @@ async function cb({ device_id, text }) {
             G_Instance.matchIntention(device_id, text);
             LLM_FN(device_id, { text })
         } else {
+            G_Instance.tts(device_id, sleep_reply);
             onSleep && onSleep({ instance: G_Instance, device_id, client_params });
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -107,8 +108,8 @@ module.exports = async (device_id, connected_cb) => {
                     status: "iat_start",
                 }));
 
-                const LLM_FN = require(`../llm`);  
-                LLM_FN(device_id, { is_pre_connect: true }) 
+                const LLM_FN = require(`../llm`);
+                LLM_FN(device_id, { is_pre_connect: true })
             } else {
                 if (!G_devices.get(device_id)) return;
                 G_devices.set(device_id, {

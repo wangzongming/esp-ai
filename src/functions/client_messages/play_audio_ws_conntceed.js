@@ -25,6 +25,7 @@
 
 const log = require("../../utils/log");
 const isOutTimeErr = require("../../utils/isOutTimeErr");
+const gen_intention_prompt = require("../../utils/gen_intention_prompt");
 const du_cache = require("../../audio_temp/du_cache");
 
 /**
@@ -83,13 +84,14 @@ async function fn({ device_id }) {
 
         const _user_config = {
             f_reply: "您好",
-            sleep_reply: "我先退下了，有需要再叫我。",
+            sleep_reply: "我先休息了哦，有需要再叫我。",
             connected_reply: "后台服务连接成功",
             ...user_config,
-        }
+        } 
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
             user_config: _user_config,
+            intention_prompt: gen_intention_prompt(_user_config.intention)
         })
 
         const TTS_FN = require(`../tts`);

@@ -77,12 +77,16 @@ class EspAiInstance {
         if (oldConfig) {
             const { ws: ws_client } = G_devices.get(device_id);
             ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
-            G_devices.set(device_id, {
+            const new_config = {
                 ...oldConfig,
                 user_config: {
                     ...oldConfig.user_config,
                     ...config,
                 },
+            };
+            G_devices.set(device_id, {
+                ...new_config, 
+                intention_prompt: gen_intention_prompt(new_config.user_config.intention),
             })
         }
     }

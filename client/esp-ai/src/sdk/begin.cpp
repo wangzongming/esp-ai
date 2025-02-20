@@ -128,7 +128,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         pinMode(wake_up_config.pin, INPUT_PULLDOWN);
     }
 
-    // ws2812
+    if (config.lights_config.pin)
+    {
+        lights_config = config.lights_config;
+        esp_ai_pixels.setPin(lights_config.pin);
+    }
+
+
+    // ws2812   
     esp_ai_pixels.begin();
     esp_ai_pixels.setBrightness(100); // 亮度设置
     esp_ai_pixels.clear();            // 将所有像素颜色设置为“off”

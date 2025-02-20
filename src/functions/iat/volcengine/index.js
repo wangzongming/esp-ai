@@ -259,6 +259,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
         if (!accessToken) return log.error(`请配给 IAT 配置 accessToken 参数。`)
         if (!clusterId) return log.error(`请配给 IAT 配置 clusterId 参数。`)
+        
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
