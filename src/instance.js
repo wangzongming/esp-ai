@@ -24,6 +24,7 @@
  */
 
 const log = require("./utils/log");
+const gen_intention_prompt = require("./utils/gen_intention_prompt");
 
 const matchIntention = require("./instrance_fns/matchIntention")
 const tts = require("./instrance_fns/tts")

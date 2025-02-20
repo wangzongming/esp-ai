@@ -159,7 +159,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             for (let i = 0; i < audio.length; i += c_l) {
                 if (!G_devices.get(device_id)) return;
 
-                const { session_id: now_session_id } = G_devices.get(device_id);
+                const { session_id: now_session_id } = G_devices.get(device_id); 
                 if ((session_id && now_session_id !== session_id)) {
                     log.t_info("用户终止流")
                     buffer_queue = [];
@@ -182,7 +182,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         function sendNextChunk() {
             if (buffer_queue.length > 0) {
                 if (!G_devices.get(device_id)) return;
-                const { session_id: now_session_id } = G_devices.get(device_id);
+                const { session_id: now_session_id } = G_devices.get(device_id); 
                 if ((session_id && now_session_id !== session_id)) {
                     log.t_info("用户终止对话，清空音频缓冲区")
                     buffer_queue = [];

@@ -319,7 +319,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         logSendAudio((data) => {
             if (shouldClose) return;
             if (!iat_server_connected) return;
-            if (!data) return;
+            if (!data) return; 
             client.send(data);
         })
 

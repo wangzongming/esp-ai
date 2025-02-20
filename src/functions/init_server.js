@@ -104,7 +104,7 @@ function init_server() {
             ws.on('message', async function (data) {
                 const comm_args = { device_id };
                 try {
-                    if (typeof data === "string") {
+                    if (typeof data === "string") { 
                         const { type, tts_task_id, stc_time, session_id, sid, text, success, value, pin } = JSON.parse(data);
                         comm_args.session_id = session_id;
                         comm_args.tts_task_id = tts_task_id;

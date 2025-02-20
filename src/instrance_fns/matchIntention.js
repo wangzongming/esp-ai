@@ -144,8 +144,10 @@ async function matchIntention(device_id, text, reply) {
                             });
                             return;
                         }
-                        try {
+                        try { 
+                            const session_id = await G_Instance.newSession(device_id); 
                             play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
+                            // play_audio(url, ws_client, "play_music", "", device_id, seek, on_end)
                         } catch (err) {
                             log.error(`音频播放过程失败： ${err}`)
                             await TTS_FN(device_id, {
