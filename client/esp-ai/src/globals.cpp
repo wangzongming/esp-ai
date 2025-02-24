@@ -27,7 +27,7 @@
 #include <vector>
 
 
-String ESP_AI_VERSION = "2.58.36";
+String ESP_AI_VERSION = "2.59.37";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;

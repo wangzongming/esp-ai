@@ -85,7 +85,7 @@ void ESP_AI::wakeup_inference()
                 float noise = result.classification[0].value;
                 float unknown = result.classification[1].value;
                 float xmtx = result.classification[2].value;
-  
+
                 bool wakeup_condition1 = xmtx >= wake_up_config.threshold;
                 if (wakeup_condition1)
                 {
@@ -191,11 +191,11 @@ void ESP_AI::capture_samples()
     {
 
         /* read data at once from i2s */
-        i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100); 
+        i2s_read(MIC_i2s_num, (void *)mic_sample_buffer, i2s_bytes_to_read, &bytes_read, 100);
 
         _is_silence = is_silence(mic_sample_buffer, bytes_read);
 
-        
+       
         if (esp_ai_start_get_audio)
         {
             int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
@@ -206,6 +206,14 @@ void ESP_AI::capture_samples()
                 esp_ai_start_send_audio = false;
                 last_silence_time = 0;
                 esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
+
+                esp_ai_start_ed = "0";
+                // 内置状态处理
+                status_change("iat_end");
+                if (onSessionStatusCb != nullptr)
+                {
+                    onSessionStatusCb("iat_end");
+                }
             }
             else
             {

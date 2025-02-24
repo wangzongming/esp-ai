@@ -76,9 +76,9 @@ void ESP_AI::wakeUp(String scene)
         esp_ai_dec.end(); 
 
         // 提示音播放完后发送 start
-        DEBUG_PRINTLN(debug, ("[Info] -> 发送 start"));
+        DEBUG_PRINTLN(debug, F("[Info] -> 发送 start"));
         esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
-        DEBUG_PRINTLN(debug, ("[Info] -> 开始录音"));
+        DEBUG_PRINTLN(debug, F("[Info] -> 开始录音"));
 
         // 内置状态处理
         if (scene == "wakeup")

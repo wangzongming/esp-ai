@@ -30,11 +30,11 @@ void ESP_AI::loop()
     if (esp_ai_status == "0_ap")
     {
         esp_ai_dns_server.processNextRequest();
-    } 
+    }
 
     esp_ai_server.handleClient();
     esp_ai_webSocket.loop();
-    
+
     if (WiFi.status() != WL_CONNECTED)
     {
 
@@ -62,11 +62,20 @@ void ESP_AI::loop()
         int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
         if (esp_ai_start_send_audio && !esp_ai_is_listen_model && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
         {
+            Serial.println("静默时间过长");
             // 静默时间过长
             esp_ai_start_get_audio = false;
             esp_ai_start_send_audio = false;
             last_silence_time = 0;
             esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
+
+            esp_ai_start_ed = "0";
+            // 内置状态处理
+            status_change("iat_end");
+            if (onSessionStatusCb != nullptr)
+            {
+                onSessionStatusCb("iat_end");
+            }
         }
         else
         {
@@ -76,7 +85,7 @@ void ESP_AI::loop()
             if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
             {
                 if (is_silence(esp_ai_asr_sample_buffer, bytes_read))
-                { 
+                {
                     if (last_silence_time == 0)
                     {
                         last_silence_time = millis();
@@ -85,7 +94,7 @@ void ESP_AI::loop()
                 else
                 {
                     if (last_not_silence_time > 0 && (millis() - last_not_silence_time >= 100))
-                    { 
+                    {
                         // 切换到非静音状态
                         last_silence_time = 0;
                         esp_ai_user_has_spoken = true;
