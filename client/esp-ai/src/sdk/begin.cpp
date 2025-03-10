@@ -39,7 +39,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 #endif
 
     esp_ai_asr_sample_buffer_before = new std::vector<uint8_t>();
-    esp_ai_asr_sample_buffer_before->reserve(48000 * sizeof(int16_t)); // 预分配
+    esp_ai_asr_sample_buffer_before->reserve(48000 * sizeof(int16_t));  
 
     // 参数包括串行通信的波特率、串行模式、使用的 RX 引脚和 TX 引脚。
     Esp_ai_serial.begin(115200, SERIAL_8N1, esp_ai_serial_rx, esp_ai_serial_tx);
@@ -113,7 +113,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 
         if (!wake_up_config.vad_first)
         {
-            wake_up_config.vad_first = 5000;
+            wake_up_config.vad_first = 10000;
         }
         if (!wake_up_config.vad_course)
         {
@@ -150,6 +150,15 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         esp_ai_net_status = "0";
         onNetStatusCb("0");
+    }
+
+    // 在开始前让留给开发者决策是否能继续执行
+    if (onBeginCb != nullptr)
+    { 
+        bool can_bagin = onBeginCb();
+        if(can_bagin == false){
+            return;
+        }
     }
 
     String loc_device_id = get_device_id();

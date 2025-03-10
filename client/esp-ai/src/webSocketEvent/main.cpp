@@ -34,6 +34,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_ws_connected = false;
             esp_ai_start_ed = "0";
             esp_ai_session_id = "";
+            asr_ing = false;
             Serial.println("\n\n[Info] -> ESP-AI 服务已断开\n\n");
             esp_ai_cache_audio_du.clear();
             esp_ai_cache_audio_greetings.clear();
@@ -89,6 +90,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_session_id = "";
             esp_ai_tts_task_id = "";
             esp_ai_status = "3";
+            asr_ing = false;
         }
         else
         {
@@ -240,6 +242,8 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         esp_ai_start_ed = "0";
                         esp_ai_start_get_audio = false;
                         esp_ai_start_send_audio = false;
+                        delay(500);
+                        asr_ing = false;
                     }
                     else if (status == "iat_start")
                     {
@@ -446,7 +450,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_prev_session_id = sid;
             return;
         }
-
+ 
         esp_ai_dec.write(audioData, audioLength);
 
         esp_ai_prev_session_id = sid;

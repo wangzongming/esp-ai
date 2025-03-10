@@ -155,7 +155,8 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
 */
 function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
-    const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
+    // const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g; // 避免小数点被拆分
+    const punctuationRegex = /[,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
     const matches = [...str.matchAll(punctuationRegex)];
 
     if (!isLast && matches.length === 0) return {};

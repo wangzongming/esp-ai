@@ -200,6 +200,13 @@ public:
      * 让设备重新进行一次音频缓存
      */
     void reCache();
+
+    /**
+     * 返回 false 则在 begin 时就停止程序执行，
+     * 如检查到电池没电了，应该提示没电了，而不应该让程序继续执行下去
+     */
+    void onBegin(bool (*func)());
+    
     
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
@@ -222,6 +229,8 @@ private:
    
     String (*onBindDeviceCb)(JSONVar data) = nullptr;
     void (*onRepeatedlyClickCb)() = nullptr;
+    bool (*onBeginCb)() = nullptr;
+    
 
     void speaker_i2s_setup();
     void adjustVolume(int16_t *buffer, size_t length, float volume);
@@ -281,4 +290,5 @@ private:
 
     static void reporting_sensor_data_wrapper(void *arg);
     void reporting_sensor_data();
+ 
 };

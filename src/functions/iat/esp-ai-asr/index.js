@@ -74,6 +74,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 clearInterval(sendTimer);
                 audioBuffers.length && iat_ws.send(Buffer.concat(audioBuffers)) 
                 setTimeout(() => iat_ws.send("end"), 200) 
+                shouldClose = true;
             }
         });
 

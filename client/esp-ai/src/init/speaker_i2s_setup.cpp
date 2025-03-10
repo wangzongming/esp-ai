@@ -44,7 +44,7 @@ void ESP_AI::speaker_i2s_setup()
     // 这里最好看看源码中的类型定义
     config.i2s_format = I2S_MSB_FORMAT;
     config.buffer_count = 8;
-    config.buffer_size = 1024;
+    config.buffer_size = 1024; 
     config.auto_clear = true;
     config.channels = 1;
     config.pin_ws = i2s_config_speaker.ws_io_num;     // LCK

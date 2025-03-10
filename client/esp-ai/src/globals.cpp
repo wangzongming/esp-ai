@@ -27,7 +27,7 @@
 #include <vector>
 
 
-String ESP_AI_VERSION = "2.59.37";
+String ESP_AI_VERSION = "2.62.40";
 
 String esp_ai_start_ed = "0";
 bool esp_ai_ws_connected = false;
@@ -40,6 +40,7 @@ bool esp_ai_user_has_spoken = false;
 bool esp_ai_sleep = false;
 bool esp_ai_is_first_send = true;
 bool esp_ai_played_connected = false;
+bool asr_ing = false;
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;

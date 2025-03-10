@@ -109,10 +109,8 @@ function main(config = {}) {
 
         const init_server = require("./functions/init_server")
         const _config = IS_DEV ? require("./config_dev") : require("./config")    
-
-        // 满足最高 44khz 不卡顿，超过44khz将无法满足~
-        // 如果只是满足 16k 可以 *4  
-        global.G_max_audio_chunk_size = 1024 * 10;     
+ 
+        global.G_max_audio_chunk_size = 1024 * 10;        
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };

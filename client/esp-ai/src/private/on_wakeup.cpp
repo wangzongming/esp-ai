@@ -50,7 +50,7 @@ void ESP_AI::on_wakeup()
     int esp_ai_prev_state = 0;
     int esp_ai_prev_state_listen = 0;
     long esp_ai_btn_up_time = 0;
-
+ 
     while (true)
     {
         if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
@@ -78,7 +78,8 @@ void ESP_AI::on_wakeup()
                 esp_ai_prev_state = reading;
             }
         }
-        else if ((esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
+        // else if ((esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
+        else if ((asr_ing == false && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
         {
             if (Esp_ai_serial.available())
             {
@@ -88,7 +89,7 @@ void ESP_AI::on_wakeup()
                 {
                     esp_ai_start_send_audio = false;
                     esp_ai_start_get_audio = false;
-                    DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
+                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口数据, 唤醒成功"));
                     wakeUp("wakeup");
                 }
             }
@@ -100,7 +101,7 @@ void ESP_AI::on_wakeup()
                 {
                     esp_ai_start_send_audio = false;
                     esp_ai_start_get_audio = false;
-                    DEBUG_PRINTLN(debug, ("收到串口数据, 唤醒成功"));
+                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口数据, 唤醒成功"));
                     wakeUp("wakeup");
                 }
             }
@@ -117,7 +118,7 @@ void ESP_AI::on_wakeup()
                     esp_ai_start_get_audio = false;
                     esp_ai_btn_up_time = 0;
                     esp_ai_prev_state_listen = reading;
-                    DEBUG_PRINTLN(debug, ("您请说话。"));
+                    DEBUG_PRINTLN(debug, ("[Info] -> 您请说话。"));
                     wakeUp("wakeup");
                 }
             }
@@ -133,7 +134,7 @@ void ESP_AI::on_wakeup()
                     }
                     if ((millis() - esp_ai_btn_up_time) >= 300) 
                     { 
-                        DEBUG_PRINTLN(debug, ("大语言模型正在推理。"));
+                        DEBUG_PRINTLN(debug, ("[Info] -> 大语言模型正在推理。"));
                         esp_ai_start_get_audio = false;
                         esp_ai_start_send_audio = false;
                         esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");

@@ -67,10 +67,10 @@
 #include "audio/zh/yu_e_bu_zuo.h"
 #include "audio/zh/chao_ti_wei_qi_yong.h"
 #include "audio/zh/e_du_ka_bu_cun_zai.h"
+#include "audio/zh/mei_dian_le.h"
 // #include "audio/zh/jian_quan_shi_bai.h"
 // #include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
 // #include "audio/zh/qing_lian_jie_fu_wu.h"
-// #include "audio/zh/mei_dian_le.h"
 
 // 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
@@ -245,6 +245,7 @@ extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
 extern bool esp_ai_is_first_send;
+extern bool asr_ing;
  
 // 聆听模式
 extern bool esp_ai_is_listen_model;

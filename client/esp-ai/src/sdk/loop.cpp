@@ -49,7 +49,7 @@ void ESP_AI::loop()
         {
             esp_ai_net_status = "0";
             onNetStatusCb("0");
-            DEBUG_PRINTLN(debug, ("WIFI 异常断开，将自动重启板子"));
+            DEBUG_PRINTLN(debug, ("[Error] -> WIFI 异常断开，将自动重启板子"));
             ESP.restart();
             delay(3000);
         }
@@ -61,12 +61,12 @@ void ESP_AI::loop()
     {
         int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
         if (esp_ai_start_send_audio && !esp_ai_is_listen_model && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
-        {
-            Serial.println("静默时间过长");
+        {  
             // 静默时间过长
             esp_ai_start_get_audio = false;
             esp_ai_start_send_audio = false;
             last_silence_time = 0;
+            DEBUG_PRINTLN(debug, ("[Info] -> 静默时间过长"));
             esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
 
             esp_ai_start_ed = "0";

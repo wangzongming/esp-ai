@@ -287,6 +287,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         };
         client.onClose = () => {
             devLog && log.iat_info("-> 火山 ASR 服务已关闭：", session_id)
+            shouldClose = true;
             iat_server_connected = false;
             connectServerCb(false);
         };

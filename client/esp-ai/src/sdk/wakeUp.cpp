@@ -31,26 +31,33 @@ void ESP_AI::wakeUp(String scene)
         esp_ai_session_id = "";
         esp_ai_tts_task_id = "";
         esp_ai_start_get_audio = false; 
+        asr_ing = true;
  
+        Serial.println("设置音量为0");
+        
         esp_ai_volume.setVolume(0); 
-        delay(30);
-        esp_ai_dec.flush();
-        delay(30);
-        // 结束解码
-        esp_ai_dec.end(); 
-        delay(30);  
-        esp_ai_volume.setVolume(volume_config.volume);
-        esp_ai_dec.begin();  
+        delay(30); 
  
+        esp_ai_dec.begin();   
+        delay(200);
+        Serial.println("设置音量为正常");
+
+        esp_ai_volume.setVolume(volume_config.volume); 
+        delay(200);
+         
+        
         // 播放问候语
         if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
         {
+            Serial.println(" === 播放问候语 === ");
             size_t bytes_written = esp_ai_dec.write(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size()); 
             int num_samples = esp_ai_cache_audio_greetings.size() / 2;
             int duration_ms = (num_samples * 1000) / 16000;
-            delay(duration_ms);  
+            // delay(duration_ms + 300);   
+            delay(duration_ms);   
         }
  
+        
         // 播放提示音
         if (!esp_ai_cache_audio_du.empty())
         {
