@@ -74,7 +74,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 clearInterval(sendTimer);
                 audioBuffers.length && iat_ws.send(Buffer.concat(audioBuffers)) 
                 setTimeout(() => iat_ws.send("end"), 200) 
-                shouldClose = true;
+                // ws 中还需要接受信息，所以不能改状态
+                // shouldClose = true;
             }
         });
 
@@ -112,7 +113,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     devLog && log.iat_info(data.text)
                     break;
                 case 'final':
-                    if (shouldClose) return;
+                    if (shouldClose) return;  
                     realStr += data.text;
                     devLog && log.iat_info(`IAT 已完成：${realStr}`)
                     cb({ text: realStr, device_id });

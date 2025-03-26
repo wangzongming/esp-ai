@@ -169,7 +169,7 @@ class volcengineAsrClient {
             const code = payload.readUInt32BE(0);
             payloadSize = payload.readUInt32BE(4);
             payloadMsg = payload.slice(8);
-            console.error("SERVER_ERROR_RESPONSE code:", code);
+            console.error("SERVER_ERROR_RESPONSE code:", code); 
             // throw new Error(payloadMsg.toString());
         }
 

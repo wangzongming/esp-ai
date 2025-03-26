@@ -79,7 +79,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                     return tts_res;
                 })
                 texts.all_text += org_text;
-            } else {  
+            } else {
                 // 特殊结束任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
                     const { stop_next_session } = G_devices.get(device_id);
@@ -122,7 +122,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         else {
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
             if (ttsText) {
-                // log.llm_info('客户端播放1：', ttsText);
+                // log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
                 texts.index += 1;
 
@@ -149,20 +149,24 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
 
 
 /**
- * 文本截取函数: 这里用多用一次 TTS 额度来保证速度
+ *  文本截取函数: 这里用多用一次 TTS 额度来保证速度
  *  1. 使用正则表达式匹配所有表示句子停顿的中英文标点,并不是使用标点符号分割
  *  2. 一些特殊符号不用念出来
+ *  3. 部分非停顿符号不要，还需要注意数学中的小数点
 */
 function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
-    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
-    // const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g; // 避免小数点被拆分
-    const punctuationRegex = /[,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
+    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格 
+    // const punctuationRegex = /[,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
+    const punctuationRegex = /[,;!?"‘!?。、，；！？]?/g;
     const matches = [...str.matchAll(punctuationRegex)];
 
+    if (!isLast && str.length <= 1) return {};
     if (!isLast && matches.length === 0) return {};
     const notSpeak = /[\*|\n]/g;
+   
+    const matchData = matches.filter((item) => item[0]);
     // 获取最后一个匹配的标点符号的索引
-    const lastIndex = matches[matches.length - 1]?.index;
+    const lastIndex =matchData[matchData.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
         // 这里是否考虑提供配置让用户决策
@@ -183,8 +187,6 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
         let speakText = str.replace(notSpeak, '').replace(emojiRegex, '');
         return { speak_text: speakText, org_text: str };
     }
-
-
 }
 
 module.exports = (device_id, opts) => {
@@ -297,7 +299,7 @@ module.exports = (device_id, opts) => {
             }
             llm_historys.length && log.llm_info(`--------------------------------------------------------`)
         }
-        
+
         return LLM_FN({
             device_id,
             session_id,

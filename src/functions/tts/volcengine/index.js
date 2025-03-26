@@ -116,9 +116,8 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
                 error_msg = error_msg.toString('utf-8');
                 console.log(`          Error message code: ${code}`);
                 console.log(`          Error message size: ${msg_size} bytes`);
-                // console.log(`                  Error data: ${JSON.stringify(request_json, null, 4)}`);
-                console.log(`               Error message: ${error_msg}`);
-
+                console.log(`                  Error data: ${text}`);
+                console.log(`               Error message: ${error_msg}`); 
                 log.tts_info(`发送字符串：${text}`);
                 ttsServerErrorCb(`火山 TTS 接口返回错误 ${res.code}: ${res.message} ${error_msg}`)
                 curTTSWs.close()

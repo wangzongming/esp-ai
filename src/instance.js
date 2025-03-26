@@ -76,8 +76,9 @@ class EspAiInstance {
         !device_id && log.error(`调用 updateClientConfig 方法时，请传入 device_id`);
         const oldConfig = G_devices.get(device_id);
         if (oldConfig) {
-            const { ws: ws_client } = G_devices.get(device_id);
-            ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
+            // const { ws: ws_client } = G_devices.get(device_id);
+            // 缓存信息不可在此处清楚，本函数仅仅用于更新配置
+            // ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
             const new_config = {
                 ...oldConfig,
                 user_config: {
@@ -86,10 +87,19 @@ class EspAiInstance {
                 },
             };
             G_devices.set(device_id, {
-                ...new_config, 
+                ...new_config,
                 intention_prompt: gen_intention_prompt(new_config.user_config.intention),
             })
         }
+    }
+
+    /**
+     * 清除客户端音频缓存
+    */
+    reCache(device_id) {
+        !device_id && log.error(`调用 reCache 方法时，请传入 device_id`);
+        const { ws: ws_client } = G_devices.get(device_id);
+        ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
     }
 
     tts = tts;
