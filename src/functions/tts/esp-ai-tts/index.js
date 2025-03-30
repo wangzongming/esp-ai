@@ -82,7 +82,7 @@ class AudioSender {
 */
 function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
-        const { url = 'https://api.espai.fun/ai_api/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
+        const { url = 'https://api.espai2.fun/ai_api/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
         if (!url) return log.error(`请配给 TTS 配置 url 参数。`);
         let shouldClose = false;

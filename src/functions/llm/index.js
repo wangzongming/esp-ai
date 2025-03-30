@@ -1,21 +1,25 @@
-/**
- * Copyright (c) 2024 小明IO
+/*
+ * MIT License
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (c) 2025-至今 小明IO
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * Commercial use of this software requires prior written authorization from the Licensor.
- * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
- * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
  * @author 小明IO
  * @email  1746809408@qq.com
@@ -24,6 +28,7 @@
  */
 
 const log = require("../../utils/log");
+const axios = require('axios');
 
 /**
  * 接下来的 session_id 都当前形参为准
@@ -53,7 +58,17 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                 data: _chunk_text || chunk_text
             }))
         });
-
+ 
+        // 向客户端发送情绪
+        const sendEmotion = async (text) => { 
+            const response = await axios.post(`https://api.espai2.fun/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
+            const { success, message: res_msg, data } = response.data;
+            if (success) {
+                ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
+            } else {
+                log.error('-> 情绪推理失败：', res_msg);
+            }
+        }
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
@@ -63,7 +78,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0, tts_server)
-
+            ttsText && sendEmotion(ttsText);
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
             // console.log('llm 结束: ', textNowNull, ttsText);
             if (textNowNull) {
@@ -121,6 +136,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         }
         else {
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
+            ttsText && sendEmotion(ttsText);
             if (ttsText) {
                 // log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
@@ -163,10 +179,10 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     if (!isLast && str.length <= 1) return {};
     if (!isLast && matches.length === 0) return {};
     const notSpeak = /[\*|\n]/g;
-   
+
     const matchData = matches.filter((item) => item[0]);
     // 获取最后一个匹配的标点符号的索引
-    const lastIndex =matchData[matchData.length - 1]?.index;
+    const lastIndex = matchData[matchData.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
         // 这里是否考虑提供配置让用户决策

@@ -27,6 +27,7 @@ const log = require("../../utils/log");
 const isOutTimeErr = require("../../utils/isOutTimeErr");
 const gen_intention_prompt = require("../../utils/gen_intention_prompt");
 const du_cache = require("../../audio_temp/du_cache");
+const play_audio = require("../../audio_temp/play_audio");
 
 /**
  * 客户端连接成功
@@ -87,7 +88,7 @@ async function fn({ device_id }) {
             sleep_reply: "我先休息了哦，有需要再叫我。",
             connected_reply: "后台服务连接成功",
             ...user_config,
-        } 
+        }
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
             user_config: _user_config,
@@ -105,6 +106,19 @@ async function fn({ device_id }) {
                 G_Instance.pinMode(device_id, pin, "OUTPUT");
             }
         })
+
+
+        // setTimeout(async () => {
+        //     // 播放音频测试 
+        //     const session_id = await G_Instance.newSession(device_id);
+        //     play_audio("https://xiaomingio.top/music.mp3", ws, "play_music", session_id, device_id, 0, () => {
+        //     // play_audio("http://192.168.3.16:8000/music_16.mp3", ws, "play_music", session_id, device_id, 0, () => {
+        //     // play_audio("http://192.168.3.16:8000/111.mp3", ws, "play_music", session_id, device_id, 0, () => {
+        //     // play_audio("http://192.168.3.16:8000/music2.mp3", ws, "play_music", session_id, device_id, 0, () => {
+        //         console.log("音乐播放完毕")
+        //     })
+        // }, 2000)
+        // return;
 
         // await TTS_FN(device_id, {
         //     // text: "哦，听起来不太好受。记得多穿衣服保暖。", 
@@ -129,7 +143,7 @@ async function fn({ device_id }) {
                 is_create_cache: true,
             })
         }
- 
+
         // const sleep_reply = _user_config.sleep_reply;
         // if (sleep_reply !== false) {
         //     await TTS_FN(device_id, {

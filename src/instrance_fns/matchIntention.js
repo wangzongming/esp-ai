@@ -59,7 +59,7 @@ async function matchIntention(device_id, text, reply) {
                 break intention_for;
             } else if (item.api_key) {
                 // AI 推理 
-                const response = await axios.post(item.nlp_server || `https://api.espai.fun/ai_api/semantic`, {
+                const response = await axios.post(item.nlp_server || `https://api.espai2.fun/ai_api/semantic`, {
                     "api_key": item.api_key,
                     "texts": [key[0], _text]
                 }, {
@@ -108,7 +108,7 @@ async function matchIntention(device_id, text, reply) {
                     if (target_device_id) {
                         !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);
                         // const response = await axios.get(`http://192.168.3.23:7002/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
-                        const response = await axios.get(`https://api.espai.fun/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
+                        const response = await axios.get(`https://api.espai2.fun/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
                             headers: { 'Content-Type': 'application/json' }
                         });
                         const { success, message: res_msg } = response.data;

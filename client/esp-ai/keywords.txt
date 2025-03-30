@@ -24,6 +24,8 @@ stopSession KEYWORD2
 tts KEYWORD2
 onRepeatedlyClick KEYWORD2
 reCache KEYWORD2
+onEmotion KEYWORD2
+onBegin KEYWORD2
  
  
 #constant (LITERAL1)

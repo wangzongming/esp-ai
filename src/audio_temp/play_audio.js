@@ -104,10 +104,10 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 break_second: Math.floor(seek + play_time / 1000),
                 event,
                 seek
-            }) 
-            
+            })
+
             // 特殊发一组标志 
-            client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8')); 
+            client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));
 
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
@@ -125,8 +125,8 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
             play_audio_ing: true,
-            play_audio_on_end: (...arg) => { 
-                client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));  
+            play_audio_on_end: (...arg) => {
+                client_ws.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));
                 return on_end && on_end(...arg);
             },
             play_audio_seek: seek || 0,
@@ -159,7 +159,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
             for (let i = 0; i < audio.length; i += c_l) {
                 if (!G_devices.get(device_id)) return;
 
-                const { session_id: now_session_id } = G_devices.get(device_id); 
+                const { session_id: now_session_id } = G_devices.get(device_id);
                 if ((session_id && now_session_id !== session_id)) {
                     log.t_info("用户终止流")
                     buffer_queue = [];
@@ -182,7 +182,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         function sendNextChunk() {
             if (buffer_queue.length > 0) {
                 if (!G_devices.get(device_id)) return;
-                const { session_id: now_session_id } = G_devices.get(device_id); 
+                const { session_id: now_session_id } = G_devices.get(device_id);
                 if ((session_id && now_session_id !== session_id)) {
                     log.t_info("用户终止对话，清空音频缓冲区")
                     buffer_queue = [];
@@ -192,7 +192,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 is_sending = true;
                 const send_chunk = buffer_queue.shift();
                 const real_chunk = Buffer.concat([session_id_buffer, send_chunk])
-                // console.log("发送音频：", moment().format("HH:mm:ss:sss"),  real_chunk.length);
+                console.log("发送音频：", moment().format("HH:mm:ss:sss"), real_chunk.length, real_chunk);
                 client_ws.send(real_chunk, (err) => {
                     if (is_parse_over) {
                         if (!G_devices.get(device_id)) return;
@@ -212,7 +212,9 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                             is_sending = false;
                             sendNextChunk();
                         }
+                        // test...
                     }, 10);
+                    // }, 5000);
                 });
             }
         }

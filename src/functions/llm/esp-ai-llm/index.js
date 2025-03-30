@@ -47,7 +47,7 @@ const axios = require('axios');
 */
 async function LLM_FN({ devLog, is_pre_connect, llm_config, text, llmServerErrorCb, llm_init_messages = [], llm_historys = [], cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb, log }) {
     try {
-        const { url = 'https://api.espai.fun/ai_api/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
+        const { url = 'https://api.espai2.fun/ai_api/llm', api_key, model = "qwen2.5:32b", ...other_config } = llm_config;
         if (!api_key) return log.error(`请配给 LLM 配置 api_key 参数。`)
 
             

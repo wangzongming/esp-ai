@@ -49,7 +49,7 @@ const axios = require('axios');
 */
 function LLM_FN({ devLog, is_pre_connect, llm_config, text, llmServerErrorCb, device_id, cb, llm_params_set, logWSServer, connectServerBeforeCb, connectServerCb, log }) {
     try {
-        const { url = 'https://api.espai.fun/ai_api/rag/query', api_key, ...other_config } = llm_config;
+        const { url = 'https://api.espai2.fun/ai_api/rag/query', api_key, ...other_config } = llm_config;
         if (!api_key) return log.error(`请配给 RAG 配置 api_key 参数。`)
 
         // 预先连接函数

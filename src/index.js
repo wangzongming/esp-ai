@@ -111,6 +111,7 @@ function main(config = {}) {
         const _config = IS_DEV ? require("./config_dev") : require("./config")    
  
         global.G_max_audio_chunk_size = 1024 * 10;       
+        // global.G_max_audio_chunk_size = 1024;       
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };
