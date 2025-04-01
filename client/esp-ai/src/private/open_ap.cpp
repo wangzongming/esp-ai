@@ -30,9 +30,13 @@
 
 void ESP_AI::open_ap()
 {
+    String device_id = get_local_data("device_id");
+    String lastTwoChars = device_id.substring(device_id.length() - 5);
+    lastTwoChars.replace(":", "");
+
     WiFi.mode(WIFI_AP);
-    String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI";
-    WiFi.softAP(ap_name);  
+    String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI:" + lastTwoChars;
+    WiFi.softAP(ap_name);
     IPAddress ip = WiFi.softAPIP(); 
     String httpUrl = String("http://") + ip.toString();
     DEBUG_PRINTLN(debug, "[Info] WIFI名称：" + ap_name);

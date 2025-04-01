@@ -174,16 +174,7 @@ String generateUUID()
 // 获取ESP32的硬件地址（eFuse MAC地址）
 String get_device_id()
 {
-    uint64_t mac = ESP.getEfuseMac();
-    char macStr[18];
-    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-            (uint8_t)(mac >> 40),
-            (uint8_t)(mac >> 32),
-            (uint8_t)(mac >> 24),
-            (uint8_t)(mac >> 16),
-            (uint8_t)(mac >> 8),
-            (uint8_t)mac);
-    return macStr;
+    return WiFi.macAddress();
 }
 
 /**
