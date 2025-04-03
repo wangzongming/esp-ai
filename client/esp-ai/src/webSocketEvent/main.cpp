@@ -323,12 +323,41 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     String str_val = (const char *)parseRes["str_val"];
                     int num_val = (int)parseRes["num_val"];
 
+                    // 设置引脚模式
                     if (fn_name == "pinMode")
                     {
                         str_val == "OUTPUT" && (pinMode(pin, OUTPUT), true);
                         str_val == "INPUT" && (pinMode(pin, INPUT), true);
                         str_val == "INPUT_PULLUP" && (pinMode(pin, INPUT_PULLUP), true);
                         str_val == "INPUT_PULLDOWN" && (pinMode(pin, INPUT_PULLDOWN), true);
+
+                        // LEDC
+                        if (str_val == "LEDC")
+                        {
+                            // LEDC 通道, 取值 0 ~ 15
+                            int channel = 0;
+                            if (parseRes.hasOwnProperty("channel"))
+                            {
+                                channel = (int)parseRes["channel"];
+                            }
+                            // 定义 PWM 频率，舵机通常使用 50Hz
+                            int freq = 50;
+                            if (parseRes.hasOwnProperty("freq"))
+                            {
+                                freq = (int)parseRes["freq"];
+                            }
+                            // 定义 PWM 分辨率
+                            int resolution = 10;
+                            if (parseRes.hasOwnProperty("resolution"))
+                            {
+                                resolution = (int)parseRes["resolution"];
+                            } 
+
+                            // 初始化 LEDC 通道
+                            ledcSetup(channel, freq, resolution);
+                            // 将 LEDC 通道绑定到指定引脚
+                            ledcAttachPin(pin, channel);
+                        }
                     }
                     else if (fn_name == "digitalWrite")
                     {
@@ -347,7 +376,23 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         analog_read_pins.push_back(pin);
                     }
-                }else if(type == "emotion"){ 
+                    // 舵机驱动
+                    else if (fn_name == "ledcWrite")
+                    {
+                        int channel = 0;
+                        if (parseRes.hasOwnProperty("channel"))
+                        {
+                            channel = (int)parseRes["channel"];
+                        }
+                        int deg = (int)parseRes["deg"];
+                        DEBUG_PRINT(debug, F("\n[指令] -> 舵机旋转："));
+                        DEBUG_PRINTLN(debug, deg); 
+                        ledcWrite(channel, angleToDutyCycle(deg));
+                    }
+                }
+                // 情绪监听
+                else if (type == "emotion")
+                {
                     if (onEmotionCb != nullptr)
                     {
                         onEmotionCb(data);
@@ -462,7 +507,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
         // Serial.print("写入长度：");
         // Serial.println(audioLength);
-        
+
         esp_ai_dec.write(audioData, audioLength);
 
         esp_ai_prev_session_id = sid;

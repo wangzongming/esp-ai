@@ -32,6 +32,8 @@ const stop = require("./instrance_fns/stop")
 const newSession = require("./instrance_fns/newSession")
 const isPlaying = require("./instrance_fns/isPlaying")
 const pinMode = require("./instrance_fns/pinMode")
+const LEDCInit = require("./instrance_fns/LEDCInit")
+const ledcWrite = require("./instrance_fns/ledcWrite")
 const digitalWrite = require("./instrance_fns/digitalWrite")
 const digitalRead = require("./instrance_fns/digitalRead")
 const analogWrite = require("./instrance_fns/analogWrite")
@@ -108,6 +110,8 @@ class EspAiInstance {
     matchIntention = matchIntention;
     isPlaying = isPlaying;
     pinMode = pinMode;
+    LEDCInit = LEDCInit;
+    ledcWrite = ledcWrite;
     digitalWrite = digitalWrite;
     digitalRead = digitalRead;
     analogWrite = analogWrite;

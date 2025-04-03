@@ -34,12 +34,15 @@ const axios = require('axios');
 */
 async function matchIntention(device_id, text, reply) {
     !device_id && log.error(`调用 matchIntention 方法时，请传入 device_id`);
-    const { devLog, onSleep } = G_config;
+    const { devLog } = G_config;
     const TTS_FN = require(`../functions/tts`);
-    const { ws: ws_client, backlog_instruction = [], client_params, session_id, user_config, llm_historys = [], prev_play_audio_ing, user_config: { sleep_reply, intention = [] } } = G_devices.get(device_id);
+    const { ws: ws_client, user_config, llm_historys = [], prev_play_audio_ing, user_config: { intention = [] } } = G_devices.get(device_id);
     if (!text) return null;
     let task_info = null;
- 
+
+    // 推理中
+    G_devices.set(device_id, { ...G_devices.get(device_id), intention_ing: true })
+
     intention_for: for (const item of intention) {
         const { key = [] } = item;
         if (typeof key === "function") {
@@ -49,7 +52,7 @@ async function matchIntention(device_id, text, reply) {
                 task_info["__name__"] = res;
                 break intention_for;
             }
-        } else { 
+        } else {
             const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
             const punctuationRegex = /[\.,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
             const _text = text.replace(punctuationRegex, '').replace(emojiRegex, '');
@@ -78,33 +81,31 @@ async function matchIntention(device_id, text, reply) {
                 }
             }
         }
-    } 
+    }
+
+    // 结束推理
+    G_devices.set(device_id, { ...G_devices.get(device_id), intention_ing: false })
 
     if (task_info) {
-        const { instruct, message, data, pin, __name__, music_server, on_end, target_device_id, api_key } = task_info;
+        const { instruct, data, pin, __name__, music_server, on_end, target_device_id, api_key, channel, deg } = task_info;
         if (typeof instruct === "function") {
             await instruct({
                 text,
                 instance: G_Instance,
                 device_id
-            }); 
+            });
         } else {
             switch (instruct) {
                 case "__sleep__":
-                    if (!G_devices.get(device_id)) return; 
+                    if (!G_devices.get(device_id)) return;
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
-                        stop_next_session: true, 
-                    }) 
+                        stop_next_session: true,
+                    })
                     break;
                 case "__io_high__":
                 case "__io_low__":
-                    !pin && log.error(`__io_high__、__io_low__ 指令必须配置 pin 数据`);
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id), 
-                        stop_next_session: true
-                    })
-
+                    (!pin && pin !== 0) && log.error(`${instruct} 指令必须配置 pin`);
                     if (target_device_id) {
                         !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);
                         // const response = await axios.get(`http://192.168.3.23:7002/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
@@ -118,14 +119,20 @@ async function matchIntention(device_id, text, reply) {
                                 need_record: false,
                                 text_is_over: true,
                             });
-                        } 
+                        }
                     } else {
-                        G_Instance.digitalWrite(device_id, pin, instruct === "__io_high__" ? "HIGH" : "LOW"); 
+                        G_Instance.digitalWrite(device_id, pin, instruct === "__io_high__" ? "HIGH" : "LOW");
                     }
+                    break;
+
+                case "__LEDC__":
+                    // LEDC 暂不支持远程设备
+                    (!channel && channel!== 0) && log.error(`${instruct} 指令必须配置 channel、deg`); 
+                    G_Instance.ledcWrite(device_id, channel, deg);
                     break;
                 case "__play_music__":
                     // 所有 LLM 用下面的 key 为准 
-                    if (!G_devices.get(device_id)) return; 
+                    if (!G_devices.get(device_id)) return;
                     G_Instance.stop(device_id, "__play_music__");
 
                     G_devices.set(device_id, {
@@ -133,34 +140,30 @@ async function matchIntention(device_id, text, reply) {
                         llm_historys,
                         stop_next_session: true
                     })
-                    
-                    // 不延时不能保证播放队列
-                    setTimeout(async () => {
-                        const { url, seek, message: errMessage } = await music_server(__name__ || text, { user_config, instance: G_Instance, device_id });
-                        if (!url) {
-                            await TTS_FN(device_id, {
-                                text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
-                                need_record: true,
-                            });
-                            return;
-                        }
-                        try { 
-                            const session_id = await G_Instance.newSession(device_id); 
-                            play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
-                            // play_audio(url, ws_client, "play_music", "", device_id, seek, on_end)
-                        } catch (err) {
-                            log.error(`音频播放过程失败： ${err}`)
-                            await TTS_FN(device_id, {
-                                text: "音频播放出错啦，重新换一首吧！",
-                                need_record: true,
-                            });
-                        }
-                    }, 900);
+
+                    const { url, seek, message: errMessage } = await music_server(__name__ || text, { user_config, instance: G_Instance, device_id });
+                    if (!url) {
+                        await TTS_FN(device_id, {
+                            text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
+                            need_record: true,
+                        });
+                        return;
+                    }
+                    try {
+                        const session_id = await G_Instance.newSession(device_id);
+                        play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
+                    } catch (err) {
+                        log.error(`音频播放过程失败： ${err}`)
+                        await TTS_FN(device_id, {
+                            text: "音频播放出错啦，重新换一首吧！",
+                            need_record: true,
+                        });
+                    }
                     break;
                 default:
                     devLog && log.iat_info(`执行指令：${instruct}, data: ${data}, name: ${__name__}`);
                     G_devices.set(device_id, {
-                        ...G_devices.get(device_id), 
+                        ...G_devices.get(device_id),
                         stop_next_session: true
                     })
                     instruct && ws_client && ws_client.send(JSON.stringify({
@@ -173,7 +176,7 @@ async function matchIntention(device_id, text, reply) {
             }
         }
     }
+
     return task_info;
 }
 module.exports = matchIntention;
- 

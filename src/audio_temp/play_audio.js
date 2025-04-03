@@ -192,7 +192,7 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                 is_sending = true;
                 const send_chunk = buffer_queue.shift();
                 const real_chunk = Buffer.concat([session_id_buffer, send_chunk])
-                console.log("发送音频：", moment().format("HH:mm:ss:sss"), real_chunk.length, real_chunk);
+                // console.log("发送音频：", moment().format("HH:mm:ss:sss"), real_chunk.length, real_chunk);
                 client_ws.send(real_chunk, (err) => {
                     if (is_parse_over) {
                         if (!G_devices.get(device_id)) return;
@@ -211,10 +211,8 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
                             clearInterval(checkBufferedAmount);
                             is_sending = false;
                             sendNextChunk();
-                        }
-                        // test...
-                    }, 10);
-                    // }, 5000);
+                        } 
+                    }, 10); 
                 });
             }
         }

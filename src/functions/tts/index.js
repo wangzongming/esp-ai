@@ -40,9 +40,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
     try {
         const { devLog, onTTScb } = G_config;
         if (!G_devices.get(device_id)) return;
-        const {
-            ws: ws_client, tts_list, session_id: now_session_id
-        } = G_devices.get(device_id);
+        const { ws: ws_client, tts_list, session_id: now_session_id } = G_devices.get(device_id);
         if (!is_create_cache && session_id && now_session_id && session_id !== now_session_id) return;
 
         !is_create_cache && onTTScb && onTTScb({
@@ -68,20 +66,46 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
             // 这个和会话ID不同，这都是追加的方式。
-            const { stop_next_session } = G_devices.get(device_id); 
+            const { stop_next_session, intention_ing } = G_devices.get(device_id); 
+
+            function sendEndBuffer() {
+                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+            }
+
+            function sendEndAlignBuffer() {
+                const { intention_ing } = G_devices.get(device_id);
+                const sendFn = () => audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8')); 
+                if (intention_ing) {
+                    setTimeout(() => {
+                        const { intention_ing } = G_devices.get(device_id); 
+                        if (intention_ing) {
+                            sendEndBuffer()
+                        } else {
+                            sendFn();
+                        }
+                    }, 200)
+                } else {
+                    sendFn();
+                }
+            }
+
             if (text_is_over) {
-                if (!stop_next_session) { 
-                    audio_sender.sendAudio(Buffer.from(need_record ? G_session_ids["tts_all_end_align"] : G_session_ids["tts_all_end"], 'utf-8'));
-                } else { 
-                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                if (!stop_next_session) {
+                    if (need_record) { 
+                        sendEndAlignBuffer(); 
+                    } else {
+                        sendEndBuffer();
+                    }
+                } else {
+                    sendEndBuffer();
                 }
             } else {
-                if (!stop_next_session) { 
+                if (!stop_next_session) {
                     audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
-                }else{  
-                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8')); 
+                } else {
+                    sendEndBuffer();
                 }
-            } 
+            }
         }
 
     } catch (err) {
@@ -117,7 +141,7 @@ function TTSFN(device_id, opts) {
 
             const TTS_FN = plugin || require(`./${tts_server}`);
 
-            if(!is_pre_connect){ 
+            if (!is_pre_connect) {
                 if (!text || !(`${text}`.replace(/\s/g, ''))) {
                     return true;
                 }
@@ -179,7 +203,7 @@ function TTSFN(device_id, opts) {
                         status: "tts_chunk_start",
                     }));
                     // 启动音频发送任务 
-                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {  
+                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
                         resolve(true);
                     });
                 } else {

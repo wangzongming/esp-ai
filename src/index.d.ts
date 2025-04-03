@@ -199,7 +199,7 @@ export interface Config {
         */
         llm_init_messages: Record<string, string>[];
 
-        
+
         /**
          * 独立为本设备设置语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
          * 只能播放本地 mp3 地址： iatDu: path.join(__dirname, `./du.mp3`) // nodejs 写法
@@ -525,4 +525,16 @@ export interface Instance {
      * 使用场景： 读取电位器的值等等
     */
     analogRead(device_id: string, pin: number, onChange: (val: number) => void): void;
+
+
+    /**
+     * LEDC 通道初始化
+    */
+    LEDCInit(device_id: string, arg: { pin: number;  channel: number, freq: number, resolution: number }): void;
+
+    /**
+     * LEDC 通道写入 
+    */
+    ledcWrite(device_id: string,  channel: number,  deg: number): void;
+
 }

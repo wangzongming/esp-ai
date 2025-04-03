@@ -100,10 +100,14 @@ async function fn({ device_id }) {
 
         ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
 
-        intention.forEach(({ instruct, pin, target_device_id }) => {
+        intention.forEach(({ instruct, pin, target_device_id, channel, freq, resolution }) => {
             if (!target_device_id && (instruct === "__io_high__" || instruct === "__io_low__" || instruct === "__pwm__")) {
-                !pin && log.error(`__io_high__ 指令必须配置 pin 数据`);
+                !pin && log.error(`${instruct} 指令必须配置引脚号：pin`);
                 G_Instance.pinMode(device_id, pin, "OUTPUT");
+            }
+            if (!target_device_id && (instruct === "__LEDC__")) {
+                !pin && log.error(`${instruct} 指令必须配置引脚号：pin`);
+                G_Instance.LEDCInit(device_id, { pin, channel, freq, resolution });
             }
         })
 
@@ -111,10 +115,7 @@ async function fn({ device_id }) {
         // setTimeout(async () => {
         //     // 播放音频测试 
         //     const session_id = await G_Instance.newSession(device_id);
-        //     play_audio("https://xiaomingio.top/music.mp3", ws, "play_music", session_id, device_id, 0, () => {
-        //     // play_audio("http://192.168.3.16:8000/music_16.mp3", ws, "play_music", session_id, device_id, 0, () => {
-        //     // play_audio("http://192.168.3.16:8000/111.mp3", ws, "play_music", session_id, device_id, 0, () => {
-        //     // play_audio("http://192.168.3.16:8000/music2.mp3", ws, "play_music", session_id, device_id, 0, () => {
+        //     play_audio("https://xiaomingio.top/music.mp3", ws, "play_music", session_id, device_id, 0, () => { 
         //         console.log("音乐播放完毕")
         //     })
         // }, 2000)

@@ -352,5 +352,8 @@ JSONVar get_local_all_data();
 String get_device_id();
 bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
 
+// 将角度转换为占空比
+int angleToDutyCycle(int angle);
+
 extern std::vector<int> digital_read_pins;
 extern std::vector<int> analog_read_pins;
