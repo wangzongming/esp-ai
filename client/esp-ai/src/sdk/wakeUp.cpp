@@ -36,7 +36,14 @@ void ESP_AI::wakeUp(String scene)
         esp_ai_tts_task_id = "";
         esp_ai_start_get_audio = false; 
         asr_ing = true; 
-        
+
+        recive_status = false;
+        while (write_status)
+        {
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+
         esp_ai_volume.setVolume(0); 
         delay(30); 
  
@@ -85,6 +92,7 @@ void ESP_AI::wakeUp(String scene)
         DEBUG_PRINTLN(debug, F("[Info] -> 发送 start"));
         esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
         DEBUG_PRINTLN(debug, F("[Info] -> 开始录音"));
+        recive_status = true;
 
         // 内置状态处理
         if (scene == "wakeup")

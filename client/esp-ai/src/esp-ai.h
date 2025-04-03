@@ -158,7 +158,7 @@ public:
      * 可设置的数据项 wifi_name | wifi_pwd | api_key | 其他自定义参数
      */
     void setLocalData(String field_name, String new_value);
-    // test
+
     /**
      * 获取存储在芯片中的全部数据
      * JSONVar data = getLocalAllData(); 
@@ -301,5 +301,7 @@ private:
 
     static void reporting_sensor_data_wrapper(void *arg);
     void reporting_sensor_data();
- 
+
+    bool recive_status = true;
+    bool write_status = false;
 };

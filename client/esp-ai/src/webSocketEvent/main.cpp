@@ -87,7 +87,13 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             if (!esp_ai_cache_audio_sleep_reply.empty() && esp_ai_session_id != "" && !esp_ai_is_listen_model)
             {
                 esp_ai_dec.begin();
-                esp_ai_dec.write(esp_ai_cache_audio_sleep_reply.data(), esp_ai_cache_audio_sleep_reply.size());
+                // esp_ai_dec.write(esp_ai_cache_audio_sleep_reply.data(), esp_ai_cache_audio_sleep_reply.size());
+                if (recive_status)
+                {
+                    write_status = true;
+                    esp_ai_dec.write(esp_ai_cache_audio_sleep_reply.data(), esp_ai_cache_audio_sleep_reply.size());
+                    write_status = false;
+                }
             }
 
             esp_ai_start_ed = "0";
@@ -508,7 +514,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         // Serial.print("写入长度：");
         // Serial.println(audioLength);
 
-        esp_ai_dec.write(audioData, audioLength);
+        if (recive_status)
+        {
+            write_status = true;
+            esp_ai_dec.write(audioData, audioLength);
+            write_status = false;
+        }
 
         esp_ai_prev_session_id = sid;
         break;
