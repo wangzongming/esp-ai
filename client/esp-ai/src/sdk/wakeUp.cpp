@@ -43,6 +43,7 @@ void ESP_AI::wakeUp(String scene)
             vTaskDelay(pdMS_TO_TICKS(20));
         }
         vTaskDelay(pdMS_TO_TICKS(200));
+        esp_ai_dec.end();
 
         esp_ai_volume.setVolume(0); 
         delay(30); 
