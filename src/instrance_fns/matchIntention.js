@@ -140,8 +140,7 @@ async function matchIntention(device_id, text, reply) {
                         llm_historys,
                         stop_next_session: true
                     })
-
-                    console.log('开始请求音乐服务')
+ 
                     const { url, seek, message: errMessage } = await music_server(__name__ || text, { user_config, instance: G_Instance, device_id });
                     if (!url) {
                         await TTS_FN(device_id, {
@@ -150,8 +149,7 @@ async function matchIntention(device_id, text, reply) {
                         });
                         return;
                     }
-                    try {
-                        console.log('开始播放音乐')
+                    try { 
                         const session_id = await G_Instance.newSession(device_id);
                         play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
                     } catch (err) {
@@ -160,28 +158,7 @@ async function matchIntention(device_id, text, reply) {
                             text: "音频播放出错啦，重新换一首吧！",
                             need_record: true,
                         });
-                    }
-
-
-                    // music_server(__name__ || text, { user_config, instance: G_Instance, device_id }).then(async ({ url, seek, message: errMessage }) => {
-                    //     if (!url) {
-                    //         await TTS_FN(device_id, {
-                    //             text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
-                    //             need_record: true,
-                    //         });
-                    //         return;
-                    //     }
-                    //     try {
-                    //         const session_id = await G_Instance.newSession(device_id);
-                    //         play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
-                    //     } catch (err) {
-                    //         log.error(`音频播放过程失败： ${err}`)
-                    //         await TTS_FN(device_id, {
-                    //             text: "音频播放出错啦，重新换一首吧！",
-                    //             need_record: true,
-                    //         });
-                    //     }
-                    // });
+                    } 
 
                     break;
                 default:
