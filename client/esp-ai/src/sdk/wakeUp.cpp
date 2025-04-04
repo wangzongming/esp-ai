@@ -78,8 +78,7 @@ void ESP_AI::wakeUp(String scene)
         wakeup_time = millis();
 
         // 继续采集音频
-        esp_ai_start_get_audio = true;
-        esp_ai_is_first_send = true;
+        esp_ai_start_get_audio = true; 
 
         // 清空缓冲区
         if (esp_ai_asr_sample_buffer_before && !esp_ai_asr_sample_buffer_before->empty())

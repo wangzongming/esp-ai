@@ -32,18 +32,17 @@
 
 String ESP_AI_VERSION = "2.65.42";
 
-String esp_ai_start_ed = "0";
-bool esp_ai_ws_connected = false;
-String esp_ai_session_id = "";
-String esp_ai_prev_session_id = "";
-String esp_ai_tts_task_id = "";
-String esp_ai_status = "";
-bool esp_ai_is_listen_model = true;
-bool esp_ai_user_has_spoken = false;
-bool esp_ai_sleep = false;
-bool esp_ai_is_first_send = true;
-bool esp_ai_played_connected = false;
-bool asr_ing = false;
+String esp_ai_start_ed = "0";         // AST 服务推理中
+bool esp_ai_ws_connected = false;     // ws 服务已经连接成功
+String esp_ai_session_id = "";        // 会话ID，用于判断是否应该丢弃会话
+String esp_ai_prev_session_id = "";   // 上一轮会话ID
+String esp_ai_tts_task_id = "";       // TTS chunk ID
+String esp_ai_status = "";            // 设备状态
+bool esp_ai_is_listen_model = true;   // 是否为按住对话模式, 这个模式下按住按钮才会进行聆听，放开后进行LLM推理
+bool esp_ai_user_has_spoken = false;  // 用户是否已经说过话了，说过后要开始进行静默时间计时
+bool esp_ai_sleep = false;            // 是否为休眠状态，开发中... 
+bool esp_ai_played_connected = false; // 是否已经播放过 服务连接成功 的提示语了
+bool asr_ing = false;                 // 硬件是否正在进行收音                  
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;

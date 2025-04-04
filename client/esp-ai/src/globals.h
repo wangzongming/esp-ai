@@ -247,8 +247,7 @@ extern String esp_ai_session_id;
 extern String esp_ai_prev_session_id;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
-extern bool esp_ai_sleep;
-extern bool esp_ai_is_first_send;
+extern bool esp_ai_sleep; 
 extern bool asr_ing;
  
 // 聆听模式

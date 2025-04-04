@@ -47,6 +47,10 @@ void ESP_AI::on_wakeup_wrapper(void *arg)
     instance->on_wakeup();
 }
 
+/**
+ * 聆听中时不需要被打断，否则会带来更多问题
+ * 比如：不做回音消除时用户说话就不可以触发唤醒词等等...
+*/
 void ESP_AI::on_wakeup()
 {
     long esp_ai_last_debounce_time = 0;
@@ -57,7 +61,7 @@ void ESP_AI::on_wakeup()
  
     while (true)
     {
-        if (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low")
+        if (asr_ing == false && (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low"))
         {
             int reading = digitalRead(wake_up_config.pin);
             long curTime = millis();
