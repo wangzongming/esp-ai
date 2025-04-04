@@ -127,7 +127,7 @@ async function matchIntention(device_id, text, reply) {
 
                 case "__LEDC__":
                     // LEDC 暂不支持远程设备
-                    (!channel && channel!== 0) && log.error(`${instruct} 指令必须配置 channel、deg`); 
+                    (!channel && channel !== 0) && log.error(`${instruct} 指令必须配置 channel、deg`);
                     G_Instance.ledcWrite(device_id, channel, deg);
                     break;
                 case "__play_music__":
@@ -141,6 +141,7 @@ async function matchIntention(device_id, text, reply) {
                         stop_next_session: true
                     })
 
+                    console.log('开始请求音乐服务')
                     const { url, seek, message: errMessage } = await music_server(__name__ || text, { user_config, instance: G_Instance, device_id });
                     if (!url) {
                         await TTS_FN(device_id, {
@@ -150,6 +151,7 @@ async function matchIntention(device_id, text, reply) {
                         return;
                     }
                     try {
+                        console.log('开始播放音乐')
                         const session_id = await G_Instance.newSession(device_id);
                         play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
                     } catch (err) {
@@ -159,12 +161,34 @@ async function matchIntention(device_id, text, reply) {
                             need_record: true,
                         });
                     }
+
+
+                    // music_server(__name__ || text, { user_config, instance: G_Instance, device_id }).then(async ({ url, seek, message: errMessage }) => {
+                    //     if (!url) {
+                    //         await TTS_FN(device_id, {
+                    //             text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
+                    //             need_record: true,
+                    //         });
+                    //         return;
+                    //     }
+                    //     try {
+                    //         const session_id = await G_Instance.newSession(device_id);
+                    //         play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
+                    //     } catch (err) {
+                    //         log.error(`音频播放过程失败： ${err}`)
+                    //         await TTS_FN(device_id, {
+                    //             text: "音频播放出错啦，重新换一首吧！",
+                    //             need_record: true,
+                    //         });
+                    //     }
+                    // });
+
                     break;
                 default:
                     devLog && log.iat_info(`执行指令：${instruct}, data: ${data}, name: ${__name__}`);
                     G_devices.set(device_id, {
                         ...G_devices.get(device_id),
-                        stop_next_session: true
+                        // stop_next_session: true
                     })
                     instruct && ws_client && ws_client.send(JSON.stringify({
                         type: "instruct",

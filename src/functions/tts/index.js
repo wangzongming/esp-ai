@@ -66,39 +66,58 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
             // 这个和会话ID不同，这都是追加的方式。
-            const { stop_next_session, intention_ing } = G_devices.get(device_id); 
+            const { stop_next_session } = G_devices.get(device_id);
 
             function sendEndBuffer() {
                 audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
             }
-
             function sendEndAlignBuffer() {
+                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+            } 
+
+
+            let awaitCount = 0;
+
+            /**
+             * 等待意图的函数，最多等待 2s
+            */
+            function awaitIntention(doFn) {
                 const { intention_ing } = G_devices.get(device_id);
-                const sendFn = () => audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8')); 
-                if (intention_ing) {
+                if (intention_ing && awaitCount < 10) {
                     setTimeout(() => {
-                        const { intention_ing } = G_devices.get(device_id); 
+                        const { intention_ing } = G_devices.get(device_id);
                         if (intention_ing) {
-                            sendEndBuffer()
+                            awaitCount += 1;
+                            awaitIntention(doFn)
                         } else {
-                            sendFn();
+                            doFn();
                         }
                     }, 200)
                 } else {
-                    sendFn();
+                    doFn();
                 }
             }
 
+
+
             if (text_is_over) {
-                if (!stop_next_session) {
-                    if (need_record) { 
-                        sendEndAlignBuffer(); 
+                /**
+                 * 意图推理中时候并不知道是否还需要重新采集音频
+                 * 所以需要等待推理完毕后才进行最后一帧音频流的发送
+                */
+                awaitIntention(() => {
+                    const { stop_next_session } = G_devices.get(device_id); 
+                    if (!stop_next_session) {
+                        if (need_record) {
+                            sendEndAlignBuffer();
+                        } else {
+                            sendEndBuffer();
+                        }
                     } else {
                         sendEndBuffer();
                     }
-                } else {
-                    sendEndBuffer();
-                }
+                })
+ 
             } else {
                 if (!stop_next_session) {
                     audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
