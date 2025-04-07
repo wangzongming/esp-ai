@@ -248,6 +248,16 @@ private:
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
     void open_ap();
+
+    void open_ble_server();
+    static void on_ble_device_connected_wrapper(void *arg);
+    void on_ble_device_connected();
+    static void on_ble_device_disconnected_wrapper(void *arg);
+    void on_ble_device_disconnected(); 
+    static void characteristic_callbacks_wrapper(void *arg);
+    void characteristic_callbacks();   
+    void ble_connect_wifi();
+    
     void connect_ws();
 
     static void volume_listener_wrapper(void *arg);

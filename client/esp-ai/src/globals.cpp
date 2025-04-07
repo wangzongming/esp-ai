@@ -40,9 +40,9 @@ String esp_ai_tts_task_id = "";       // TTS chunk ID
 String esp_ai_status = "";            // 设备状态
 bool esp_ai_is_listen_model = true;   // 是否为按住对话模式, 这个模式下按住按钮才会进行聆听，放开后进行LLM推理
 bool esp_ai_user_has_spoken = false;  // 用户是否已经说过话了，说过后要开始进行静默时间计时
-bool esp_ai_sleep = false;            // 是否为休眠状态，开发中... 
+bool esp_ai_sleep = false;            // 是否为休眠状态，开发中...
 bool esp_ai_played_connected = false; // 是否已经播放过 服务连接成功 的提示语了
-bool asr_ing = false;                 // 硬件是否正在进行收音                  
+bool asr_ing = false;                 // 硬件是否正在进行收音
 
 // 开始搜集音频
 bool esp_ai_start_get_audio = false;
@@ -101,8 +101,8 @@ ESP_AI_volume_config default_volume_config = {7, 4096, 0.8, false};
 
 // 默认离线唤醒方案
 ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.9};
-// { wifi 账号， wifi 密码 }
-ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", ""};
+// { wifi 账号， wifi 密码, "热点名字", "配网页面HTML", "配网方式：AP | BLE" }
+ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", "", "AP"};
 // { ip， port, api_key }
 ESP_AI_server_config default_server_config = {"https", "node.espai2.fun", 443, "", ""};
 
@@ -225,6 +225,16 @@ JSONVar get_local_all_data()
 }
 
 /**
+ * 清楚本地存储的所有信息
+ * get_local_data("wifi_name"); // oldwang
+ */
+void clear_local_all_data()
+{ 
+    esi_ai_prefs.clear();
+}
+
+
+/**
  * set_local_data("wifi_name", "oldwang");
  */
 void set_local_data(String field_name, String new_value)
@@ -281,7 +291,7 @@ bool is_silence(const int16_t *audio_buffer, size_t bytes_read)
 
 /**
  * 将角度转换为占空比
-*/
+ */
 int angleToDutyCycle(int angle)
 {
     // 舵机的脉冲宽度范围通常在 0.5ms - 2.5ms
@@ -293,3 +303,45 @@ int angleToDutyCycle(int angle)
 
 std::vector<int> digital_read_pins;
 std::vector<int> analog_read_pins;
+
+String decodeURIComponent(const String &encoded)
+{
+    String decoded = "";
+    for (int i = 0; i < encoded.length(); i++)
+    {
+        if (encoded[i] == '%')
+        {
+            if (i + 2 < encoded.length())
+            {
+                // 提取 % 后面的两位十六进制字符
+                String hexStr = encoded.substring(i + 1, i + 3);
+                char decodedChar = (char)strtol(hexStr.c_str(), NULL, 16);
+                decoded += decodedChar;
+                i += 2; // 跳过已经处理的两位十六进制字符
+            }
+        }
+        else if (encoded[i] == '+')
+        {
+            // 处理 + 符号，它通常代表空格
+            decoded += ' ';
+        }
+        else
+        {
+            // 普通字符直接添加到结果中
+            decoded += encoded[i];
+        }
+    }
+    return decoded;
+}
+String get_ap_name(String ap_name)
+{
+    String device_id = get_local_data("device_id");
+    String lastTwoChars = device_id.substring(device_id.length() - 5);
+    lastTwoChars.replace(":", "");
+    String name = ap_name.length() > 0 ? ap_name : "ESP-AI:" + lastTwoChars;
+    return name;
+}
+
+// 接收到的客户端蓝牙数据
+String ESP_AI_BLE_RD;
+String ESP_AI_BLE_ERR = "";

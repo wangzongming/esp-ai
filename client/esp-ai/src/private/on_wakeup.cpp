@@ -61,11 +61,11 @@ void ESP_AI::on_wakeup()
  
     while (true)
     {
-        if (asr_ing == false && (wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low"))
+        if ((wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low"))
         {
             int reading = digitalRead(wake_up_config.pin);
             long curTime = millis();
-            int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
+            int target_val = wake_up_scheme == "pin_high" ? 1 : 0; 
             if (reading == target_val)
             {
                 if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
@@ -87,6 +87,7 @@ void ESP_AI::on_wakeup()
             }
         }
         // else if ((esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
+        // else if ((asr_ing == false && esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
         else if ((asr_ing == false && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
         {
             if (Esp_ai_serial.available())

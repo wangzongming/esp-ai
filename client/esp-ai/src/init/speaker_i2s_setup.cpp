@@ -32,7 +32,7 @@ void ESP_AI::speaker_i2s_setup()
 {
     AudioLogger::instance().begin(Serial, AudioLogger::Error);
     // AudioLogger::instance().begin(Serial, AudioLogger::Debug);
-    DEBUG_PRINT(debug, F("扬声器采样率："));
+    DEBUG_PRINT(debug, F("[Info] 扬声器采样率："));
     DEBUG_PRINTLN(debug, i2s_config_speaker.sample_rate);
     DEBUG_PRINTLN(debug, "");
     // 配置项文档

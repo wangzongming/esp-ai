@@ -36,7 +36,7 @@ void ESP_AI::wakeUp(String scene)
         esp_ai_tts_task_id = "";
         esp_ai_start_get_audio = false; 
         asr_ing = true; 
-
+        
         recive_status = false;
         while (write_status)
         {
@@ -52,7 +52,7 @@ void ESP_AI::wakeUp(String scene)
         delay(200); 
 
         esp_ai_volume.setVolume(volume_config.volume); 
-        delay(200);
+        delay(200); 
          
         
         // 播放问候语
@@ -62,7 +62,7 @@ void ESP_AI::wakeUp(String scene)
             int num_samples = esp_ai_cache_audio_greetings.size() / 2;
             int duration_ms = (num_samples * 1000) / 16000; 
             delay(duration_ms);   
-        }
+        } 
  
         
         // 播放提示音

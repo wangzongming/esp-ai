@@ -26,8 +26,8 @@
 #include "loop.h"
 
 void ESP_AI::loop()
-{
-    if (esp_ai_status == "0_ap")
+{   
+    if (esp_ai_status == "0_ap" && wifi_config.way == "AP")
     {
         esp_ai_dns_server.processNextRequest();
     }

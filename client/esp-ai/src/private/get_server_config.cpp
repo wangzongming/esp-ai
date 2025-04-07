@@ -74,7 +74,14 @@ bool ESP_AI::get_server_config()
                 }
                 Serial.println("[Error] 请求服务信息错误: " + message);
                 Serial.println("[Error] 请重新配网，如果您不使用 ESP-AI 开发者平台，请将配网页面中的 api_key 删除");
-                open_ap(); 
+                if (wifi_config.way == "BLE")
+                {
+                    open_ble_server();
+                }
+                else
+                {
+                    open_ap();
+                }
                 return false;
             }
             else

@@ -29,26 +29,23 @@
 #include "open_ap.h"
 
 void ESP_AI::open_ap()
-{
-    String device_id = get_local_data("device_id");
-    String lastTwoChars = device_id.substring(device_id.length() - 5);
-    lastTwoChars.replace(":", "");
-
+{ 
+    String ap_name = get_ap_name(wifi_config.ap_name);
+ 
     WiFi.mode(WIFI_AP);
-    String ap_name = strlen(wifi_config.ap_name) > 0 ? wifi_config.ap_name : "ESP-AI:" + lastTwoChars;
-    WiFi.softAP(ap_name);
-    IPAddress ip = WiFi.softAPIP(); 
+    WiFi.softAP(ap_name.c_str());
+    IPAddress ip = WiFi.softAPIP();
     String httpUrl = String("http://") + ip.toString();
     DEBUG_PRINTLN(debug, "[Info] WIFI名称：" + ap_name);
     DEBUG_PRINTLN(debug, "[Info] 配网地址：" + httpUrl);
 
     if (esp_ai_dns_server.start(53, "*", ip))
-    {
-        Serial.println("DNS 服务器启动成功");
+    { 
+        DEBUG_PRINTLN(debug, "[Info] DNS 服务器启动成功");
     }
     else
     {
-        Serial.println("DNS 服务器启动失败");
+        DEBUG_PRINTLN(debug, "[Error] DNS 服务器启动失败"); 
     }
 
     esp_ai_dec.write(qing_pei_wang, qing_pei_wang_len);

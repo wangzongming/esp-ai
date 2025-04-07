@@ -66,7 +66,7 @@ void ESP_AI::lights()
             rainbow_step_ai = (rainbow_step_ai + 15) & 255;
         }
         else
-        {
+        { 
             if (esp_ai_status == "iat_start" || esp_ai_status == "wakeup")
             {
                 esp_ai_pixels.clear();
@@ -91,10 +91,17 @@ void ESP_AI::lights()
                 esp_ai_pixels.clear();
                 esp_ai_pixels.show();
             }
+            // 未初始化完毕
+            else if (esp_ai_status == "0")
+            { 
+                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(255, 0, 0));
+                esp_ai_pixels.setBrightness(100);  
+                esp_ai_pixels.show();
+            }
             else if (esp_ai_status == "0_ap")
-            {
+            { 
                 esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
-                esp_ai_pixels.setBrightness(50);  
+                esp_ai_pixels.setBrightness(100);  
                 esp_ai_pixels.show();
             }
             else if (esp_ai_status == "2")

@@ -60,7 +60,15 @@
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
 #include <DNSServer.h>
-  
+
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+#include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_gap_ble_api.h"
+
+
 #include "audio/zh/lian_jie_shi_bai.h"
 #include "audio/zh/lian_jie_zhong.h"
 #include "audio/zh/pei_wang_cheng_gong.h"
@@ -75,6 +83,9 @@
 // #include "audio/zh/jian_quan_shi_bai.h"
 // #include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
 // #include "audio/zh/qing_lian_jie_fu_wu.h"
+
+#define BLE_SERVICE_UUID "b09b32d2-1e07-45bb-9319-109d612dead9"
+#define BLE_CHARACTERISTIC_UUID "5c1e7878-e48e-4134-af2c-fd64d873125b"
 
 // 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
@@ -96,6 +107,7 @@
 #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
 #define MIC_i2s_num I2S_NUM_0
 #define YSQ_i2s_num I2S_NUM_1
+
 
 extern HardwareSerial Esp_ai_serial;
 extern Preferences esi_ai_prefs;
@@ -165,9 +177,10 @@ struct ESP_AI_wifi_config
     char wifi_pwd[60];
     // 热点名字
     char ap_name[30];
-    // 自定义页面
-    String html_str;
-    // std::vector<char> html_str;
+    // 自定义配网页面
+    String html_str; 
+    // 配网方式 AP | BLE
+    String way; 
 };
 
 struct ESP_AI_server_config
@@ -196,7 +209,7 @@ struct ESP_AI_reset_btn_config
 struct ESP_AI_lights_config
 {
     // IO口
-    int pin; 
+    int pin;
 };
 
 struct ESP_AI_CONFIG
@@ -219,7 +232,6 @@ struct ESP_AI_CONFIG
     ESP_AI_reset_btn_config reset_btn_config;
     // 灯光配置
     ESP_AI_lights_config lights_config;
-    
 };
 
 extern String esp_ai_net_status;
@@ -247,9 +259,9 @@ extern String esp_ai_session_id;
 extern String esp_ai_prev_session_id;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
-extern bool esp_ai_sleep; 
+extern bool esp_ai_sleep;
 extern bool asr_ing;
- 
+
 // 聆听模式
 extern bool esp_ai_is_listen_model;
 extern bool esp_ai_played_connected;
@@ -283,7 +295,7 @@ extern ESP_AI_i2s_config_mic default_i2s_config_mic;
 extern ESP_AI_i2s_config_speaker default_i2s_config_speaker;
 // 默认离线唤醒方案
 extern ESP_AI_wake_up_config default_wake_up_config;
-// { wifi 账号， wifi 密码 }
+// { wifi 账号， wifi 密码, "热点名字", "配网页面HTML", "配网方式：AP | BLE" }
 extern ESP_AI_wifi_config default_wifi_config;
 // { ip， port }
 extern ESP_AI_server_config default_server_config;
@@ -291,7 +303,7 @@ extern ESP_AI_server_config default_server_config;
 extern ESP_AI_volume_config default_volume_config;
 // 重置按钮 { 输入引脚，输入最大值，默认音量 }
 extern ESP_AI_reset_btn_config default_reset_btn_config;
-extern ESP_AI_lights_config default_lights_config; 
+extern ESP_AI_lights_config default_lights_config;
 
 extern Adafruit_NeoPixel esp_ai_pixels;
 
@@ -350,9 +362,16 @@ void set_local_data(String field_name, String new_value);
 JSONVar get_local_all_data();
 String get_device_id();
 bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
+void clear_local_all_data();
 
 // 将角度转换为占空比
 int angleToDutyCycle(int angle);
 
 extern std::vector<int> digital_read_pins;
 extern std::vector<int> analog_read_pins;
+
+String decodeURIComponent(const String &encoded);
+String get_ap_name(String ap_name);
+extern String ESP_AI_BLE_RD;
+extern String ESP_AI_BLE_ERR;
+

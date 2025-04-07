@@ -30,7 +30,7 @@
 #include "main.h"
 
 bool start_scan_ssids_ed = false;
-
+ 
 void ESP_AI::set_config()
 {
     String loc_wifi_name = get_local_data("wifi_name");
@@ -194,18 +194,18 @@ void ESP_AI::scan_wifi_wrapper(void *arg)
 
 void ESP_AI::scan_wifi()
 {
-    Serial.println("开始扫描wifi");
+    DEBUG_PRINTLN(debug, "[Info] 开始扫描wifi");
     is_scan_over = false;
     is_scan_ing = true;
     int n = WiFi.scanNetworks();
-    Serial.println("扫描wifi完毕");
+    DEBUG_PRINTLN(debug, "[Info] 扫描wifi完毕。");
     if (n == 0)
     {
-        Serial.println("未搜索到任何 WIFI， 请重启开发板尝试。");
+        DEBUG_PRINTLN(debug, "[Info] 未搜索到任何 WIFI， 请重启开发板尝试。");
     }
     else
     {
-        Serial.printf("\n\nWIFI扫描完成，共找到 %d 个网络\n", n);
+        Serial.printf("[Info] 共找到 %d 个网络\n", n);
         for (int i = 0; i < n; ++i)
         {
             // 中国 2.4ghz 信道 1-14
@@ -274,7 +274,7 @@ void ESP_AI::web_server_setCrossOrigin()
     esp_ai_server.sendHeader(F("Access-Control-Allow-Methods"), F("PUT,POST,GET,OPTIONS"));
     esp_ai_server.sendHeader(F("Access-Control-Allow-Headers"), F("*"));
 };
- 
+
 void handleCaptivePortal()
 {
     esp_ai_server.sendHeader("Location", String("http://") + WiFi.softAPIP().toString(), true);
@@ -301,10 +301,10 @@ void ESP_AI::web_server_init()
     esp_ai_server.on("/clear_config", [this]()
                      { this->clear_config(); });
 
-    esp_ai_server.on("/generate_204", handleCaptivePortal);  
-    esp_ai_server.on("/fwlink", handleCaptivePortal);        
-    esp_ai_server.on("/hotspot-detect.html", handleCaptivePortal); 
-    esp_ai_server.onNotFound(handleCaptivePortal);          
+    esp_ai_server.on("/generate_204", handleCaptivePortal);
+    esp_ai_server.on("/fwlink", handleCaptivePortal);
+    esp_ai_server.on("/hotspot-detect.html", handleCaptivePortal);
+    esp_ai_server.onNotFound(handleCaptivePortal);
 
     esp_ai_server.begin();
 }
