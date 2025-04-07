@@ -33,66 +33,7 @@ BLECharacteristic *esp_ai_ble_characteristic;
 BLEService *esp_ai_ble_service;
 BLEAdvertising *esp_ai_ble_advertising;
 
-/**
- * 销毁蓝牙相关服务
- */
-void destroyBLEDevice()
-{
-
-    // 1. 停止广播
-    Serial.println("[Info] 开始停止广播");
-    BLEAdvertising *advertising = BLEDevice::getAdvertising();
-    if (advertising)
-        advertising->stop();
-    Serial.println("[Info] 停止广播完毕");
-
-    Serial.println("[Info] 开始停止服务");
-    // 2. 停止服务（如果你保存了 service/server 指针，也可以调用 stop）
-    if (esp_ai_ble_service)
-    {
-        esp_ai_ble_service->stop();
-    }
-    Serial.println("[Info] 停止服务完毕");
-
-    // 3. 延时等待 BLE 堆安全释放（关键）
-    delay(100); // 给 BLE 协议栈一点时间清理资源
-
-    Serial.println("[Info] 开始释放 BLE 栈");
-
-    // 4. 不强制释放，避免卡死
-    BLEDevice::deinit(false); // false 表示“非强制释放”
-
-    // 5. 可选：释放底层 BT 控制器（如果你不再用 BLE）
-    esp_bluedroid_disable();
-    esp_bluedroid_deinit();
-    esp_bt_controller_disable();
-    esp_bt_controller_deinit();
-
-    // // 停止广播
-    // if (esp_ai_ble_advertising)
-    // {
-    //     esp_ai_ble_advertising->stop();
-    //     esp_ai_ble_advertising = NULL;
-    // }
-
-    // // 停止服务
-    // if (esp_ai_ble_service)
-    // {
-    //     esp_ai_ble_service->stop();
-    //     esp_ai_ble_service = NULL;
-    // }
-
-    // // 断开所有连接
-    // if (esp_ai_ble_server)
-    // {
-    //     esp_ai_ble_server->disconnect();
-    //     esp_ai_ble_server = NULL;
-    // }
-
-    // // 关闭 BLE 控制器
-    // BLEDevice::deinit(true);
-}
-
+ 
 /**
  * 蓝牙连接回调
  */
@@ -235,11 +176,7 @@ void ESP_AI::ble_connect_wifi()
     JSONVar data = get_local_all_data();
     String wifi_name = (const char *)data["wifi_name"];
     String wifi_pwd = (const char *)data["wifi_pwd"]; 
-
-    Serial.println("开始配网");
-    Serial.print(wifi_name);
-    Serial.print("  ");
-    Serial.println(wifi_pwd);
+ 
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifi_name, wifi_pwd);
     DEBUG_PRINT(debug, F("connect wifi ing..."));
