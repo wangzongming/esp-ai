@@ -1,0 +1,14 @@
+dependencies:
+  idf:
+    version: '>=5.0'
+description: nghttp2 - HTTP/2 C Library
+repository: git://github.com/espressif/idf-extra-components.git
+repository_info:
+  commit_sha: 63471e582ecc9f08551c33d7deca728b5e61db08
+  path: nghttp
+sbom:
+  manifests:
+  - dest: nghttp2
+    path: sbom_nghttp2.yml
+url: https://github.com/espressif/idf-extra-components/tree/master/nghttp
+version: 1.62.1
