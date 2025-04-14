@@ -1,0 +1,14 @@
+dependencies:
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common
+  espressif/esp_hosted:
+    version: ~0.0.9
+    rules:
+    - if: target in [esp32p4]
+  espressif/esp_wifi_remote:
+    version: ~0.3.0
+    rules:
+    - if: target in [esp32p4]
+  espressif/esp-sr: '>=2.0.2'
+  lvgl/lvgl: '>=9.2.0'
+  espressif/esp_websocket_client: '>=1.4.0'

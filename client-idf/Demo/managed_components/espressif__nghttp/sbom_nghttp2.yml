@@ -1,0 +1,7 @@
+name: nghttp2
+version: 1.62.1
+cpe: cpe:2.3:a:nghttp2:nghttp2:{}:*:*:*:*:*:*:*
+supplier: 'Organization: nghttp2 <https://nghttp2.org/'
+description: nghttp2 - HTTP/2 C Library and tools
+url: https://github.com/nghttp2/nghttp2
+hash: d13a5758373931064636c1641db6277db45552dc

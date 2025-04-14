@@ -1,0 +1,109 @@
+menu "Example Configuration"
+    config AFE_MIC_NUM
+        int "Number of micphones used for AFE"
+        range 1 2
+        default 2 if IDF_TARGET_ESP32S3
+        default 1 if IDF_TARGET_ESP32
+        help
+            Now only support 1 or 2 mic
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+    
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+    
+            Can be left blank if the network has no security set.
+    
+    config BAIDU_ACCESS_KEY
+        string "Baidu speech access key ID"
+        default ""
+        help
+            Baidu speech Access key ID
+    
+    
+    config BAIDU_SECRET_KEY
+        string "Baidu speech access secret"
+        default ""
+        help
+            Baidu speech Access secret
+        config EXAMPLE_USING_ESP_TLS_MBEDTLS
+        bool
+        depends on ESP_TLS_USING_MBEDTLS
+        default y
+
+    config EXAMPLE_CLIENT_SESSION_TICKETS
+        bool "Enable Client session ticket support"
+        default n
+        select ESP_TLS_CLIENT_SESSION_TICKETS
+        help
+            Enable the client session ticket support for the example.
+
+    config EXAMPLE_LOCAL_SERVER_URL
+        string "Local Server URL for testing session tickets"
+        default "https://192.168.0.106:8070"
+        depends on EXAMPLE_CLIENT_SESSION_TICKETS
+        help
+            The url of the server to which the example is going to connect in order to test the session ticket support.
+
+    config EXAMPLE_LOCAL_SERVER_URL_FROM_STDIN
+        bool
+        default y if EXAMPLE_LOCAL_SERVER_URL = "FROM_STDIN"
+
+
+        config EXAMPLE_USING_ESP_TLS_MBEDTLS
+            bool
+            depends on ESP_TLS_USING_MBEDTLS
+            default y
+    
+        config EXAMPLE_CLIENT_SESSION_TICKETS
+            bool "Enable Client session ticket support"
+            default n
+            select ESP_TLS_CLIENT_SESSION_TICKETS
+            help
+                Enable the client session ticket support for the example.
+    
+        config EXAMPLE_LOCAL_SERVER_URL
+            string "Local Server URL for testing session tickets"
+            default "https://192.168.0.106:8070"
+            depends on EXAMPLE_CLIENT_SESSION_TICKETS
+            help
+                The url of the server to which the example is going to connect in order to test the session ticket support.
+    
+        config EXAMPLE_LOCAL_SERVER_URL_FROM_STDIN
+            bool
+            default y if EXAMPLE_LOCAL_SERVER_URL = "FROM_STDIN"
+            choice WEBSOCKET_URI_SOURCE
+                prompt "Websocket URI source"
+                default WEBSOCKET_URI_FROM_STRING
+                help
+                    Selects the source of the URI used in the example.
+        
+                config WEBSOCKET_URI_FROM_STRING
+                    bool "From string"
+        
+                config WEBSOCKET_URI_FROM_STDIN
+                    bool "From stdin"
+            endchoice
+            config ESP_WS_CLIENT_ENABLE_DYNAMIC_BUFFER
+                bool "Enable websocket client dynamic buffer for send and receive data"
+                default n
+                help
+                    Enable this option will reallocated buffer when send or receive data and free them when end of use.
+                    This can save about 2 KB memory when no websocket data send and receive.
+        
+            config WEBSOCKET_URI
+                string "Websocket endpoint URI"
+                depends on WEBSOCKET_URI_FROM_STRING
+                default "ws://echo.websocket.events"
+                help
+                    URL of websocket endpoint this example connects to and sends echo
+        
+    
+    endmenu
+    

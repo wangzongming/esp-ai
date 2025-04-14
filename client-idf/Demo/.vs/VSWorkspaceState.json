@@ -1,0 +1,18 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "out\\build\\x64-Debug",
+      "out\\install\\x64-Debug"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\main",
+    "\\managed_components",
+    "\\managed_components\\espressif__zlib\\test_apps",
+    "\\managed_components\\espressif__zlib\\zlib",
+    "\\managed_components\\espressif__zlib\\zlib\\contrib",
+    "\\managed_components\\espressif__zlib\\zlib\\contrib\\vstudio\\vc9"
+  ],
+  "PreviewInSolutionExplorer": false
+}
