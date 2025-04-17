@@ -76,7 +76,7 @@ class volcengineAsrClient {
         });
 
         // test...
-        // this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
+        this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
 
         this.ws.on('open', async () => {
             this.onOpen && this.onOpen();
@@ -173,7 +173,7 @@ class volcengineAsrClient {
             const code = payload.readUInt32BE(0);
             payloadSize = payload.readUInt32BE(4);
             payloadMsg = payload.slice(8);
-            console.error("SERVER_ERROR_RESPONSE code:", code); 
+            console.error("SERVER_ERROR_RESPONSE code:", code);
             // throw new Error(payloadMsg.toString());
         }
 
@@ -259,17 +259,21 @@ class volcengineAsrClient {
 */
 function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
     try {
-        const { url = "", appid, accessToken, clusterId = "volcengine_streaming_common" } = iat_config;
+        const { url = "", appid, accessToken, vad_course = 5000, clusterId = "volcengine_streaming_common" } = iat_config;
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
         if (!accessToken) return log.error(`请配给 IAT 配置 accessToken 参数。`)
         if (!clusterId) return log.error(`请配给 IAT 配置 clusterId 参数。`)
-        
+
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
         let iat_server_connected = false;
         let ended = false;
         let astText = "";
+
+        let asrTimeoutTimer = null;
+        let prevIsNull = false;
+
         connectServerBeforeCb();
 
         const client = new volcengineAsrClient({ url, appid, token: accessToken, cluster: clusterId, uid: device_id });
@@ -288,6 +292,23 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                 cb({ text: astText || "", device_id });
                 client.close()
             }
+
+            // 如果长时间无法识别文字需要关闭连接
+            !prevIsNull && clearTimeout(asrTimeoutTimer);
+            if (!astText) {
+                prevIsNull = true;
+                if (!prevIsNull) { 
+                    asrTimeoutTimer = setTimeout(() => { 
+                        ended = true;
+                        devLog && log.iat_info('ASR 识别结果:' + astText);
+                        cb({ text: astText || "", device_id });
+                        client.close()
+                    }, vad_course)
+                } 
+            } else {
+                prevIsNull = false;
+            }
+
         };
         client.onClose = () => {
             devLog && log.iat_info("-> 火山 ASR 服务已关闭：", session_id)
@@ -324,7 +345,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         logSendAudio((data) => {
             if (shouldClose) return;
             if (!iat_server_connected) return;
-            if (!data) return; 
+            if (!data) return;
             client.send(data);
         })
 

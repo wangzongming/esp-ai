@@ -85,7 +85,7 @@ void ESP_AI::loop()
             if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
             {
                 if (is_silence(esp_ai_asr_sample_buffer, bytes_read))
-                {
+                { 
                     if (last_silence_time == 0)
                     {
                         last_silence_time = millis();
