@@ -23,9 +23,16 @@
  * @websit https://espai.fun
  */
 
+const { iat_info } = require("../../utils/log");
 async function fn({ device_id  }) { 
     if(!G_devices.get(device_id)) return;
-    const { iat_ws } = G_devices.get(device_id); 
+    const { devLog } = G_config;
+    devLog && iat_info(`-> 收到客户端发来的 iat_end 事件`)
+    const { iat_ws, resolve_tts_task, tts_buffer_chunk_queue } = G_devices.get(device_id); 
+    // test...
+    tts_buffer_chunk_queue && tts_buffer_chunk_queue.clear();
+    resolve_tts_task && resolve_tts_task();
+
     iat_ws?.end?.();
 }
 

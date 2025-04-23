@@ -58,21 +58,27 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                 data: _chunk_text || chunk_text
             }))
         });
- 
+
         // 向客户端发送情绪
-        const sendEmotion = async (text) => { 
-            const response = await axios.post(`https://api.espai2.fun/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
-            const { success, message: res_msg, data } = response.data;
-            if (success) {
-                ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
-            } else {
-                log.error('-> 情绪推理失败：', res_msg);
+        const sendEmotion = async (text) => {
+            try{ 
+                const response = await axios.post(`https://api.espai2.fun/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
+                const { success, message: res_msg, data } = response.data;
+                if (success) {
+                    ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
+                } else {
+                    log.error('-> 情绪推理失败：', res_msg);
+                }
+            }catch(err){ 
+                log.error('-> 情绪推理失败：', err);
             }
+            
         }
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
 
+        // console.log("播放音频：", is_over, text);
         if (is_over) {
             devLog && log.llm_info('-> LLM 推理完毕');
             llm_ws && llm_ws.close()
@@ -81,7 +87,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             ttsText && sendEmotion(ttsText);
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
             // console.log('llm 结束: ', textNowNull, ttsText);
-            if (textNowNull) {
+            if (textNowNull && (ttsText.replace(/\s/g, '')).replace(/[,;!?()<>"‘”《》’!?【】。、，；！？（）”’]?/g, "") !== "") {
                 // 添加音频播放任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
                     const tts_res = await TTS_FN(device_id, {
@@ -92,7 +98,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                         need_record: true
                     })
                     return tts_res;
-                })
+                }) 
                 texts.all_text += org_text;
             } else {
                 // 特殊结束任务
@@ -106,8 +112,6 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                     }
                     return true;
                 })
-
-
             }
 
             // 所有 LLM 用下面的 key 为准
@@ -138,13 +142,24 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
             ttsText && sendEmotion(ttsText);
             if (ttsText) {
-                // log.llm_info('客户端播放：', ttsText);
+                log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
                 texts.index += 1;
 
-                // 添加任务
-                tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                    return TTS_FN(device_id, {
+                // // 添加任务
+                // tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
+                //     return TTS_FN(device_id, {
+                //         text: ttsText,
+                //         pauseInputAudio: true,
+                //         session_id,
+                //         text_is_over: false,
+                //         need_record: false
+                //     })
+                // })
+
+                  // 添加任务
+                  tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
+                    return await TTS_FN(device_id, {
                         text: ttsText,
                         pauseInputAudio: true,
                         session_id,

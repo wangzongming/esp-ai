@@ -125,7 +125,7 @@ async function fn({ device_id }) {
         //     // text: "哦，听起来不太好受。记得多穿衣服保暖。", 
         //     text: "东方财富最新的股价为13.74元/股。需要注意的是股市随时都在变化。", 
         //     text_is_over: true,
-        //     tts_task_id: "connected_reply"
+        //     // tts_task_id: "connected_reply"
         // }) 
         // return;
 

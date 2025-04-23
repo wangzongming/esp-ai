@@ -76,7 +76,7 @@ class volcengineAsrClient {
         });
 
         // test...
-        this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
+        // this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
 
         this.ws.on('open', async () => {
             this.onOpen && this.onOpen();
@@ -272,7 +272,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let astText = "";
 
         let asrTimeoutTimer = null;
-        let prevIsNull = false;
+        let prevIsNull = false; 
 
         connectServerBeforeCb();
 
@@ -280,7 +280,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         client.onOpen = () => {
             if (shouldClose) return;
             iat_server_connected = true;
-            connectServerCb(true);
+            connectServerCb(true); 
+           
         };
         client.onMessage = (data) => {
             if (shouldClose) return;
@@ -343,6 +344,8 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             }
         })
         logSendAudio((data) => {
+            // console.log("发送数据：", data);
+            // console.log(shouldClose, iat_server_connected);
             if (shouldClose) return;
             if (!iat_server_connected) return;
             if (!data) return;

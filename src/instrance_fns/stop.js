@@ -40,8 +40,7 @@ function stop(device_id, at) {
         const {
             ws,
             tts_buffer_chunk_queue, iat_server_connect_ing, iat_server_connected, client_out_audio_ing,
-            tts_list = [], iat_ws, llm_ws,
-            // iat_end_frame_timer, clear_audio_out_over_queue, 
+            tts_list = [], iat_ws, llm_ws, 
             play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek, 
             tts_server_connect_ing, tts_server_connected,
             llm_server_connect_ing, llm_server_connected

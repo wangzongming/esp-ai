@@ -1,4 +1,4 @@
-
+const log = require("./log");
 class TTS_buffer_chunk_queue {
     constructor(device_id) {
         this.device_id = device_id;
@@ -8,7 +8,7 @@ class TTS_buffer_chunk_queue {
         this.queue_listen_timer = true; 
     } 
     push(args) { 
-        this.queue.push(args); 
+        this.queue.push(args);  
         !this.runing && this.run();
     }
     async run() {
@@ -18,11 +18,11 @@ class TTS_buffer_chunk_queue {
             return;
         } 
         this.runing = true;
-        const tts_queue = this.queue.shift();
-        await tts_queue();
+        const tts_queue = this.queue.shift(); 
+        await tts_queue(); 
         this.run(); 
     } 
-    clear() {
+    clear() { 
         this.runing = false;
         this.stoped = true;
         this.queue = [];

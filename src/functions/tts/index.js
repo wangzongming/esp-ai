@@ -201,13 +201,15 @@ function TTSFN(device_id, opts) {
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
                     tts_server_connect_ing: true,
+                    // 记录下来，如果设备打断时，需要框架调用，否则本任务将永远无法结束
+                    resolve_tts_task: resolve
                 })
             }
 
             /**
             * 连接 tts 服务后的回调
             */
-            const connectServerCb = async (connected) => {
+            const connectServerCb = async (connected) => {  
                 if (connected) {
                     if (!G_devices.get(device_id)) return;
                     devLog && log.tts_info("-> TTS 服务连接成功！")
@@ -223,10 +225,18 @@ function TTSFN(device_id, opts) {
                     }));
                     // 启动音频发送任务 
                     audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id), 
+                            resolve_tts_task: null
+                        })
                         resolve(true);
                     });
                 } else {
                     if (!G_devices.get(device_id)) {
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id), 
+                            resolve_tts_task: null
+                        })
                         return resolve(true);
                     };
                     G_devices.set(device_id, {
@@ -235,6 +245,14 @@ function TTSFN(device_id, opts) {
                         tts_server_connect_ing: false,
                     })
                     !is_create_cache && ws_client && ws_client.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));
+
+                    // test...
+                    // 关闭连接后应该结束TTS
+                    // 否则TTS任务列表的某个任务会一直处于等待状态 
+
+                    // 存在问题：
+                    // 用户打断后会导致 TTS 任务永远结束不了....
+                    // resolve(true);
                 }
             }
 
@@ -246,6 +264,10 @@ function TTSFN(device_id, opts) {
                 tts_list.delete(tts_task_id)
                 log.error(err)
 
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id), 
+                    resolve_tts_task: null
+                })
                 resolve(true);
             }
 

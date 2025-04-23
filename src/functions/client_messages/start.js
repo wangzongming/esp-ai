@@ -29,13 +29,15 @@
 const { t_info, error } = require("../../utils/log");
 const isOutTimeErr = require("../../utils/isOutTimeErr");
 
-async function fn({ device_id }) {
+async function fn({ device_id, _ws }) {
     try {
         const IAT_FN = require(`../iat`);
         // const TTS_FN = require(`../tts`);
 
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
+            // test...
+            _ws && _ws.close();
             return;
         };
 

@@ -115,6 +115,7 @@ function init_server() {
                         comm_args.success = success;
                         comm_args.value = value;
                         comm_args.pin = pin;
+                        comm_args._ws = ws; 
                         switch (type) {
                             case "start":
                                 start(comm_args);

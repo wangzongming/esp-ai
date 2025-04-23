@@ -122,6 +122,12 @@ module.exports = async (device_id, connected_cb) => {
                     iat_server_connect_ing: false,
                     iat_ws: null,
                 })
+                
+                const { session_id: _session_id } = G_devices.get(device_id) 
+                if (session_id !== _session_id) {
+                    console.log('无需发送打断标识')
+                    return;
+                }
                 ws_client && ws_client.send(JSON.stringify({
                     type: "session_status",
                     status: "iat_end",
