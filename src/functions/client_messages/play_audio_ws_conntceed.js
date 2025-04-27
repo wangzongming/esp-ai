@@ -160,7 +160,8 @@ async function fn({ device_id }) {
             await TTS_FN(device_id, {
                 text: connected_reply,
                 text_is_over: true,
-                tts_task_id: "connected_reply"
+                tts_task_id: "connected_reply",
+                session_id: G_session_ids.cache_connected,
             })
         }
 

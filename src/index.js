@@ -92,6 +92,7 @@ function main(config = {}) {
          * 1000 -> 提示音缓存数据
          * 1001 -> 唤醒问候语缓存数据
          * 1002 -> 休息时回复缓存数据
+         * 0001 -> 服务连接成功提示语
          * 2000 -> 整个回复的TTS最后一组数据，需要继续对话
          * 2001 -> 整个回复的TTS最后一组数据，无需继续对话
          * 2002 -> TTS 任务组的片段完毕
@@ -100,6 +101,7 @@ function main(config = {}) {
         global.G_session_ids = {
             cache_du:"1000",
             cache_hello:"1001",
+            cache_connected:"0001",
             cache_sleep_reply:"1002",
             tts_all_end_align:"2000",
             tts_all_end:"2001",
