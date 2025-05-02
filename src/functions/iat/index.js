@@ -53,14 +53,17 @@ async function cb({ device_id, text }) {
         if (text.length) {
             G_Instance.matchIntention(device_id, text);
             LLM_FN(device_id, { text })
-        } else {
-            G_Instance.tts(device_id, sleep_reply);
+        } else { 
             onSleep && onSleep({ instance: G_Instance, device_id, client_params });
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 first_session: true,
             })
-            ws_client && ws_client.send("session_end");
+            // ws_client && ws_client.send("session_end");
+            ws_client && ws_client.send("session_end", () => {
+                G_Instance.tts(device_id, sleep_reply);
+            });
+
         }
     } catch (err) {
         console.log("IAT 回调错误：", err);
@@ -122,8 +125,8 @@ module.exports = async (device_id, connected_cb) => {
                     iat_server_connect_ing: false,
                     iat_ws: null,
                 })
-                
-                const { session_id: _session_id } = G_devices.get(device_id) 
+
+                const { session_id: _session_id } = G_devices.get(device_id)
                 if (session_id !== _session_id) {
                     console.log('无需发送打断标识')
                     return;

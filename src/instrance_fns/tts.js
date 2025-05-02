@@ -31,8 +31,7 @@ const log = require("../utils/log");
 async function tts(device_id, text, opts) {
     try {
         !device_id && log.error(`调用 tts 方法时，请传入 device_id`);
-        if (!G_devices.get(device_id)) return;
-        const { ws } = G_devices.get(device_id);
+        if (!G_devices.get(device_id)) return; 
         const TTS_FN = require(`../functions/tts`);
         text && await TTS_FN(device_id, {
             text: text,

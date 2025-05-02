@@ -145,6 +145,7 @@ async function fn({ device_id }) {
             })
         }
 
+        // 在iat结束后再下发即可
         // const sleep_reply = _user_config.sleep_reply;
         // if (sleep_reply !== false) {
         //     await TTS_FN(device_id, {
@@ -156,7 +157,7 @@ async function fn({ device_id }) {
         // }
 
         // 播放ws连接成功语音
-        if (connected_reply) {
+        if (connected_reply) { 
             await TTS_FN(device_id, {
                 text: connected_reply,
                 text_is_over: true,

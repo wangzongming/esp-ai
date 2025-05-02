@@ -56,9 +56,8 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             }))
         });
         !is_create_cache && frameOnTTScb && frameOnTTScb(audio, is_over);
-
-        ws_client.isAlive = true;
-
+ 
+        ws_client.isAlive = true; 
         audio.length && audio_sender.sendAudio(audio);
         // 告诉客户端本 TTS chunk 播放完毕
         if (is_over) {
