@@ -39,7 +39,7 @@ void ESP_AI::wakeUp(String scene)
         
         recive_status = false;
         while (write_status)
-        {
+        { 
             vTaskDelay(pdMS_TO_TICKS(20));
         }
         vTaskDelay(pdMS_TO_TICKS(200));

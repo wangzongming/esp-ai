@@ -144,18 +144,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             if (ttsText) {
                 log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
-                texts.index += 1;
-
-                // // 添加任务
-                // tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                //     return TTS_FN(device_id, {
-                //         text: ttsText,
-                //         pauseInputAudio: true,
-                //         session_id,
-                //         text_is_over: false,
-                //         need_record: false
-                //     })
-                // })
+                texts.index += 1;  
 
                   // 添加任务
                   tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {

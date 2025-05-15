@@ -242,7 +242,7 @@ function init_server() {
 
         setInterval(function () {
             log.info("当前客户端数量：" + wss.clients.size)
-        }, 30 * 1000);
+        }, 5 * 60 * 1000);
 
         wss.on('close', function close() {
             clearInterval(interval);

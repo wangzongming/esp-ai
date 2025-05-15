@@ -36,16 +36,12 @@ async function fn({ device_id, _ws }) {
 
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
-            // test...
             _ws && _ws.close();
             return;
         };
 
         const { auth } = G_config;
-        const {
-            ws,  
-            client_params, 
-        } = G_devices.get(device_id);
+        const { ws, client_params } = G_devices.get(device_id);
         if (auth) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
                 ws,
@@ -72,7 +68,7 @@ async function fn({ device_id, _ws }) {
                 return;
             };
         }
-  
+
         await G_Instance.stop(device_id, "打断会话时");
         await G_Instance.newSession(device_id);
 
@@ -85,7 +81,7 @@ async function fn({ device_id, _ws }) {
                 // 异步停止下一次会话
                 stop_next_session: false
             })
- 
+
             return IAT_FN(device_id, connect_cb);
         };
         if (!G_devices.get(device_id)) return;
@@ -94,8 +90,8 @@ async function fn({ device_id, _ws }) {
             started: true,
             start_iat,
         })
- 
-        
+
+
         // 应该直接去连接 iat 服务
         start_iat();
 

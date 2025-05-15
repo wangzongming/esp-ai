@@ -46,7 +46,7 @@ const WebSocket = require('ws')
  * 
  *  
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
     try {
         const { api_key, vad_first = '', vad_course = '', ...other_config } = iat_config;
         if (!api_key) return log.error(`请配给 IAT 配置 api_key 参数。`)
@@ -111,6 +111,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             switch (data.type) {
                 case 'result':
                     realStr += data.text;
+                    onIATText && onIATText(realStr);
                     devLog && log.iat_info(data.text)
                     break;
                 case 'final':
@@ -118,6 +119,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     realStr += data.text;
                     devLog && log.iat_info(`IAT 已完成：${realStr}`)
                     cb({ text: realStr, device_id });
+                    onIATText && onIATText(realStr);
                     connectServerCb(false);
                     shouldClose = true;
                     iat_server_connected = false;

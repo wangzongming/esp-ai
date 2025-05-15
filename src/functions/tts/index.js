@@ -56,8 +56,8 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             }))
         });
         !is_create_cache && frameOnTTScb && frameOnTTScb(audio, is_over);
- 
-        ws_client.isAlive = true; 
+
+        ws_client.isAlive = true;
         audio.length && audio_sender.sendAudio(audio);
         // 告诉客户端本 TTS chunk 播放完毕
         if (is_over) {
@@ -67,12 +67,12 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             // 这个和会话ID不同，这都是追加的方式。
             const { stop_next_session } = G_devices.get(device_id);
 
-            function sendEndBuffer() {
+            function sendEndBuffer() { 
                 audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
             }
             function sendEndAlignBuffer() {
                 audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
-            } 
+            }
 
 
             let awaitCount = 0;
@@ -105,7 +105,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                  * 所以需要等待推理完毕后才进行最后一帧音频流的发送
                 */
                 awaitIntention(() => {
-                    const { stop_next_session } = G_devices.get(device_id); 
+                    const { stop_next_session } = G_devices.get(device_id);
                     if (!stop_next_session) {
                         if (need_record) {
                             sendEndAlignBuffer();
@@ -116,7 +116,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                         sendEndBuffer();
                     }
                 })
- 
+
             } else {
                 if (!stop_next_session) {
                     audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
@@ -169,7 +169,8 @@ function TTSFN(device_id, opts) {
             } else {
                 devLog && log.tts_info('-> 开始请求TTS: ', text);
             }
-            const audio_sender = new Audio_sender(ws_client, device_id)
+
+            const audio_sender = new Audio_sender(ws_client, device_id);
 
             !is_create_cache && onTTS && onTTS({
                 device_id, tts_task_id,
@@ -208,7 +209,7 @@ function TTSFN(device_id, opts) {
             /**
             * 连接 tts 服务后的回调
             */
-            const connectServerCb = async (connected) => {  
+            const connectServerCb = async (connected) => {
                 if (connected) {
                     if (!G_devices.get(device_id)) return;
                     devLog && log.tts_info("-> TTS 服务连接成功！")
@@ -225,7 +226,7 @@ function TTSFN(device_id, opts) {
                     // 启动音频发送任务 
                     audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
                         G_devices.set(device_id, {
-                            ...G_devices.get(device_id), 
+                            ...G_devices.get(device_id),
                             resolve_tts_task: null
                         })
                         resolve(true);
@@ -233,7 +234,7 @@ function TTSFN(device_id, opts) {
                 } else {
                     if (!G_devices.get(device_id)) {
                         G_devices.set(device_id, {
-                            ...G_devices.get(device_id), 
+                            ...G_devices.get(device_id),
                             resolve_tts_task: null
                         })
                         return resolve(true);
@@ -264,7 +265,7 @@ function TTSFN(device_id, opts) {
                 log.error(err)
 
                 G_devices.set(device_id, {
-                    ...G_devices.get(device_id), 
+                    ...G_devices.get(device_id),
                     resolve_tts_task: null
                 })
                 resolve(true);
@@ -280,7 +281,7 @@ function TTSFN(device_id, opts) {
                 tts_config,
                 tts_params_set,
                 log,
-                iat_server, llm_server, tts_server,
+                iat_server, llm_server, tts_server, text_is_over,
                 cb: (arg) => cb({
                     ...arg, tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb, is_cache, is_create_cache, audio_sender
                 }),

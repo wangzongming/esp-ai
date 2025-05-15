@@ -28,8 +28,7 @@ async function fn({ device_id  }) {
     if(!G_devices.get(device_id)) return;
     const { devLog } = G_config;
     devLog && iat_info(`-> 收到客户端发来的 iat_end 事件`)
-    const { iat_ws, resolve_tts_task, tts_buffer_chunk_queue } = G_devices.get(device_id); 
-    // test...
+    const { iat_ws, resolve_tts_task, tts_buffer_chunk_queue } = G_devices.get(device_id);  
     tts_buffer_chunk_queue && tts_buffer_chunk_queue.clear();
     resolve_tts_task && resolve_tts_task();
 

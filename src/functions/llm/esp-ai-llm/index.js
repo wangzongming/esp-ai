@@ -79,7 +79,7 @@ async function LLM_FN({ devLog, is_pre_connect, llm_config, text, llmServerError
 
         const data = {
             ...other_config,
-            "message": [
+            "messages": [
                 ...llm_init_messages,
                 ...llm_historys,
                 {

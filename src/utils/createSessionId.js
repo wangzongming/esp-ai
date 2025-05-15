@@ -26,7 +26,7 @@
 /**
  * 会话 ID 创建，内置会话ID: 
  * 系统提示音: 0000
- *    会话Id: 1000 ~ 1999  
+ *    会话Id: 1000 ~ 9999  
 */
 const createSessionId = (preId) => {
     let id = createId();
@@ -36,7 +36,11 @@ const createSessionId = (preId) => {
     return id;
 }
 function createId() {
-    return 1000 + parseInt(Math.random() * 1000);
+    const id = 1000 + parseInt(Math.random() * 9000);
+    if (G_session_ids[`${id}`]) {
+        return createId()
+    }
+    return id;
 }
 
 module.exports = createSessionId;

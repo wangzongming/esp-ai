@@ -60,7 +60,7 @@ const path = require('path');
  *
  *
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb, onIATText }) {
     try {
         const { appid, apiSecret, apiKey, ...other_config } = iat_config;
         if (!apiKey) return log.error(`请配给 IAT 配置 apiKey 参数。`)
@@ -192,16 +192,19 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     }
                 })
 
+                onIATText && onIATText(str)
                 devLog && log.iat_info(`-> 最终识别结果：${realStr}`)
                 cb({ text: realStr, device_id });
                 return;
             } else {
+                onIATText && onIATText(str)
                 str += "-> 中间识别结果"
             }
             if (res.data.result.pgs === 'rpl') {
                 res.data.result.rg.forEach(i => {
                     iatResult[i] = null
                 })
+                onIATText && onIATText(str)
                 str += "【动态修正】"
             }
             str += "："
@@ -214,7 +217,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
                     })
                 }
             })
-            devLog && log.iat_info(str)
+            devLog === 2 && log.iat_info(str);
         })
 
         // 资源释放
@@ -271,8 +274,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         }
 
         // test...
-        // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`));
-
+        // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`)); 
         let overTimer = null;
         function send_pcm(data) {
             if (shouldClose) return;

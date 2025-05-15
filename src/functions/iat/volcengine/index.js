@@ -57,6 +57,7 @@ class volcengineAsrClient {
         this.workflow = "audio_in,resample,partition,vad,fe,decode";
         // 默认音频格式与编解码方式
         this.format = "mp3";
+        // this.format = "pcm";
         this.codec = "raw";
         this.url = url || "wss://openspeech.bytedance.com/api/v2/asr";
         this.onOpen = null;
@@ -76,7 +77,7 @@ class volcengineAsrClient {
         });
 
         // test...
-        // this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
+        this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
 
         this.ws.on('open', async () => {
             this.onOpen && this.onOpen();
@@ -196,7 +197,7 @@ class volcengineAsrClient {
 
     sendChunk(chunk, isLastSegment) {
         // test...
-        // this.writeStreamMP3.write(chunk);
+        this.writeStreamMP3.write(chunk);
         let audioMsgHeader;
         if (!isLastSegment) {
             audioMsgHeader = DefaultAudioOnlyWsHeader;
@@ -257,7 +258,7 @@ class volcengineAsrClient {
  *
  *
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, cb, logWSServer, logSendAudio, onIATText, connectServerCb, connectServerBeforeCb, iatEndQueueCb }) {
     try {
         const { url = "", appid, accessToken, vad_course = 5000, clusterId = "volcengine_streaming_common" } = iat_config;
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
@@ -272,7 +273,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let astText = "";
 
         let asrTimeoutTimer = null;
-        let prevIsNull = false; 
+        let prevIsNull = false;
 
         connectServerBeforeCb();
 
@@ -280,12 +281,13 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         client.onOpen = () => {
             if (shouldClose) return;
             iat_server_connected = true;
-            connectServerCb(true); 
-           
+            connectServerCb(true);
+
         };
         client.onMessage = (data) => {
             if (shouldClose) return;
             astText = data?.result?.[0]?.text || "";
+            onIATText && onIATText(astText);
             devLog === 2 && log.iat_info('识别内容:' + astText);
             if (iat_server_connected === false && !ended) {
                 ended = true;
@@ -298,14 +300,14 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             !prevIsNull && clearTimeout(asrTimeoutTimer);
             if (!astText) {
                 prevIsNull = true;
-                if (!prevIsNull) { 
-                    asrTimeoutTimer = setTimeout(() => { 
+                if (!prevIsNull) {
+                    asrTimeoutTimer = setTimeout(() => {
                         ended = true;
                         devLog && log.iat_info('ASR 识别结果:' + astText);
                         cb({ text: astText || "", device_id });
                         client.close()
                     }, vad_course)
-                } 
+                }
             } else {
                 prevIsNull = false;
             }

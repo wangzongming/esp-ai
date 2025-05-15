@@ -122,12 +122,19 @@ async function fn({ device_id }) {
         // return;
 
         // await TTS_FN(device_id, {
+        //     text: "好的",  
+        //     text_is_over: true,
+        //     // tts_task_id: "connected_reply"
+        // }) 
+        // await TTS_FN(device_id, {
         //     // text: "哦，听起来不太好受。记得多穿衣服保暖。", 
         //     text: "东方财富最新的股价为13.74元/股。需要注意的是股市随时都在变化。", 
         //     text_is_over: true,
         //     // tts_task_id: "connected_reply"
         // }) 
         // return;
+
+        
 
         // 缓存提示音 
         if (user_config.iatDu !== false) {
@@ -145,7 +152,7 @@ async function fn({ device_id }) {
             })
         }
 
-        // 在iat结束后再下发即可
+        // 在iat结束后再下发即可 ing...
         // const sleep_reply = _user_config.sleep_reply;
         // if (sleep_reply !== false) {
         //     await TTS_FN(device_id, {

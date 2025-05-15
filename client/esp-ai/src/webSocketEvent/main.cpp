@@ -488,6 +488,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             esp_ai_prev_session_id = sid;
             return;
         }
+
         // 提取音频数据
         uint8_t *audioData = payload + 4;
         size_t audioLength = length - 4;
@@ -513,6 +514,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
         // Serial.print("写入长度：");
         // Serial.println(audioLength);
+        // Serial.println(recive_status);
 
         if (recive_status)
         {
