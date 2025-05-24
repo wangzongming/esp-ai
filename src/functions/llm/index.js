@@ -35,7 +35,7 @@ const axios = require('axios');
 */
 async function cb(device_id, { text, user_text, is_over, texts, chunk_text, session_id }) {
     try {
-        const { devLog, onLLMcb, llm_qa_number } = G_config;
+        const { devLog, onLLMcb, llm_qa_number, ai_server } = G_config;
         if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../tts`);
         const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue, tts_server } = G_devices.get(device_id);
@@ -43,8 +43,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         if (!texts.index) {
             texts.index = 0;
         }
-
-
+ 
         onLLMcb && onLLMcb({
             device_id,
             text: chunk_text,
@@ -59,20 +58,22 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             }))
         });
 
-        // 向客户端发送情绪
+        /**
+         * 向客户端发送情绪
+        */
         const sendEmotion = async (text) => {
-            try{ 
-                const response = await axios.post(`https://api.espai2.fun/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
+            try { 
+                const response = await axios.post(`${ai_server}/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
                 const { success, message: res_msg, data } = response.data;
                 if (success) {
                     ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
                 } else {
-                    log.error('-> 情绪推理失败：', res_msg);
+                    log.error('-> 情绪推理失败：'+ res_msg);
                 }
-            }catch(err){ 
-                log.error('-> 情绪推理失败：', err);
+            } catch (err) {
+                log.error('-> 情绪推理失败：');
+                console.log(err);
             }
-            
         }
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
@@ -97,8 +98,9 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                         text_is_over: true,
                         need_record: true
                     })
+                    console.log("AI 说完了 111")
                     return tts_res;
-                }) 
+                })
                 texts.all_text += org_text;
             } else {
                 // 特殊结束任务
@@ -142,12 +144,12 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
             ttsText && sendEmotion(ttsText);
             if (ttsText) {
-                log.llm_info('客户端播放：', ttsText);
+                devLog && log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
-                texts.index += 1;  
+                texts.index += 1;
 
-                  // 添加任务
-                  tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
+                // 添加任务
+                tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
                     return await TTS_FN(device_id, {
                         text: ttsText,
                         pauseInputAudio: true,

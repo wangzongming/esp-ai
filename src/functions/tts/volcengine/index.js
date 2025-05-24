@@ -59,7 +59,7 @@ function TTS_FN({ device_id, text, devLog, tts_config, logWSServer, tts_params_s
             speed_ratio: 1.0,
             pitch_ratio: 1.0,
             ...other_config,
-            encoding: "mp3",
+            encoding: "mp3", 
         }
 
         const curTTSWs = new WebSocket(api_url, { headers: { "Authorization": `Bearer; ${accessToken}` }, perMessageDeflate: false });

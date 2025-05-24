@@ -22,24 +22,14 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-
-const { tts_info } = require("../../utils/log");
-async function fn({ device_id, tts_task_id, session_id }) {
-    const { devLog } = G_config;
-    if (!G_devices.get(device_id)) return;
-    devLog && tts_info("-> 客户端音频流播放完毕：", session_id || "无会话ID", tts_task_id || "无任务ID");
  
-    const new_attr = { client_out_audio_ing: false, };
-    if (session_id === G_session_ids["tts_all_end"] || session_id === G_session_ids["tts_all_end_align"]) {
-        new_attr["session_id"] = "";
-
-        // test...
-        console.log("AI 说完了 222")
-    }
-
+async function fn({ device_id, session_id, value }) {
+    if (!G_devices.get(device_id)) return;  
+    // test...
+    console.log('客户端可用流：', (value / 1024) + " kb")
     G_devices.set(device_id, {
         ...G_devices.get(device_id),
-        ...new_attr
+        client_available_audio: value,
     })
 }
 

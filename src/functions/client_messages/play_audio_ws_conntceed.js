@@ -115,7 +115,10 @@ async function fn({ device_id }) {
         // setTimeout(async () => {
         //     // 播放音频测试 
         //     const session_id = await G_Instance.newSession(device_id);
-        //     play_audio("https://xiaomingio.top/music.mp3", ws, "play_music", session_id, device_id, 0, () => { 
+        //     play_audio(
+        //         // "https://xiaomingio.top/music.mp3"
+        //         "https://xiaomingio.top/music2.mp3"
+        //         , ws, "play_music", session_id, device_id, 0, () => { 
         //         console.log("音乐播放完毕")
         //     })
         // }, 2000)

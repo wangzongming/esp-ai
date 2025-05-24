@@ -56,9 +56,10 @@ class volcengineAsrClient {
         // 固定的工作流
         this.workflow = "audio_in,resample,partition,vad,fe,decode";
         // 默认音频格式与编解码方式
-        this.format = "mp3";
-        // this.format = "pcm";
-        this.codec = "raw";
+        // this.format = "mp3";
+        this.format = "pcm";
+        this.codec = "raw";  
+
         this.url = url || "wss://openspeech.bytedance.com/api/v2/asr";
         this.onOpen = null;
         this.onMessage = null;
@@ -77,7 +78,7 @@ class volcengineAsrClient {
         });
 
         // test...
-        this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.mp3`));
+        // this.writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./test.pcm`));
 
         this.ws.on('open', async () => {
             this.onOpen && this.onOpen();
@@ -197,7 +198,7 @@ class volcengineAsrClient {
 
     sendChunk(chunk, isLastSegment) {
         // test...
-        this.writeStreamMP3.write(chunk);
+        // this.writeStreamMP3.write(chunk);
         let audioMsgHeader;
         if (!isLastSegment) {
             audioMsgHeader = DefaultAudioOnlyWsHeader;
@@ -281,8 +282,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, cb, logWSServe
         client.onOpen = () => {
             if (shouldClose) return;
             iat_server_connected = true;
-            connectServerCb(true);
-
+            connectServerCb(true); 
         };
         client.onMessage = (data) => {
             if (shouldClose) return;

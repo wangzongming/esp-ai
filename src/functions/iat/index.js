@@ -27,6 +27,7 @@ const log = require("../../utils/log");
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
+
 async function cb({ device_id, text }) {
     try {
         const { onIATcb, onSleep } = G_config;
@@ -59,7 +60,6 @@ async function cb({ device_id, text }) {
                 ...G_devices.get(device_id),
                 first_session: true,
             })
-            // ws_client && ws_client.send("session_end");
             ws_client && ws_client.send("session_end", () => {
                 G_Instance.tts(device_id, sleep_reply);
             });
@@ -74,12 +74,12 @@ async function cb({ device_id, text }) {
 module.exports = async (device_id, connected_cb) => {
     try {
         const TTS_FN = require(`../tts`);
-        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course } = G_config;
-        const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config } } = G_devices.get(device_id)
+        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course, api_key, ai_server } = G_config;
+        const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config }, llm_historys = [] } = G_devices.get(device_id)
 
-        let prev_text = ""; // 上一次识别出来的文字
-        let prev_asr_res_time = 0;
-        let prev_send_audio_time = 0;
+        let prev_asr_text = ""; // 上一次识别出来的文字  
+        let vad_ended = false;     // vad 结束
+        let asr_timeouter = null;     // vad 结束 
 
         devLog && log.info('');
         devLog && log.iat_info('-> 开始请求语音识别');
@@ -87,6 +87,7 @@ module.exports = async (device_id, connected_cb) => {
         const plugin = plugins.find(item => item.name === iat_server && item.type === "IAT")?.main;
         const IAT_FN = plugin || require(`./${iat_server}`);
         onIAT && onIAT({ device_id, ws: ws_client });
+
 
         /**
          * 开始连接 iat 服务的回调
@@ -106,7 +107,18 @@ module.exports = async (device_id, connected_cb) => {
             if (!G_devices.get(device_id)) return;
             if (connected) {
                 if (!G_devices.get(device_id)) return;
-                prev_time = +new Date();
+
+                // asr 超时兜底
+                asr_start_time = +new Date();
+                clearTimeout(asr_timeouter);
+                asr_timeouter = setTimeout(() => {
+                    if (!G_devices.get(device_id)) return;
+                    const { iat_ws } = G_devices.get(device_id)
+                    if (!iat_ws) return;
+                    iat_ws.end && iat_ws.end();
+                    vad_ended = true;
+                }, vad_first);
+
                 devLog && log.iat_info("-> ASR 服务连接成功: " + session_id)
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
@@ -126,6 +138,7 @@ module.exports = async (device_id, connected_cb) => {
                 LLM_FN(device_id, { is_pre_connect: true })
             } else {
                 if (!G_devices.get(device_id)) return;
+                clearTimeout(asr_timeouter);
                 G_devices.set(device_id, {
                     ...G_devices.get(device_id),
                     iat_server_connected: false,
@@ -134,7 +147,7 @@ module.exports = async (device_id, connected_cb) => {
                 })
 
                 const { session_id: _session_id } = G_devices.get(device_id)
-                if (session_id !== _session_id) { 
+                if (session_id !== _session_id) {
                     return;
                 }
                 ws_client && ws_client.send(JSON.stringify({
@@ -156,34 +169,11 @@ module.exports = async (device_id, connected_cb) => {
             })
         }
 
-        /**
-        * 记录发送音频数据给服务的函数，框架在合适的情况下会进行调用
-        */
         const logSendAudio = (send_pcm) => {
             if (!G_devices.get(device_id)) return;
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
-                send_pcm: (...args) => {
-                    /**
-                     * 为了防止硬件不断发送音频数据，而 ASR 插件不进行 onIATText，所以需要预留一个兜底
-                    */
-                    const now = +new Date();
-                    const awaited = prev_send_audio_time - prev_time;
-                    if (!prev_text && prev_text !== 0) {
-                        if (awaited > vad_first) {
-                            const { iat_ws } = G_devices.get(device_id) 
-                            iat_ws.end && iat_ws.end();
-                        }
-                    } else {
-                        if (awaited > vad_course) {
-                            const { iat_ws } = G_devices.get(device_id) 
-                            iat_ws.end && iat_ws.end();
-                        }
-                    } 
-
-                    prev_send_audio_time = now;
-                    send_pcm(...args);
-                }
+                send_pcm
             })
         }
 
@@ -238,33 +228,55 @@ module.exports = async (device_id, connected_cb) => {
         /**
          * 语音识别的回调，只要客户端发送音频数据到了服务端，服务端转送到了 ASR 后就一定会触发本函数
         */
+        let done_timer = null;
+        let not_done_timer = null;
+        let on_iat_text_time = null;
         const onIATText = (text) => {
-            if (!G_devices.get(device_id)) return;
-            const { iat_ws } = G_devices.get(device_id)
-            const now = +new Date();
-            const awaited = now - prev_asr_res_time;
+            if (vad_ended) return;
+            if (text !== prev_asr_text) {
+                clearTimeout(asr_timeouter);
 
-            // 说话判断
-            if (prev_asr_res_time) {
-                if (!prev_text && prev_text !== 0) {
-                    // 首次对话等待
-                    if (awaited > vad_first) { 
-                        iat_ws?.end?.();
-                    }
-                } else {
-                    // 过程等待  
-                    if (awaited > vad_course) { 
-                        iat_ws?.end?.();
-                    }
-                }
-            } 
+                prev_asr_text = text;
+                on_iat_text_time = +new Date();
+                clearTimeout(not_done_timer);
+                clearTimeout(done_timer);
+                done_timer = setTimeout(() => {
+                    const _on_iat_text_time = on_iat_text_time;
+                    done_talking({ ai_server, text, api_key, prev_text: llm_historys?.[llm_historys.length - 1]?.content }).then((score) => {
+                        if (_on_iat_text_time !== on_iat_text_time) {
+                            // test...
+                            log.t_red_info("放弃本次语义判断。")
+                            return;
+                        }
+                        const done = score >= 60;
+                        // test...
+                        log.t_red_info("====>>> ", text, score, done);
 
-            if (text !== prev_text) {
-                prev_asr_res_time = now;
-                prev_text = text;
-                prev_time = now;
+                        const over_do = () => {
+                            if (!G_devices.get(device_id)) return;
+                            const { iat_ws } = G_devices.get(device_id)
+                            if (!iat_ws) return;
+                            iat_ws.end && iat_ws.end();
+                            vad_ended = true;
+                        }
+                        if (done) {
+                            // log.t_red_info("语义结束")
+                            over_do();
+                        } else {
+                            // log.t_red_info("启动语义定时")
+                            clearTimeout(not_done_timer);
+                            not_done_timer = setTimeout(() => {
+                                log.t_red_info("超时结束 VAD ")
+                                over_do();
+                            }, 2000)
+                        }
+                    });
+                }, vad_course);
             }
+
         }
+
+
 
         return IAT_FN({
             session_id,
@@ -288,3 +300,25 @@ module.exports = async (device_id, connected_cb) => {
         log.error(`IAT 错误： ${err}`)
     }
 };
+
+/**
+* 判断语义是否完整
+*/
+const axios = require('axios');
+async function done_talking({ ai_server, text, api_key, prev_text }) {
+    try {
+        if (!text) return false;
+        const response = await axios.post(`${ai_server}/ai_api/done_talking`, { text, api_key, prev_text }, { headers: { 'Content-Type': 'application/json' } });
+        const { success, message: res_msg, data } = response.data;
+        if (success) {
+            return data;
+        } else {
+            log.error('-> 语义推理失败：' + res_msg);
+            return false;
+        }
+    } catch (err) {
+        log.error('-> 语义推理失败，请求失败：');
+        console.log(err);
+        return false;
+    }
+}

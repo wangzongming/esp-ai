@@ -29,11 +29,11 @@
  */
 const WebSocket = require('ws')
 const getServerURL = require("../../getServerURL");
-const { Readable } = require('stream');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
-const fs = require('fs');
-const path = require('path');
+// const { Readable } = require('stream');
+// const ffmpeg = require('fluent-ffmpeg');
+// const ffmpegPath = require('ffmpeg-static');
+// const fs = require('fs');
+// const path = require('path');
 
 /**
  * 讯飞 iat 服务器如果给压缩过的音频，不管是 mp3 还是 其他，都会报错 10043 ，所以直接将硬件采集的数据转为原始数据给接口
@@ -105,29 +105,33 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         let iat_status = XF_IAT_FRAME.STATUS_FIRST_FRAME;
 
         const sender = () => {
-            if (audioBuffers.length) {  
+            if (audioBuffers.length) {
                 const sends = audioBuffers.splice(0, audioBuffers.length);
-                const stream = Readable.from(Buffer.concat(sends));
+                const frame = build_frame(Buffer.concat(sends));
+                iat_ws.send(JSON.stringify(frame));
+
+                // const sends = audioBuffers.splice(0, audioBuffers.length);
+                // const stream = Readable.from(Buffer.concat(sends));
                 // test...
                 // writeStreamMP3.write(Buffer.concat(sends));  
 
-                clearTimeout(overTimer);
-                ffmpeg(stream)
-                    .setFfmpegPath(ffmpegPath)
-                    .inputFormat('mp3')
-                    .audioCodec('pcm_s16le')
-                    .audioFrequency(16000)
-                    .audioFilters('volume=10')
-                    .outputOptions(['-ac 1'])
-                    .outputFormat('s16le')
-                    .on('error', (error) => {
-                        console.error(`MP3 转换出错 ${error}`);
-                    })
-                    .pipe()
-                    .on('data', (chunk) => { 
-                        const frame = build_frame(chunk);
-                        iat_ws.send(JSON.stringify(frame));
-                    })
+                // clearTimeout(overTimer);
+                // ffmpeg(stream)
+                //     .setFfmpegPath(ffmpegPath)
+                //     .inputFormat('mp3')
+                //     .audioCodec('pcm_s16le')
+                //     .audioFrequency(16000)
+                //     .audioFilters('volume=10')
+                //     .outputOptions(['-ac 1'])
+                //     .outputFormat('s16le')
+                //     .on('error', (error) => {
+                //         console.error(`MP3 转换出错 ${error}`);
+                //     })
+                //     .pipe()
+                //     .on('data', (chunk) => { 
+                //         const frame = build_frame(chunk);
+                //         iat_ws.send(JSON.stringify(frame));
+                //     })
                 // .on("end", () => {
                 //     clearTimeout(overTimer);
                 //     overTimer = setTimeout(() => {
@@ -152,7 +156,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
         iatEndQueueCb(() => {
             if (shouldClose) return;
             if (iat_server_connected && send_pcm) {
-                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME; 
+                iat_status = XF_IAT_FRAME.STATUS_LAST_FRAME;
                 clearInterval(sendTimer);
                 sender();
             }
@@ -160,7 +164,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
         let realStr = "";
         // 得到识别结果后进行处理，仅供参考，具体业务具体对待
-        iat_ws.on('message', (data, err) => { 
+        iat_ws.on('message', (data, err) => {
             if (shouldClose) return;
             if (err) {
                 log.iat_info(`err:${err}`)
@@ -275,7 +279,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
         // test...
         // let writeStreamMP3 = fs.createWriteStream(path.join(__dirname, `./pcm_output.mp3`)); 
-        let overTimer = null;
+        // let overTimer = null;
         function send_pcm(data) {
             if (shouldClose) return;
             if (!iat_server_connected) return;

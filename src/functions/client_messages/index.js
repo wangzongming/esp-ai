@@ -9,6 +9,7 @@ const digitalRead = require("./digitalRead")
 const analogRead = require("./analogRead")
 const iat_end = require("./iat_end")
 const reCache = require("./reCache")
+const client_available_audio = require("./client_available_audio")
 
 module.exports = {
     audio,
@@ -21,5 +22,6 @@ module.exports = {
     digitalRead,
     analogRead,
     iat_end,
-    reCache
+    reCache,
+    client_available_audio
 }

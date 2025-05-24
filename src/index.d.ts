@@ -122,6 +122,12 @@ export interface Config {
     devLog?: number,
 
     /**
+     * ESP-AI 开放平台，超体 api_key
+     * 用于一些需要进行 AI 推理时调用服务使用。
+    */ 
+    api_key: string;
+
+    /**
      * 全局语音识别开始前"嘟"的音频流，默认为 false，也就是不开启提示音
      * 只能播放本地 mp3 地址： iatDu: path.join(__dirname, `./du.mp3`) // nodejs 写法
      * 为 false 时关闭提示音，为 true 时使用默认提示音。

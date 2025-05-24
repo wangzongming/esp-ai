@@ -87,7 +87,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                         const { intention_ing } = G_devices.get(device_id);
                         if (intention_ing) {
                             awaitCount += 1;
-                            awaitIntention(doFn)
+                            awaitIntention(doFn);
                         } else {
                             doFn();
                         }
@@ -96,9 +96,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                     doFn();
                 }
             }
-
-
-
+ 
             if (text_is_over) {
                 /**
                  * 意图推理中时候并不知道是否还需要重新采集音频
@@ -224,7 +222,7 @@ function TTSFN(device_id, opts) {
                         status: "tts_chunk_start",
                     }));
                     // 启动音频发送任务 
-                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
+                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => { 
                         G_devices.set(device_id, {
                             ...G_devices.get(device_id),
                             resolve_tts_task: null

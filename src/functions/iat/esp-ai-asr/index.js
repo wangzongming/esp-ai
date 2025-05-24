@@ -62,8 +62,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
 
         connectServerBeforeCb(); 
         const iat_ws = new WebSocket(`wss://api.espai2.fun/ai_api/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
-        // const iat_ws = new WebSocket(`ws://192.168.3.16:82?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`);
-
+        
         logWSServer({
             close: () => {
                 shouldClose = true;

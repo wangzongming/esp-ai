@@ -46,7 +46,7 @@ const IS_DEV = process.argv[2] === "--dev";
 // 判断nodejs版本，低于 18 进行报错
 // 判断nodejs版本，低于 18 进行报错
 const nodeVersion = process.version.split('.')[0].replace('v', '');
-if (parseInt(nodeVersion, 10) < 18) { 
+if (parseInt(nodeVersion, 10) < 18) {
     log.error(`Node.js 版本必须至少为 18.x\n`);
     process.exit(1);
 }
@@ -79,14 +79,16 @@ function main(config = {}) {
          *       send_pcm: (pcm)=> void           // 音频发送函数
          *       start_iat: ()=> void             // 音频发送函数
          *       add_audio_out_over_queue: ()=> Promise<void>  // 音频流播放完毕的任务队列 
-         *       backlog_instruction: [],// Backlog instruction 
-         *       stop_next_session: false // 异步停止下一次会话
+         *       backlog_instruction: [],          // Backlog instruction 
+         *       stop_next_session: false          // 异步停止下一次会话
+         *       client_available_audio: 1024,     //  客户端可用字节流
          * }]
         */
         global.G_devices = new Map();
         const Instance = new EspAiInstance()
         global.G_Instance = Instance;
-        
+
+
         /**
          * 会话ID定义：  
          * 1000 -> 提示音缓存数据
@@ -99,21 +101,30 @@ function main(config = {}) {
          * 其他 -> session_id
         */
         global.G_session_ids = {
-            cache_du:"1000",
-            cache_hello:"1001",
-            cache_connected:"0001",
-            cache_sleep_reply:"1002",
-            tts_all_end_align:"2000",
-            tts_all_end:"2001",
-            tts_chunk_end:"2002",
+            cache_du: "1000",
+            cache_hello: "1001",
+            cache_connected: "0001",
+            cache_sleep_reply: "1002",
+            tts_all_end_align: "2000",
+            tts_all_end: "2001",
+            tts_chunk_end: "2002",
         }
 
 
         const init_server = require("./functions/init_server")
-        const _config = IS_DEV ? require("./config_dev") : require("./config")    
- 
-        global.G_max_audio_chunk_size = 1024 * 10;       
-        // global.G_max_audio_chunk_size = 1024;       
+        const _config = IS_DEV ? require("./config_dev") : require("./config")
+
+        global.G_max_audio_chunk_size = 1024 * 10;
+        // global.G_max_audio_chunk_size = 1024 * 2;
+
+        // test...
+        /**
+         * 每秒数据量=采样率×位深度×声道数
+         * 16,000样本/秒×16位/样本×1声道=256,000位/秒（bit/s）
+         * 256,000bit/s÷8=32,000字节/秒（Byte/s）
+         * 按 1 KB = 1000 Byte（通信领域常用）：32,000Byte/s÷1000=32KB/s
+        */
+        // global.G_max_audio_chunk_size = 6400; // 每 200 秒钟播放的字节量
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };

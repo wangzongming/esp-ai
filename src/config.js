@@ -40,13 +40,21 @@ const config = {
      * 默认 10000（10s）
     */
     vad_first: 10000,
-
+ 
     /**
      * 对话过程中等待用户说话的时间
      * 也就是用户开始说话后等待用户思考的时间，不建议超过 1000
-     * 默认 1000（1s）
+     * 默认 800ms
+    */ 
+    vad_course: 500,
+
+    /**
+     * 用于全局`ESP-AI`的秘钥，在一些需要进行AI服务时使用。
     */
-    vad_course: 800,
+    ai_server: `https://api.espai.fun`,
+    // test...
+    // ai_server: `http://192.168.3.16:7002`,
+    
 
 
     /**
@@ -57,18 +65,18 @@ const config = {
         return {
 
             // IAT 语音识别服务
-            iat_server: "xun_fei", 
+            iat_server: "xun_fei",
 
             // TTS 文字转语音服务
-            tts_server: "xun_fei", 
+            tts_server: "xun_fei",
 
             // LLM 大语言服务
-            llm_server: "xun_fei", 
-            
+            llm_server: "xun_fei",
+
             /**
              * 意图表：当用户唤醒 小明同学 后，小明同学可以做下面的任务
             */
-            intention: [ 
+            intention: [
                 {
                     // 关键词
                     key: ["退下吧", "退下"],
@@ -80,7 +88,7 @@ const config = {
 
         }
     },
- 
+
 }
 
 module.exports = config;

@@ -33,7 +33,7 @@ async function fn({ device_id, _ws }) {
     try {
         const IAT_FN = require(`../iat`);
         // const TTS_FN = require(`../tts`);
-
+        console.log("====== 开始对话 =====")
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
             _ws && _ws.close();
@@ -79,7 +79,9 @@ async function fn({ device_id, _ws }) {
                 started: true,
                 backlog_instruction: [],
                 // 异步停止下一次会话
-                stop_next_session: false
+                stop_next_session: false,
+                // 重置可用流
+                client_out_audio_ing: 0,
             })
 
             return IAT_FN(device_id, connect_cb);

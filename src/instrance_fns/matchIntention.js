@@ -34,7 +34,7 @@ const axios = require('axios');
 */
 async function matchIntention(device_id, text, reply) {
     !device_id && log.error(`调用 matchIntention 方法时，请传入 device_id`);
-    const { devLog } = G_config;
+    const { devLog, ai_server } = G_config;
     const TTS_FN = require(`../functions/tts`);
     const { ws: ws_client, user_config, llm_historys = [], prev_play_audio_ing, user_config: { intention = [] } } = G_devices.get(device_id);
     if (!text) return null;
@@ -62,7 +62,7 @@ async function matchIntention(device_id, text, reply) {
                 break intention_for;
             } else if (item.api_key) {
                 // AI 推理 
-                const response = await axios.post(item.nlp_server || `https://api.espai2.fun/ai_api/semantic`, {
+                const response = await axios.post(item.nlp_server || `${ai_server}/ai_api/semantic`, {
                     "api_key": item.api_key,
                     "texts": [key[0], _text]
                 }, {
@@ -109,7 +109,7 @@ async function matchIntention(device_id, text, reply) {
                     if (target_device_id) {
                         !api_key && log.error(`指定了 target_device_id 的指令必须配置 api_key。`);
                         // const response = await axios.get(`http://192.168.3.23:7002/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
-                        const response = await axios.get(`https://api.espai2.fun/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
+                        const response = await axios.get(`${ai_server}/sdk/pin?target_device_id=${target_device_id}&api_key=${api_key}&instruct=${instruct}`, {
                             headers: { 'Content-Type': 'application/json' }
                         });
                         const { success, message: res_msg } = response.data;
@@ -124,7 +124,6 @@ async function matchIntention(device_id, text, reply) {
                         G_Instance.digitalWrite(device_id, pin, instruct === "__io_high__" ? "HIGH" : "LOW");
                     }
                     break;
-
                 case "__LEDC__":
                     // LEDC 暂不支持远程设备
                     (!channel && channel !== 0) && log.error(`${instruct} 指令必须配置 channel、deg`);
@@ -140,8 +139,13 @@ async function matchIntention(device_id, text, reply) {
                         llm_historys,
                         stop_next_session: true
                     })
- 
+
                     const { url, seek, message: errMessage } = await music_server(__name__ || text, { user_config, instance: G_Instance, device_id });
+                    // 等待说话完毕
+                    // test...
+                    
+
+
                     if (!url) {
                         await TTS_FN(device_id, {
                             text: errMessage || "没有找到相关的结果，换个关键词试试吧！",
@@ -149,7 +153,7 @@ async function matchIntention(device_id, text, reply) {
                         });
                         return;
                     }
-                    try { 
+                    try {
                         const session_id = await G_Instance.newSession(device_id);
                         play_audio(url, ws_client, "play_music", session_id, device_id, seek, on_end)
                     } catch (err) {
@@ -158,7 +162,7 @@ async function matchIntention(device_id, text, reply) {
                             text: "音频播放出错啦，重新换一首吧！",
                             need_record: true,
                         });
-                    } 
+                    }
 
                     break;
                 default:
