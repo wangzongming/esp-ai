@@ -187,7 +187,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 {
                     String message = (const char *)parseRes["message"];
                     String code = (const char *)parseRes["code"];
-                    Serial.println("[Error] -> 连接服务失败，鉴权失败：" + message);
+                    Serial.println("[Error] -> 连接服务失败，鉴权失败：code: " + code + ", message: "+ message);
                     Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。"));
                     Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
                     Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));

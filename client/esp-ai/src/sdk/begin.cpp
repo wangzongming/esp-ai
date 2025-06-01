@@ -49,8 +49,11 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     Serial.println(F("[Error] 您的开发板可能不受支持！"));
 #endif
 
-    // 参数包括串行通信的波特率、串行模式、使用的 RX 引脚和 TX 引脚。
-    Esp_ai_serial.begin(115200, SERIAL_8N1, esp_ai_serial_rx, esp_ai_serial_tx);
+    if (strcmp(config.wake_up_config.wake_up_scheme, "asrpro") == 0 || strcmp(config.wake_up_config.wake_up_scheme, "serial") == 0)
+    {
+        // 参数包括串行通信的波特率、串行模式、使用的 RX 引脚和 TX 引脚。
+        Esp_ai_serial.begin(115200, SERIAL_8N1, esp_ai_serial_rx, esp_ai_serial_tx);
+    }
 
     // 内存初始化
     espai_system_mem_init();
@@ -64,15 +67,14 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         i2s_config_speaker = config.i2s_config_speaker;
     }
 
-
     if (config.i2s_config_mic.bits_per_sample)
     {
         mic_bits_per_sample = config.i2s_config_mic.bits_per_sample;
     }
     else
     {
-        mic_bits_per_sample = 16; 
-    }  
+        mic_bits_per_sample = 16;
+    }
 
     // wifi 配置
     if (strcmp(config.wifi_config.wifi_name, "") != 0 || strcmp(config.wifi_config.ap_name, "") != 0 || config.wifi_config.html_str != "" || config.wifi_config.way != "")
