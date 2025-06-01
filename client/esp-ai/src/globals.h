@@ -33,9 +33,13 @@
 #include <Arduino.h>
 #include <driver/i2s.h>
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <WebSocketsClient.h>
+
+// 使用 v1.0.1 版本
 #include "AudioTools.h"
-// 使用 libhelix 对mp3编码
+
+// 使用 libhelix 对mp3解码
 // 要安装插件： https://github.com/pschatzmann/arduino-libhelix
 // 注释代码： \Documents\Arduino\libraries\arduino-audio-tool\src\AudioCodecs\CodecMP3Helix.h 85行 --1.x 版本作者已经注释
 // #include "AudioCodecs/CodecMP3Helix.h"
@@ -44,7 +48,7 @@
 // 使用 LAME 对mp3编码
 // 要安装插件： https://github.com/pschatzmann/arduino-liblame
 // #include "AudioCodecs/CodecMP3LAME.h"
-#include "AudioTools/AudioCodecs/CodecMP3LAME.h"
+// #include "AudioTools/AudioCodecs/CodecMP3LAME.h"
 
 #include <Arduino_JSON.h>
 #include <WebServer.h>
@@ -68,6 +72,7 @@
 #include "esp_bt_main.h"
 #include "esp_gap_ble_api.h"
 
+#include <HTTPClient.h>
 
 #include "audio/zh/lian_jie_shi_bai.h"
 #include "audio/zh/lian_jie_zhong.h"
@@ -80,12 +85,27 @@
 #include "audio/zh/chao_ti_wei_qi_yong.h"
 #include "audio/zh/e_du_ka_bu_cun_zai.h"
 #include "audio/zh/mei_dian_le.h"
+#include "audio/zh/hui_fu_chu_chang.h"
 // #include "audio/zh/jian_quan_shi_bai.h"
 // #include "audio/zh/pei_wang_xin_xi_yi_qing_chu.h"
 // #include "audio/zh/qing_lian_jie_fu_wu.h"
 
 #define BLE_SERVICE_UUID "b09b32d2-1e07-45bb-9319-109d612dead9"
 #define BLE_CHARACTERISTIC_UUID "5c1e7878-e48e-4134-af2c-fd64d873125b"
+
+  
+extern String SID_TONE;
+extern String SID_CONNECTED_SERVER;
+extern String SID_TONE_CACHE;
+extern String SID_WAKEUP_REP_CACHE;
+extern String SID_SLEEP_REP_CACHE;
+extern String SID_TTS_END_RESTART;
+extern String SID_TTS_END;
+extern String SID_TTS_CHUNK_END;
+extern String SID_TTS_FN;
+extern String SID_SESSION;
+
+
 
 // 使用软串口 TX=11，R=12
 #ifndef esp_ai_serial_tx
@@ -104,11 +124,10 @@
 #endif
 #endif
 
-#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
-#define MIC_i2s_num I2S_NUM_0
-#define YSQ_i2s_num I2S_NUM_1
+#define MIC_i2s_num I2S_NUM_1
+#define YSQ_i2s_num I2S_NUM_0
 
-
+extern WiFiMulti wifiMulti;
 extern HardwareSerial Esp_ai_serial;
 extern Preferences esi_ai_prefs;
 
@@ -117,6 +136,8 @@ struct ESP_AI_i2s_config_mic
     int bck_io_num;
     int ws_io_num;
     int data_in_num;
+    int bits_per_sample;
+    int channel_format;
 };
 
 struct ESP_AI_i2s_config_speaker
@@ -152,10 +173,6 @@ struct ESP_AI_wake_up_config
     int pin;
     // 串口唤醒时的唤醒字符
     char str[32];
-    // 用户未说话前等待静默时间，默认 5000
-    int vad_first;
-    // 用户说话后等待静默时间，默认 500
-    int vad_course;
 };
 
 // 音量调节配置
@@ -178,9 +195,9 @@ struct ESP_AI_wifi_config
     // 热点名字
     char ap_name[30];
     // 自定义配网页面
-    String html_str; 
+    String html_str;
     // 配网方式 AP | BLE
-    String way; 
+    String way;
 };
 
 struct ESP_AI_server_config
@@ -241,53 +258,143 @@ extern WebSocketsClient esp_ai_webSocket;
 extern WebServer esp_ai_server;
 extern DNSServer esp_ai_dns_server;
 
+extern bool spk_ing;
+extern SemaphoreHandle_t audio_mutex;
+
+class BufferPrint : public Print
+{
+public:
+    BufferPrint(BufferRTOS<uint8_t> &buf) : _buffer(buf) {}
+
+    virtual size_t write(uint8_t data) override
+    {
+        if (!spk_ing)
+            return 0;
+        if (xSemaphoreTake(audio_mutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            return _buffer.writeArray(&data, 1);
+        }
+        return 0;
+    }
+
+    virtual size_t write(const uint8_t *buffer, size_t size) override
+    {
+        if (!spk_ing)
+            return 0; 
+        if (xSemaphoreTake(audio_mutex, pdMS_TO_TICKS(10)) == pdTRUE)
+        {
+            size_t result = _buffer.writeArray(buffer, size);
+            xSemaphoreGive(audio_mutex);
+            return result;
+        }
+        return 0;
+    }
+
+private:
+    BufferRTOS<uint8_t> &_buffer;
+};
+constexpr size_t AUDIO_BUFFER_SIZE = 1024 * 20; // 缓冲区中的总字节数
+constexpr size_t AUDIO_CHUNK_SIZE = 1024;       // 理想的读/写块大小
 extern I2SStream esp_ai_spk_i2s;
-extern EncodedAudioStream esp_ai_dec; // Decoding stream
+extern EncodedAudioStream esp_ai_dec;
+extern MP3DecoderHelix esp_ai_dec_mp3;
 extern VolumeStream esp_ai_volume;
+extern StreamCopy esp_ai_copier;
+extern BufferPrint esp_ai_spk_buffer_print;
+extern BufferRTOS<uint8_t> esp_ai_audio_buffer;
+extern QueueStream<uint8_t> esp_ai_spk_queue;
 
-extern liblame::MP3EncoderLAME esp_ai_mp3_encoder;
-extern liblame::AudioInfo esp_ai_mp3_info;
-void esp_ai_asr_callback(uint8_t *mp3_data, size_t len);
+#define MIC_SAMPLE_BUFFER_SIZE 1024
+extern int mic_bits_per_sample;
+extern SemaphoreHandle_t esp_ai_ws_mutex;
+class WebsocketStream : public Print
+{
+public:
+    virtual size_t write(uint8_t b) override
+    {
+        if (!esp_ai_webSocket.isConnected())
+        {
+            return 1;
+        }
 
-constexpr uint32_t esp_ai_asr_sample_buffer_size = 1280 * 5; // 大约 0.3kb/50ms
-extern int16_t esp_ai_asr_sample_buffer[esp_ai_asr_sample_buffer_size];
+        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+        {
+            esp_ai_webSocket.sendBIN(&b, 1);
+            xSemaphoreGive(esp_ai_ws_mutex);
+            return 1;
+        }
+
+        return 1;
+    }
+
+    virtual size_t write(const uint8_t *buffer, size_t size) override
+    {
+        if (size == 0 || !esp_ai_webSocket.isConnected())
+        {
+            return size;
+        }
+
+        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+        {
+            if (mic_bits_per_sample != 16 && mic_bits_per_sample != 24 && mic_bits_per_sample != 32)
+            {
+                int limit = 32 - mic_bits_per_sample;
+                int samples_read = size / sizeof(int32_t);
+                const int32_t *rawBuffer = reinterpret_cast<const int32_t *>(buffer);
+                int16_t processedBuffer[MIC_SAMPLE_BUFFER_SIZE];
+                for (int i = 0; i < std::min(samples_read, MIC_SAMPLE_BUFFER_SIZE); i++)
+                {
+                    processedBuffer[i] = (int16_t)(rawBuffer[i] >> limit); // 提取高N位中的有效位
+                }
+                esp_ai_webSocket.sendBIN((uint8_t *)processedBuffer, samples_read * sizeof(int16_t));
+            }
+            else
+            {
+                esp_ai_webSocket.sendBIN(buffer, size);
+            }
+
+            xSemaphoreGive(esp_ai_ws_mutex);
+            return size;
+        }
+
+        return size;
+    }
+};
+
+extern WebsocketStream ws_stream;
+extern I2SStream esp_ai_i2s_input;
+extern VolumeStream esp_ai_mic_volume;
+extern StreamCopy mic_to_ws_copier;
+
+#define ESP_AI_ASR_SAMPLE_BUFFER_SIZE 16000
+extern int16_t *esp_ai_asr_sample_buffer;
 
 extern String ESP_AI_VERSION;
 extern String esp_ai_start_ed;
 extern bool esp_ai_ws_connected;
 extern String esp_ai_session_id;
-extern String esp_ai_prev_session_id;
+extern String esp_ai_session_status;
 extern String esp_ai_tts_task_id;
 extern String esp_ai_status;
 extern bool esp_ai_sleep;
 extern bool asr_ing;
+extern String esp_ai_prev_session_id;
 
 // 聆听模式
 extern bool esp_ai_is_listen_model;
 extern bool esp_ai_played_connected;
 
-// 用户已经发话
-extern bool esp_ai_user_has_spoken;
-
-// Start collecting audio
-extern bool esp_ai_start_get_audio;
 // Start sending audio to the service
 extern bool esp_ai_start_send_audio;
-// circulating register
-extern std::vector<uint8_t> *esp_ai_asr_sample_buffer_before;
-extern size_t esp_ai_asr_sample_index;
 
 // 音频缓存
 extern std::vector<uint8_t> esp_ai_cache_audio_du;
-extern std::vector<uint8_t> esp_ai_cache_audio_greetings;
-extern std::vector<uint8_t> esp_ai_cache_audio_sleep_reply;
+extern std::vector<uint8_t> esp_ai_cache_audio_greetings; 
 
-extern long wakeup_time;
 extern long last_silence_time;
 extern long last_not_silence_time;
 extern long last_silence_time_wakeup;
 extern long last_not_silence_time_wekeup;
-extern String play_cache;
 
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 extern ESP_AI_i2s_config_mic default_i2s_config_mic;
@@ -318,6 +425,8 @@ extern Adafruit_NeoPixel esp_ai_pixels;
         Serial.println(x);      \
     }
 
+#define DEBUG_PRINTF(fmt, ...) printf_P(PSTR("[%s][%d]:" fmt "\r\n"), __func__, __LINE__, ##__VA_ARGS__);
+
 /** Audio buffers, pointers and selectors */
 typedef struct
 {
@@ -332,7 +441,7 @@ extern inference_t inference;
 extern bool debug_nn; // Set this to true to see e.g. features generated from the raw signal
 extern bool esp_ai_wakeup_record_status;
 constexpr uint32_t mic_sample_buffer_size = 1024 * 3;
-extern int16_t mic_sample_buffer[mic_sample_buffer_size];
+extern int16_t *mic_sample_buffer;
 
 extern String wake_up_scheme;
 
@@ -361,11 +470,24 @@ String get_local_data(const String &field_name);
 void set_local_data(String field_name, String new_value);
 JSONVar get_local_all_data();
 String get_device_id();
-bool is_silence(const int16_t *audio_buffer, size_t bytes_read);
 void clear_local_all_data();
 
 // 将角度转换为占空比
 int angleToDutyCycle(int angle);
+// 系统内存初始化
+void espai_system_mem_init();
+// 打印任务堆栈信息
+void print_task_info(void);
+// 获取当前是否正在播放
+bool mp3_player_is_playing();
+// 播放音频
+void mp3_player_write(const unsigned char *data, size_t len);
+// 立即停止播放
+void mp3_player_stop();
+// 死等待播放完成
+void wait_mp3_player_done();
+// 播放内置音频
+void play_builtin_audio(const unsigned char *data, size_t len);
 
 extern std::vector<int> digital_read_pins;
 extern std::vector<int> analog_read_pins;
@@ -374,4 +496,3 @@ String decodeURIComponent(const String &encoded);
 String get_ap_name(String ap_name);
 extern String ESP_AI_BLE_RD;
 extern String ESP_AI_BLE_ERR;
-

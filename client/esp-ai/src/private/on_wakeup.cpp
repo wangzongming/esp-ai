@@ -50,7 +50,7 @@ void ESP_AI::on_wakeup_wrapper(void *arg)
 /**
  * 聆听中时不需要被打断，否则会带来更多问题
  * 比如：不做回音消除时用户说话就不可以触发唤醒词等等...
-*/
+ */
 void ESP_AI::on_wakeup()
 {
     long esp_ai_last_debounce_time = 0;
@@ -58,14 +58,14 @@ void ESP_AI::on_wakeup()
     int esp_ai_prev_state = 0;
     int esp_ai_prev_state_listen = 0;
     long esp_ai_btn_up_time = 0;
- 
+
     while (true)
     {
         if ((wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low"))
         {
             int reading = digitalRead(wake_up_config.pin);
             long curTime = millis();
-            int target_val = wake_up_scheme == "pin_high" ? 1 : 0; 
+            int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
             if (reading == target_val)
             {
                 if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
@@ -73,10 +73,8 @@ void ESP_AI::on_wakeup()
                     esp_ai_last_debounce_time = curTime;
                     if (esp_ai_prev_state != reading)
                     {
-                        esp_ai_start_send_audio = false;
-                        esp_ai_start_get_audio = false;
                         esp_ai_prev_state = reading;
-                        DEBUG_PRINTLN(debug, ("按下了按钮, 唤醒成功"));
+                        DEBUG_PRINTLN(debug, ("[Info] -> 按下了按钮唤醒"));
                         wakeUp("wakeup");
                     }
                 }
@@ -96,9 +94,7 @@ void ESP_AI::on_wakeup()
                 String clear_str = cleanString(command);
                 if (clear_str == String(wake_up_config.str))
                 {
-                    esp_ai_start_send_audio = false;
-                    esp_ai_start_get_audio = false;
-                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口数据, 唤醒成功"));
+                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口唤醒"));
                     wakeUp("wakeup");
                 }
             }
@@ -108,9 +104,7 @@ void ESP_AI::on_wakeup()
                 String clear_str = cleanString(command);
                 if (clear_str == String(wake_up_config.str))
                 {
-                    esp_ai_start_send_audio = false;
-                    esp_ai_start_get_audio = false;
-                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口数据, 唤醒成功"));
+                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口唤醒"));
                     wakeUp("wakeup");
                 }
             }
@@ -123,8 +117,6 @@ void ESP_AI::on_wakeup()
             {
                 if (esp_ai_prev_state_listen != reading)
                 {
-                    esp_ai_start_send_audio = false;
-                    esp_ai_start_get_audio = false;
                     esp_ai_btn_up_time = 0;
                     esp_ai_prev_state_listen = reading;
                     DEBUG_PRINTLN(debug, ("[Info] -> 您请说话。"));
@@ -135,24 +127,27 @@ void ESP_AI::on_wakeup()
             {
                 // 需要给 mic 和解码器一些时间来处理还没有收集到的数据
                 esp_ai_prev_state_listen = reading;
-                if (esp_ai_start_get_audio)
+                if (esp_ai_start_send_audio)
                 {
                     if (esp_ai_btn_up_time == 0)
                     {
                         esp_ai_btn_up_time = millis();
                     }
-                    if ((millis() - esp_ai_btn_up_time) >= 300) 
-                    { 
-                        DEBUG_PRINTLN(debug, ("[Info] -> 大语言模型正在推理。"));
-                        esp_ai_start_get_audio = false;
-                        esp_ai_start_send_audio = false;
-                        esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
-                    } 
+                    if ((millis() - esp_ai_btn_up_time) >= 300)
+                    {
+
+                        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+                        {
+                            DEBUG_PRINTLN(debug, ("[Info] -> 大语言模型正在推理。"));
+                            esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
+ 
+                            xSemaphoreGive(esp_ai_ws_mutex);
+                        }
+                    }
                 }
             }
- 
         }
- 
+
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

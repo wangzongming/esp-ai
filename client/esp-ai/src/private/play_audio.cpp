@@ -35,18 +35,38 @@ void ESP_AI::play_audio_wrapper(void *arg)
 
 void ESP_AI::play_audio()
 {
+    // 发送正在可用音频流的频率
+    int frequency = 1000;
+    long prev_time = millis();
+    // 是否已经发送过可用为 0 的数据
+    bool send0_ed = false;
+
     while (true)
     {
-
-        if (play_cache == "clear_cache")
+        int available = esp_ai_spk_queue.available();
+        if (available > 0)
         {
-            esp_ai_dec.end();
-            delay(100);
-            esp_ai_dec.begin();
-            play_cache = "";
-            esp_ai_dec.write(san_ci, san_ci_len);
-        } 
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+            if (send0_ed)
+            {
+                send0_ed = false;
+            }
+            esp_ai_copier.copy();
+        }
+        if (esp_ai_ws_connected && ((millis() - prev_time) > frequency) && !send0_ed)
+        {
+            prev_time = millis();
+            if (available == 0)
+            {
+                send0_ed = true;
+            }
+            if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+            {
+                esp_ai_webSocket.sendTXT("{ \"type\":\"client_available_audio\", \"session_id\": \"" + esp_ai_session_id + "\", \"value\": \"" + available + "\"}");
+
+                xSemaphoreGive(esp_ai_ws_mutex);
+            }
+        }
+        vTaskDelay(10 / portTICK_RATE_MS);
     }
     vTaskDelete(NULL);
 }

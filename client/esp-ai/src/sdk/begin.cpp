@@ -34,6 +34,13 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     // xiao 需要延迟一定的时间
     delay(500);
 
+    if (debug)
+    {
+        esp_log_level_set("wifi", ESP_LOG_VERBOSE); // WiFi详细日志
+    }
+
+    esp_ai_ws_mutex = xSemaphoreCreateMutex();
+
 #if defined(ARDUINO_XIAO_ESP32S3)
     Serial.println(F("[Info] 检测到 XIAO ESP32S3 开发板"));
 #elif defined(ARDUINO_ESP32S3_DEV)
@@ -42,25 +49,11 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     Serial.println(F("[Error] 您的开发板可能不受支持！"));
 #endif
 
-    esp_ai_asr_sample_buffer_before = new std::vector<uint8_t>();
-    esp_ai_asr_sample_buffer_before->reserve(48000 * sizeof(int16_t));
-
     // 参数包括串行通信的波特率、串行模式、使用的 RX 引脚和 TX 引脚。
     Esp_ai_serial.begin(115200, SERIAL_8N1, esp_ai_serial_rx, esp_ai_serial_tx);
 
-    if (psramFound())
-    {
-        Serial.println("[Info] PSRAM 检测成功!");
-        Serial.print("[Info] Total PSRAM: ");
-        Serial.println(ESP.getPsramSize());
-        Serial.print("[Info] Free PSRAM: ");
-        Serial.println(ESP.getFreePsram());
-    }
-    else
-    {
-        Serial.println(F("[Error] PSRAM 无效，请确保您使用的是 esp32s3 开发板，并且开启了【设置/PSRAM/OPI PSRAM】"));
-        Serial.println(F("[Error] 注意分区方案需要选择： 16MB Flash(3MB APP/9.9MB FATFS)"));
-    }
+    // 内存初始化
+    espai_system_mem_init();
 
     if (config.i2s_config_mic.bck_io_num)
     {
@@ -70,6 +63,16 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         i2s_config_speaker = config.i2s_config_speaker;
     }
+
+
+    if (config.i2s_config_mic.bits_per_sample)
+    {
+        mic_bits_per_sample = config.i2s_config_mic.bits_per_sample;
+    }
+    else
+    {
+        mic_bits_per_sample = 16; 
+    }  
 
     // wifi 配置
     if (strcmp(config.wifi_config.wifi_name, "") != 0 || strcmp(config.wifi_config.ap_name, "") != 0 || config.wifi_config.html_str != "" || config.wifi_config.way != "")
@@ -124,15 +127,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         {
             pinMode(wake_up_config.pin, INPUT_PULLUP);
         }
-
-        if (!wake_up_config.vad_first)
-        {
-            wake_up_config.vad_first = 10000;
-        }
-        if (!wake_up_config.vad_course)
-        {
-            wake_up_config.vad_course = 500;
-        }
     }
     esp_ai_is_listen_model = (wake_up_scheme == "pin_high_listen" || wake_up_scheme == "pin_low_listen");
 
@@ -147,7 +141,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         lights_config = config.lights_config;
         esp_ai_pixels.setPin(lights_config.pin);
-    } 
+    }
 
     // ws2812
     esp_ai_pixels.begin();
@@ -156,10 +150,11 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     esp_ai_pixels.show();             // Initialize all pixels to 'off'
 
     // 灯光任务比较重要，靠前执行
-    xTaskCreate(ESP_AI::lights_wrapper, "lights", 1024 * 2, this, 1, NULL);
+    xTaskCreate(ESP_AI::lights_wrapper, "lights", 1024 * 3, this, 1, NULL);
 
     // 初始化扬声器
     speaker_i2s_setup();
+    xTaskCreate(ESP_AI::play_audio_wrapper, "play_audio", 1024 * 4, this, 1, NULL);
 
     // 内置状态处理
     status_change("0");
@@ -181,8 +176,9 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     String loc_device_id = get_device_id();
-    String loc_wifi_name = "";
-    String loc_wifi_pwd = "";
+    // 依次读取 5 组 wifi 信息
+    String loc_wifi_name[5] = {"", "", "", "", ""};
+    String loc_wifi_pwd[5] = {"", "", "", "", ""};
     JSONVar data = get_local_all_data();
     JSONVar keys = data.keys();
     for (int i = 0; i < keys.length(); i++)
@@ -192,11 +188,43 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         {
             if (key == "wifi_name")
             {
-                loc_wifi_name = (const char *)data[key];
+                loc_wifi_name[0] = (const char *)data[key];
+            }
+            if (key == "wifi_name2")
+            {
+                loc_wifi_name[1] = (const char *)data[key];
+            }
+            if (key == "wifi_name3")
+            {
+                loc_wifi_name[2] = (const char *)data[key];
+            }
+            if (key == "wifi_name4")
+            {
+                loc_wifi_name[3] = (const char *)data[key];
+            }
+            if (key == "wifi_name5")
+            {
+                loc_wifi_name[4] = (const char *)data[key];
             }
             if (key == "wifi_pwd")
             {
-                loc_wifi_pwd = (const char *)data[key];
+                loc_wifi_pwd[0] = (const char *)data[key];
+            }
+            if (key == "wifi_pwd2")
+            {
+                loc_wifi_pwd[1] = (const char *)data[key];
+            }
+            if (key == "wifi_pwd3")
+            {
+                loc_wifi_pwd[2] = (const char *)data[key];
+            }
+            if (key == "wifi_pwd4")
+            {
+                loc_wifi_pwd[3] = (const char *)data[key];
+            }
+            if (key == "wifi_pwd5")
+            {
+                loc_wifi_pwd[4] = (const char *)data[key];
             }
 
             DEBUG_PRINT(debug, "[Info] 本地数据 " + key + " :");
@@ -207,22 +235,18 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     xTaskCreate(ESP_AI::on_repeatedly_click_wrapper, "on_repeatedly_click", 1024 * 4, this, 1, NULL);
 
     DEBUG_PRINTLN(debug, F("==================== Connect WIFI ===================="));
-    String _wifi_name = loc_wifi_name;
-    String _wifi_pwd = loc_wifi_pwd;
     ap_connect_err = "0";
-    if (_wifi_name == "")
+    if (loc_wifi_name[0] == "")
     {
-        _wifi_name = wifi_config.wifi_name;
+        loc_wifi_name[0] = wifi_config.wifi_name;
+        loc_wifi_pwd[0] = wifi_config.wifi_pwd;
     }
-    if (_wifi_pwd == "")
-    {
-        _wifi_pwd = wifi_config.wifi_pwd;
-    }
+    // wifi_pwd 可以为空（无密码）
 
-    if (_wifi_name == "")
+    if (loc_wifi_name[0] == "")
     {
         DEBUG_PRINTLN(debug, F("[Info] 没有wifi信息，请配网"));
-        DEBUG_PRINT(debug, F("[Info] 配网方式：" ));
+        DEBUG_PRINT(debug, F("[Info] 配网方式："));
         DEBUG_PRINTLN(debug, wifi_config.way);
         if (wifi_config.way == "BLE")
         {
@@ -236,31 +260,35 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     }
 
     // 处理蓝牙临时数据
-    String loc__ble_temp_ = get_local_data("_ble_temp_"); 
-    if(loc__ble_temp_ == "1"){
+    String loc__ble_temp_ = get_local_data("_ble_temp_");
+    if (loc__ble_temp_ == "1")
+    {
         ble_connect_wifi();
         return;
     }
 
-    esp_ai_dec.write(lian_jie_zhong, lian_jie_zhong_len);
-
-    DEBUG_PRINTLN(debug, "[Info] 连接 WIFI: " + _wifi_name);
-    DEBUG_PRINTLN(debug, "[Info] WIFI 密码: " + _wifi_pwd);
+    play_builtin_audio(lian_jie_zhong, lian_jie_zhong_len);
 
     WiFi.disconnect(true);
     delay(100);
     WiFi.mode(WIFI_OFF);
     delay(100);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(_wifi_name, _wifi_pwd);
+    for (int i = 0; i < 5; i++)
+    {
+        if (loc_wifi_name[i] != "") // ssid 不能为空
+        {
+            DEBUG_PRINTLN(debug, "[Info] 连接 WIFI" + String(i + 1) + ": " + loc_wifi_name[i]);
+            DEBUG_PRINTLN(debug, "[Info] WIFI" + String(i + 1) + " 密码: " + loc_wifi_pwd[i]);
+            wifiMulti.addAP(loc_wifi_name[i].c_str(), loc_wifi_pwd[i].c_str());
+        }
+    }
 
     DEBUG_PRINT(debug, F("[Info] connect wifi ing.."));
 
-    int connect_count = 0;
-    int try_count = 30;
-    while (WiFi.status() != WL_CONNECTED && connect_count <= try_count)
+    // 等待 5 秒
+    if (wifiMulti.run(5000) != WL_CONNECTED)
     {
-        connect_count++;
         // 内置状态处理
         status_change("0_ing");
         if (onNetStatusCb != nullptr)
@@ -278,29 +306,25 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             esp_ai_net_status = "0_ing";
             onNetStatusCb("0_ing_after");
         }
-        delay(250);
-        if (connect_count > try_count)
+        DEBUG_PRINTLN(debug, F("\n[Error] 连接WIFI失败，请重新配网"));
+        if (wifi_config.way == "BLE")
         {
-            DEBUG_PRINTLN(debug, F("\n[Error] 连接WIFI失败，请重新配网"));
-            if (wifi_config.way == "BLE")
-            {
-                open_ble_server();
-            }
-            else
-            {
-                open_ap();
-            }
+            open_ble_server();
+        }
+        else
+        {
+            open_ap();
         }
     }
 
     if (WiFi.status() != WL_CONNECTED)
     {
-        esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
+        play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
         return;
     }
 
-    esp_ai_dec.write(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
-    esp_ai_dec.write(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
+    play_builtin_audio(lian_jie_cheng_gong, lian_jie_cheng_gong_len);
+    play_builtin_audio(fu_wu_lian_jie_zhong, fu_wu_lian_jie_zhong_len);
 
     esp_ai_played_connected = false;
     // 内置状态处理
@@ -322,8 +346,6 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         onConnectedWifiCb(ip_str);
     }
 
-    DEBUG_PRINTLN(debug, F("==============================================="));
-
     if (mic_i2s_init(16000))
     {
         DEBUG_PRINTLN(debug, F("[Error] Failed to start MIC I2S!"));
@@ -333,7 +355,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     {
         wakeup_init();
 
-        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, NULL);
+        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, &wakeup_task_handle);
     }
 
     if (String(server_config.ip) == "custom-made")
@@ -349,17 +371,17 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     xTaskCreate(
         ESP_AI::reporting_sensor_data_wrapper,
         "reporting_sensor_data",
-        1024 * 4,
+        1024,
         this,
         1,
-        NULL);
+        &sensor_task_handle);
 
     xTaskCreate(
         ESP_AI::on_wakeup_wrapper,
         "on_wakeup",
         1024 * 4,
         this,
-        1, NULL);
+        1, &on_wakeup_task_handle);
 
     xTaskCreate(
         ESP_AI::get_position_wrapper,
@@ -367,15 +389,15 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
         1024 * 4,
         this,
         1,
-        NULL);
+        &get_position_task_handle);
 
     xTaskCreate(
-        ESP_AI::play_audio_wrapper,
-        "play_audio",
-        1024 * 4,
+        ESP_AI::send_audio_wrapper,
+        "send_audio",
+        1024 * 8,
         this,
         1,
-        NULL);
+        &send_audio_task_handle);
 
     if (volume_config.enable)
     {
@@ -385,7 +407,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             1024 * 4,
             this,
             1,
-            NULL);
+            &volume_listener_task_handle);
     }
     connect_ws();
 }

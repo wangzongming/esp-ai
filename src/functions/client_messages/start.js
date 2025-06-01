@@ -32,8 +32,6 @@ const isOutTimeErr = require("../../utils/isOutTimeErr");
 async function fn({ device_id, _ws }) {
     try {
         const IAT_FN = require(`../iat`);
-        // const TTS_FN = require(`../tts`);
-        console.log("====== 开始对话 =====")
         if (!G_devices.get(device_id)) {
             error(`[${device_id}] start 消息错误： 设备未连接, 将忽略本次唤醒。`);
             _ws && _ws.close();
@@ -42,6 +40,8 @@ async function fn({ device_id, _ws }) {
 
         const { auth } = G_config;
         const { ws, client_params } = G_devices.get(device_id);
+
+
         if (auth) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
                 ws,
@@ -67,13 +67,13 @@ async function fn({ device_id, _ws }) {
                 }, 5000)
                 return;
             };
-        }
+        } 
 
-        await G_Instance.stop(device_id, "打断会话时");
-        await G_Instance.newSession(device_id);
-
-        const start_iat = (connect_cb) => {
+        const start_iat = async (connect_cb) => {
             if (!G_devices.get(device_id)) return;
+            await G_Instance.stop(device_id, "打断会话时");
+            await G_Instance.newSession(device_id);
+
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
                 started: true,
@@ -82,8 +82,8 @@ async function fn({ device_id, _ws }) {
                 stop_next_session: false,
                 // 重置可用流
                 client_out_audio_ing: 0,
+                abort_controllers: [],
             })
-
             return IAT_FN(device_id, connect_cb);
         };
         if (!G_devices.get(device_id)) return;

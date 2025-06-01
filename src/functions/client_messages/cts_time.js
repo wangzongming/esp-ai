@@ -29,6 +29,7 @@
 const { t_info } = require("../../utils/log");
 
 async function fn({ device_id, stc_time }) {
+    if (!G_devices.get(device_id)) return;
     const { ws } = G_devices.get(device_id);
     const net_delay = (+new Date() - (+stc_time)) / 2;
     t_info(`------------------------------------------------------------------------------`)

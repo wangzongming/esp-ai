@@ -41,6 +41,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
         const { devLog, onTTScb } = G_config;
         if (!G_devices.get(device_id)) return;
         const { ws: ws_client, tts_list, session_id: now_session_id } = G_devices.get(device_id);
+        if (!ws_client) return; 
         if (!is_create_cache && session_id && now_session_id && session_id !== now_session_id) return;
 
         !is_create_cache && onTTScb && onTTScb({
@@ -64,10 +65,8 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             devLog && log.tts_info('-> TTS 片段转换完毕');
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
-            // 这个和会话ID不同，这都是追加的方式。
-            const { stop_next_session } = G_devices.get(device_id);
-
-            function sendEndBuffer() { 
+            function sendEndBuffer() {
+                devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end"]}`);
                 audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
             }
             function sendEndAlignBuffer() {
@@ -75,34 +74,13 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             }
 
 
-            let awaitCount = 0;
-
-            /**
-             * 等待意图的函数，最多等待 2s
-            */
-            function awaitIntention(doFn) {
-                const { intention_ing } = G_devices.get(device_id);
-                if (intention_ing && awaitCount < 10) {
-                    setTimeout(() => {
-                        const { intention_ing } = G_devices.get(device_id);
-                        if (intention_ing) {
-                            awaitCount += 1;
-                            awaitIntention(doFn);
-                        } else {
-                            doFn();
-                        }
-                    }, 200)
-                } else {
-                    doFn();
-                }
-            }
- 
             if (text_is_over) {
                 /**
                  * 意图推理中时候并不知道是否还需要重新采集音频
                  * 所以需要等待推理完毕后才进行最后一帧音频流的发送
                 */
-                awaitIntention(() => {
+                G_Instance.awaitIntention(device_id, () => {
+                    if (!G_devices.get(device_id)) return;
                     const { stop_next_session } = G_devices.get(device_id);
                     if (!stop_next_session) {
                         if (need_record) {
@@ -114,13 +92,9 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                         sendEndBuffer();
                     }
                 })
-
             } else {
-                if (!stop_next_session) {
-                    audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
-                } else {
-                    sendEndBuffer();
-                }
+                // 文本没有结束，发送 chunk 标识
+                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
             }
         }
 
@@ -145,154 +119,150 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
  *
 */
 function TTSFN(device_id, opts) {
-    return new Promise((resolve) => {
-        try {
-            const { devLog, plugins = [], tts_params_set, onTTS } = G_config;
-            const {
-                ws: ws_client, error_catch, tts_list,
-                user_config: { iat_server, llm_server, tts_server, tts_config }
-            } = G_devices.get(device_id);
-            const { text, is_pre_connect, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
-            const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
-
-            const TTS_FN = plugin || require(`./${tts_server}`);
-
-            if (!is_pre_connect) {
-                if (!text || !(`${text}`.replace(/\s/g, ''))) {
-                    return true;
-                }
-            }
-            if (is_create_cache) {
-                devLog && log.tts_info('-> 开始缓存TTS: ', text);
-            } else {
-                devLog && log.tts_info('-> 开始请求TTS: ', text);
-            }
-
-            const audio_sender = new Audio_sender(ws_client, device_id);
-
-            !is_create_cache && onTTS && onTTS({
-                device_id, tts_task_id,
-                ws: ws_client,
-                text,
-                text_is_over,
-                instance: G_Instance,
-                sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
-                    type: "instruct",
-                    command_id: "on_tts",
-                    data: _text || text
-                }))
-            });
-
-            /**
-             * 记录 tts 服务对象
-            */
-            const logWSServer = (wsServer) => {
-                tts_list.set(tts_task_id, wsServer)
-            }
-
-            /**
-             * 开始连接 tts 服务的回调
-             */
-            const connectServerBeforeCb = () => {
+    try {
+        return new Promise((resolve) => {
+            try {
                 if (!G_devices.get(device_id)) return;
-                // console.time("TTS 服务连接时间：")
-                G_devices.set(device_id, {
-                    ...G_devices.get(device_id),
-                    tts_server_connect_ing: true,
-                    // 记录下来，如果设备打断时，需要框架调用，否则本任务将永远无法结束
-                    resolve_tts_task: resolve
-                })
-            }
+                const { devLog, plugins = [], tts_params_set, onTTS } = G_config;
+                const {
+                    ws: ws_client, error_catch, tts_list,
+                    user_config: { iat_server, llm_server, tts_server, tts_config }
+                } = G_devices.get(device_id);
+                const { text, is_pre_connect, session_id, text_is_over = true, need_record = false, frameOnTTScb, is_cache, is_create_cache, tts_task_id = createUUID() } = opts;
+                const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
 
-            /**
-            * 连接 tts 服务后的回调
-            */
-            const connectServerCb = async (connected) => {
-                if (connected) {
-                    if (!G_devices.get(device_id)) return;
-                    devLog && log.tts_info("-> TTS 服务连接成功！")
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        tts_server_connected: true,
-                        tts_server_connect_ing: false,
-                    })
+                const TTS_FN = plugin || require(`./${tts_server}`);
 
-                    !is_create_cache && ws_client && ws_client.send(JSON.stringify({
-                        type: "session_status",
-                        status: "tts_chunk_start",
-                    }));
-                    // 启动音频发送任务 
-                    audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => { 
-                        G_devices.set(device_id, {
-                            ...G_devices.get(device_id),
-                            resolve_tts_task: null
-                        })
-                        resolve(true);
-                    });
-                } else {
-                    if (!G_devices.get(device_id)) {
-                        G_devices.set(device_id, {
-                            ...G_devices.get(device_id),
-                            resolve_tts_task: null
-                        })
-                        return resolve(true);
-                    };
-                    G_devices.set(device_id, {
-                        ...G_devices.get(device_id),
-                        tts_server_connected: false,
-                        tts_server_connect_ing: false,
-                    })
-                    !is_create_cache && ws_client && ws_client.send(Buffer.from(G_session_ids.tts_all_end, 'utf-8'));
-
-                    // test...
-                    // 关闭连接后应该结束TTS
-                    // 否则TTS任务列表的某个任务会一直处于等待状态 
-
-                    // 存在问题：
-                    // 用户打断后会导致 TTS 任务永远结束不了....
-                    // resolve(true);
+                if (!is_pre_connect) {
+                    if (!text || !(`${text}`.replace(/\s/g, ''))) {
+                        return true;
+                    }
                 }
-            }
+                if (is_create_cache) {
+                    devLog && log.tts_info('-> 开始缓存TTS: ', text);
+                } else {
+                    devLog && log.tts_info('-> 开始请求TTS: ', text);
+                }
 
-            /**
-             * tts 服务发生错误时调用
-            */
-            const ttsServerErrorCb = (err, code) => {
-                error_catch("TTS", code || "302", err);
-                tts_list.delete(tts_task_id)
-                log.error(err)
+                const audio_sender = new Audio_sender(ws_client, device_id);
 
-                G_devices.set(device_id, {
-                    ...G_devices.get(device_id),
-                    resolve_tts_task: null
+                !is_create_cache && onTTS && onTTS({
+                    device_id, tts_task_id,
+                    ws: ws_client,
+                    text,
+                    text_is_over,
+                    instance: G_Instance,
+                    sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({
+                        type: "instruct",
+                        command_id: "on_tts",
+                        data: _text || text
+                    }))
+                });
+
+                /**
+                 * 记录 tts 服务对象
+                */
+                const logWSServer = (wsServer) => {
+                    tts_list.set(tts_task_id, wsServer)
+                }
+
+                /**
+                 * 开始连接 tts 服务的回调
+                 */
+                const connectServerBeforeCb = () => {
+                    if (!G_devices.get(device_id)) return;
+                    G_devices.set(device_id, {
+                        ...G_devices.get(device_id),
+                        tts_server_connect_ing: true,
+                        // 记录下来，如果设备打断时，需要框架调用，否则本任务将永远无法结束
+                        resolve_tts_task: resolve
+                    })
+                }
+
+                /**
+                * 连接 tts 服务后的回调
+                */
+                const connectServerCb = async (connected) => {
+                    if (connected) {
+                        if (!G_devices.get(device_id)) return;
+                        devLog && log.tts_info("-> TTS 服务连接成功！")
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id),
+                            tts_server_connected: true,
+                            tts_server_connect_ing: false,
+                        })
+
+                        !is_create_cache && ws_client && ws_client.send(JSON.stringify({
+                            type: "session_status",
+                            status: "tts_chunk_start",
+                        }));
+                        // 启动音频发送任务 
+                        audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
+                            G_devices.set(device_id, {
+                                ...G_devices.get(device_id),
+                                resolve_tts_task: null
+                            })
+                            resolve(true);
+                        });
+                    } else {
+                        if (!G_devices.get(device_id)) {
+                            G_devices.set(device_id, {
+                                ...G_devices.get(device_id),
+                                resolve_tts_task: null
+                            })
+                            return resolve(true);
+                        };
+                        G_devices.set(device_id, {
+                            ...G_devices.get(device_id),
+                            tts_server_connected: false,
+                            tts_server_connect_ing: false,
+                        })
+                    }
+                }
+
+                /**
+                 * tts 服务发生错误时调用
+                */
+                const ttsServerErrorCb = (err, code) => {
+                    error_catch("TTS", code || "302", err);
+                    tts_list.delete(tts_task_id)
+                    log.error(err)
+
+                    G_devices.set(device_id, {
+                        ...G_devices.get(device_id),
+                        resolve_tts_task: null
+                    })
+                    resolve(true);
+                }
+
+                ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
+                TTS_FN({
+                    text,
+                    device_id,
+                    session_id,
+                    is_pre_connect,
+                    devLog,
+                    tts_config,
+                    tts_params_set,
+                    log,
+                    iat_server, llm_server, tts_server, text_is_over,
+                    cb: (arg) => cb({
+                        ...arg, tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb, is_cache, is_create_cache, audio_sender
+                    }),
+                    logWSServer,
+                    ttsServerErrorCb,
+                    connectServerBeforeCb,
+                    connectServerCb,
                 })
-                resolve(true);
+            } catch (err) {
+                console.log(err);
+                log.error(`TTS 错误： ${err}`)
             }
 
-            ws_client && ws_client.send(JSON.stringify({ type: "play_audio", tts_task_id }));
-            TTS_FN({
-                text,
-                device_id,
-                session_id,
-                is_pre_connect,
-                devLog,
-                tts_config,
-                tts_params_set,
-                log,
-                iat_server, llm_server, tts_server, text_is_over,
-                cb: (arg) => cb({
-                    ...arg, tts_task_id, device_id, session_id, text_is_over, need_record, frameOnTTScb, is_cache, is_create_cache, audio_sender
-                }),
-                logWSServer,
-                ttsServerErrorCb,
-                connectServerBeforeCb,
-                connectServerCb,
-            })
-        } catch (err) {
-            console.log(err);
-            log.error(`TTS 错误： ${err}`)
-        }
+        })
+    } catch (err) {
+        console.error(`tts/index.js 错误：`, err)
+    }
 
-    })
 };
 module.exports = TTSFN;

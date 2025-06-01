@@ -27,7 +27,6 @@
  * @websit https://espai.fun
  */
 #include "get_server_config.h"
-#include <HTTPClient.h>
 
 // 获取服务节点信息
 bool ESP_AI::get_server_config()

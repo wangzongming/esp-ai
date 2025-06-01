@@ -1,4 +1,5 @@
 const log = require("../../utils/log");
+
 /*
  * MIT License
  *
@@ -28,6 +29,7 @@ const log = require("../../utils/log");
  * @websit https://espai.fun
  */
 
+const { clear_sid } = require("../device_fns");
 async function cb({ device_id, text }) {
     try {
         const { onIATcb, onSleep } = G_config;
@@ -60,10 +62,12 @@ async function cb({ device_id, text }) {
                 ...G_devices.get(device_id),
                 first_session: true,
             })
+
+            // 超时结束
+            ws_client && ws_client.send(JSON.stringify({ type: "session_status", status: "iat_end" }));
             ws_client && ws_client.send("session_end", () => {
                 G_Instance.tts(device_id, sleep_reply);
             });
-
         }
     } catch (err) {
         console.log("IAT 回调错误：", err);
@@ -74,9 +78,10 @@ async function cb({ device_id, text }) {
 module.exports = async (device_id, connected_cb) => {
     try {
         const TTS_FN = require(`../tts`);
-        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course, api_key, ai_server } = G_config;
-        const { ws: ws_client, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config }, llm_historys = [] } = G_devices.get(device_id)
+        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course, api_key: g_api_key, ai_server } = G_config;
+        const { ws: ws_client, api_key: user_api_key, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config }, llm_historys = [] } = G_devices.get(device_id)
 
+        const api_key = user_api_key || g_api_key;
         let prev_asr_text = ""; // 上一次识别出来的文字  
         let vad_ended = false;     // vad 结束
         let asr_timeouter = null;     // vad 结束 
@@ -114,7 +119,8 @@ module.exports = async (device_id, connected_cb) => {
                 asr_timeouter = setTimeout(() => {
                     if (!G_devices.get(device_id)) return;
                     const { iat_ws } = G_devices.get(device_id)
-                    if (!iat_ws) return;
+                    if (!iat_ws) return; 
+                    clear_sid(device_id);
                     iat_ws.end && iat_ws.end();
                     vad_ended = true;
                 }, vad_first);
@@ -145,15 +151,11 @@ module.exports = async (device_id, connected_cb) => {
                     iat_server_connect_ing: false,
                     iat_ws: null,
                 })
-
-                const { session_id: _session_id } = G_devices.get(device_id)
+                const { session_id: _session_id } = G_devices.get(device_id) 
                 if (session_id !== _session_id) {
                     return;
                 }
-                ws_client && ws_client.send(JSON.stringify({
-                    type: "session_status",
-                    status: "iat_end",
-                }));
+                ws_client && ws_client.send(JSON.stringify({ type: "session_status", status: "iat_end" }));
             }
         }
 
@@ -243,14 +245,12 @@ module.exports = async (device_id, connected_cb) => {
                 done_timer = setTimeout(() => {
                     const _on_iat_text_time = on_iat_text_time;
                     done_talking({ ai_server, text, api_key, prev_text: llm_historys?.[llm_historys.length - 1]?.content }).then((score) => {
-                        if (_on_iat_text_time !== on_iat_text_time) {
-                            // test...
-                            log.t_red_info("放弃本次语义判断。")
+                        if (_on_iat_text_time !== on_iat_text_time) { 
+                            // log.t_red_info("放弃本次语义判断。")
                             return;
                         }
                         const done = score >= 60;
-                        // test...
-                        log.t_red_info("====>>> ", text, score, done);
+                        // log.t_red_info(text, score, done);
 
                         const over_do = () => {
                             if (!G_devices.get(device_id)) return;
@@ -263,7 +263,6 @@ module.exports = async (device_id, connected_cb) => {
                             // log.t_red_info("语义结束")
                             over_do();
                         } else {
-                            // log.t_red_info("启动语义定时")
                             clearTimeout(not_done_timer);
                             not_done_timer = setTimeout(() => {
                                 log.t_red_info("超时结束 VAD ")

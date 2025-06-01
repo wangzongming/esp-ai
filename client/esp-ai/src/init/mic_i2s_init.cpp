@@ -30,57 +30,29 @@
 
 int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
 {
-    i2s_config_t i2s_config = {
-        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX), 
-        .sample_rate = sampling_rate,
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-        .channel_format = I2S_MIC_CHANNEL,
-        .communication_format = I2S_COMM_FORMAT_I2S,
-        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-        .dma_buf_count = 16,
-        .dma_buf_len = 512, 
-        .use_apll = false,
-        .tx_desc_auto_clear = false,
-        .fixed_mclk = 0};
-
-        #if defined(ARDUINO_XIAO_ESP32S3)
-            i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_PDM);
-        #endif
-
-        i2s_pin_config_t i2s_mic_pins = {
-            .bck_io_num = i2s_config_mic.bck_io_num,
-            .ws_io_num = i2s_config_mic.ws_io_num,
-            .data_out_num = I2S_PIN_NO_CHANGE,
-            .data_in_num = i2s_config_mic.data_in_num,
-        }; 
-
-    esp_err_t ret = 0;
-    ret = i2s_driver_install(MIC_i2s_num, &i2s_config, 0, NULL);
-    i2s_set_pin(MIC_i2s_num, &i2s_mic_pins);
-
-    if (ret != ESP_OK)
+    auto i2sConfig = esp_ai_i2s_input.defaultConfig(RX_MODE);
+    i2sConfig.bits_per_sample = i2s_config_mic.bits_per_sample ? i2s_config_mic.bits_per_sample : 16;
+    i2sConfig.sample_rate = sampling_rate;
+    i2sConfig.channels = 1;
+    i2sConfig.i2s_format = I2S_LEFT_JUSTIFIED_FORMAT;
+    i2sConfig.pin_bck = i2s_config_mic.bck_io_num;
+    i2sConfig.pin_ws = i2s_config_mic.ws_io_num;
+    i2sConfig.pin_data = i2s_config_mic.data_in_num;
+    i2sConfig.port_no = MIC_i2s_num; 
+    i2sConfig.channel_format = i2s_config_mic.channel_format ? i2s_config_mic.channel_format : I2S_CHANNEL_FMT_ONLY_LEFT; 
+    i2sConfig.buffer_size = 512;
+ 
+    // 32位兼容性最高
+    if (mic_bits_per_sample != 16 && mic_bits_per_sample != 24 && mic_bits_per_sample != 32)
     {
-        Serial.println("[Error] Error in i2s_driver_install");
-    }
+        i2sConfig.bits_per_sample = 32;
+    } 
+    esp_ai_i2s_input.begin(i2sConfig);
 
-    if (ret != ESP_OK)
-    {
-        Serial.println("[Error] Error in i2s_set_pin");
-    }
-
-    ret = i2s_zero_dma_buffer(MIC_i2s_num);
-    if (ret != ESP_OK)
-    {
-        Serial.println("[Error] Error in initializing dma buffer with 0");
-    }
-
-    // mp3 begin
-    esp_ai_mp3_info.channels = 1;
-    esp_ai_mp3_info.sample_rate = sampling_rate;
-    esp_ai_mp3_info.bits_per_sample = 16; 
-    esp_ai_mp3_info.quality = 5;
-
-    esp_ai_mp3_encoder.begin(esp_ai_mp3_info);
-
-    return int(ret);
+    auto vcfg = esp_ai_mic_volume.defaultConfig();
+    vcfg.copyFrom(i2sConfig);
+    vcfg.allow_boost = true;
+    esp_ai_mic_volume.begin(vcfg);
+    esp_ai_mic_volume.setVolume(10);
+    return 0;
 }

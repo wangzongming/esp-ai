@@ -51,11 +51,7 @@ const config = {
     /**
      * 用于全局`ESP-AI`的秘钥，在一些需要进行AI服务时使用。
     */
-    ai_server: `https://api.espai.fun`,
-    // test...
-    // ai_server: `http://192.168.3.16:7002`,
-    
-
+    ai_server: `https://api.espai.fun`, 
 
     /**
      * 为了保证服务的灵活，所以 IAT/TTS/LLM 都需要分别配置key。 哪怕都用的讯飞，也需要分别配置。

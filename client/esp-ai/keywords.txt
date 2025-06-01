@@ -26,7 +26,13 @@ onRepeatedlyClick KEYWORD2
 reCache KEYWORD2
 onEmotion KEYWORD2
 onBegin KEYWORD2
- 
+suspendAllTask KEYWORD2
+resumeAllTask KEYWORD2
+delAllTask KEYWORD2
+isSpeaking KEYWORD2
+awaitPlayerDone KEYWORD2
+playBuiltinAudio KEYWORD2
+onReady KEYWORD2
  
 #constant (LITERAL1)
 #none

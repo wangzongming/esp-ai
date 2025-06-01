@@ -32,8 +32,8 @@ void ESP_AI::connect_ws()
 {
     if (String(server_config.protocol) != "https" && String(server_config.protocol) != "http")
     {
-        DEBUG_PRINTLN(debug, ("[Error] 服务协议必须为 http 或者 https ！"));
-        DEBUG_PRINTLN(debug, ('[Error] 正确的服务配置： ESP_AI_server_config server_config = { "http或者https", "ip或者域名", 端口 };'));
+        DEBUG_PRINTLN(debug, F("[Error] 服务协议必须为 http 或者 https ！"));
+        DEBUG_PRINTLN(debug, F("[Error] 正确的服务配置： ESP_AI_server_config server_config = { \"http或者https\", \"ip或者域名\", 端口 };"));
         return;
     }
     String loc_device_id = get_device_id(); 
@@ -58,9 +58,9 @@ void ESP_AI::connect_ws()
     DEBUG_PRINT(debug, ("[Info] 参数："));
     DEBUG_PRINTLN(debug, server_config.params);
 
-    size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-    Serial.print("剩余内存：");
-    Serial.println(freeHeap / 1024 / 1024);
+    // size_t freeHeap = ESP.getFreeHeap() / 1024;
+    // Serial.print("剩余内存：");
+    // Serial.println(freeHeap);
 
 
     // ws 服务
@@ -101,5 +101,5 @@ void ESP_AI::connect_ws()
   
     esp_ai_webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     esp_ai_webSocket.setReconnectInterval(3000);
-    esp_ai_webSocket.enableHeartbeat(5000, 10000, 0);
+    esp_ai_webSocket.enableHeartbeat(5000, 10000, 0); 
 }

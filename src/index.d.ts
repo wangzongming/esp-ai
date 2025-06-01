@@ -59,17 +59,25 @@ interface IntentionType {
         instance: Instance;
         text: string;
     }) => void | string),
-    // 客户端执行指令[后]的回复消息（如：打开电灯完毕/关闭电灯完毕）
+
+    /**
+     * 客户端执行指令[后]的回复消息（如：打开电灯完毕/关闭电灯完毕）
+     * 不推荐设置，不设置的情况下由 LLM 进行推理回答
+    */
     message?: string;
+    
     // 附加参数, 不管什么数据，都需要写为 string 类型，且不建议放较大的数据在这里
     data?: string;
     // io 或者 pwm 时需要配置的引脚
     pin?: number;
-    // 超体 api_key, 该超体下如果没有指定的设备ID将会报错
-    // 配置 api_key 后字符串类型的指令会进行NLP推理。
+    /**
+     * 超体 api_key
+     * 优先级：IntentionType.api_key -> Config.gen_client_config().api_key ->  Config.api_key
+    */
     api_key?: string;
+
     /***
-     * nlp 服务地址，默认为 https://espai.natapp4.cc/v1/semantic。 注意，必须配置 api_key 才会去请求这个服务
+     * nlp 服务地址，默认为 https://api.espai.fun/ai_api/semantic 。 注意，必须配置 api_key 才会去请求这个服务
      * 请求体为 json： {
      *      
      *   "api_key": api_key,
@@ -80,8 +88,12 @@ interface IntentionType {
      * 
     */
     nlp_server?: string;
-    // 远程设备
+
+    /**
+     * 远程设备
+    */
     target_device_id?: string;
+
     /***
      * 音乐指令 __play_music__ 专用
      * 音乐播放服务
@@ -124,7 +136,8 @@ export interface Config {
     /**
      * ESP-AI 开放平台，超体 api_key
      * 用于一些需要进行 AI 推理时调用服务使用。
-    */ 
+     * 优先级：Config.gen_client_config().api_key ->  Config.api_key
+    */
     api_key: string;
 
     /**
@@ -179,6 +192,14 @@ export interface Config {
         llm_config: {
             [key: string]: any;
         };
+
+
+        /**
+         * ESP-AI 开放平台，超体 api_key
+         * 用于一些需要进行 AI 推理时调用服务使用。
+         * 优先级：Config.gen_client_config().api_key ->  Config.api_key
+        */
+        api_key?: string;
 
         /**
          * 客户端连接服务后的回复
@@ -494,8 +515,9 @@ export interface Instance {
 
     /**
      * 获取设备是否正在播放音频, 注意：不是TTS, 而是 __play_music__ 指令触发的音频
+     * 废弃...
     */
-    isPlaying(device_id: string): boolean;
+    // isPlaying(device_id: string): boolean;
 
     /**
      * 设置引脚引脚模式。
@@ -536,11 +558,22 @@ export interface Instance {
     /**
      * LEDC 通道初始化
     */
-    LEDCInit(device_id: string, arg: { pin: number;  channel: number, freq: number, resolution: number }): void;
+    LEDCInit(device_id: string, arg: { pin: number; channel: number, freq: number, resolution: number }): void;
 
     /**
      * LEDC 通道写入 
     */
-    ledcWrite(device_id: string,  channel: number,  deg: number): void;
+    ledcWrite(device_id: string, channel: number, deg: number): void;
+
+    /**
+     * 设备说话中
+    */
+    isSpeaking(device_id: string): boolean;
+
+    /**
+     * 等待设备说话完毕
+    */
+    awaitPlayerDone(device_id: string): Promise<void>;
+
 
 }

@@ -43,7 +43,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         if (!texts.index) {
             texts.index = 0;
         }
- 
+
         onLLMcb && onLLMcb({
             device_id,
             text: chunk_text,
@@ -62,13 +62,13 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
          * 向客户端发送情绪
         */
         const sendEmotion = async (text) => {
-            try { 
+            try {
                 const response = await axios.post(`${ai_server}/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
                 const { success, message: res_msg, data } = response.data;
                 if (success) {
                     ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
                 } else {
-                    log.error('-> 情绪推理失败：'+ res_msg);
+                    log.error('-> 情绪推理失败：' + res_msg);
                 }
             } catch (err) {
                 log.error('-> 情绪推理失败：');
@@ -79,16 +79,16 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
 
-        // console.log("播放音频：", is_over, text);
         if (is_over) {
             devLog && log.llm_info('-> LLM 推理完毕');
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0, tts_server)
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0)
             ttsText && sendEmotion(ttsText);
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
-            // console.log('llm 结束: ', textNowNull, ttsText);
-            if (textNowNull && (ttsText.replace(/\s/g, '')).replace(/[,;!?()<>"‘”《》’!?【】。、，；！？（）”’]?/g, "") !== "") {
+ 
+
+            if (textNowNull && (ttsText.replace(/\s/g, '')).replace(/[,;!?()<>"‘”《》’!?【】。、，；！？（）”’…~～]?/g, "") !== "") {
                 // 添加音频播放任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
                     const tts_res = await TTS_FN(device_id, {
@@ -98,20 +98,36 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                         text_is_over: true,
                         need_record: true
                     })
-                    console.log("AI 说完了 111")
                     return tts_res;
                 })
                 texts.all_text += org_text;
             } else {
-                // 特殊结束任务
+                /**
+                 * 特殊结束任务，当最后一次 TTS 没有文字是将走这里进行结束
+                */
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(() => {
-                    const { stop_next_session } = G_devices.get(device_id);
-                    if (!stop_next_session) {
-                        devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`);
-                        ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
-                    } else {
-                        ws_client.send(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
-                    }
+                    G_Instance.awaitIntention(device_id, () => {
+                        if (!G_devices.get(device_id)) return;
+                        const { stop_next_session } = G_devices.get(device_id);
+                        if (!stop_next_session) {
+                            devLog && log.llm_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end_align"]}`);
+                            const combinedBuffer = Buffer.concat([
+                                Buffer.from(session_id, 'utf-8'),
+                                Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'),
+                            ]);
+                            ws_client.send(combinedBuffer);
+                            // ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+                        } else {
+                            devLog && log.llm_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end"]}`);
+                            const combinedBuffer = Buffer.concat([
+                                Buffer.from(session_id, 'utf-8'),
+                                Buffer.from(G_session_ids["tts_all_end"], 'utf-8'),
+                            ]);
+                            ws_client.send(combinedBuffer);
+                            // ws_client.send(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                        }
+
+                    })
                     return true;
                 })
             }
@@ -141,7 +157,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             }));
         }
         else {
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index, tts_server)
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index)
             ttsText && sendEmotion(ttsText);
             if (ttsText) {
                 devLog && log.llm_info('客户端播放：', ttsText);
@@ -176,10 +192,9 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
  *  2. 一些特殊符号不用念出来
  *  3. 部分非停顿符号不要，还需要注意数学中的小数点
 */
-function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
-    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格 
-    // const punctuationRegex = /[,;!?)>"‘”》）’!?】。、，；！？》）”’] ?/g;
-    const punctuationRegex = /[,;!?"‘!?。、，；！？]?/g;
+function extractBeforeLastPunctuation(str, isLast, index) {
+    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格  
+    const punctuationRegex = /[。！？!?；;！？…~～]|(?<![A-Za-z0-9])\.(?![A-Za-z0-9])|(?<![A-Za-z])'(?![A-Za-z])/g;
     const matches = [...str.matchAll(punctuationRegex)];
 
     if (!isLast && str.length <= 1) return {};
@@ -192,7 +207,7 @@ function extractBeforeLastPunctuation(str, isLast, index, tts_server) {
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
         // 这里是否考虑提供配置让用户决策
-        const min_len = (index === 1 ? 10 : Math.min(index * 30, 100));
+        const min_len = (index === 1 ? 2 : Math.min(index * 30, 100));
         if ((res.length < min_len) && !isLast) {
             return {}
         }

@@ -29,9 +29,7 @@
 const { tts_info } = require("../../utils/log");
 async function fn({ device_id }) {
     const { devLog } = G_config;
-    if (!G_devices.get(device_id)) return;
-    const { ws } = G_devices.get(device_id);
-    ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
+    if (!G_devices.get(device_id)) return; 
 
     devLog && tts_info("-> 客户端音频流播放中");
     G_devices.set(device_id, {

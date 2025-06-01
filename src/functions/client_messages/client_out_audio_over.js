@@ -24,17 +24,27 @@
  */
 
 const { tts_info } = require("../../utils/log");
-async function fn({ device_id, tts_task_id, session_id }) {
+const { clear_sid } = require("../device_fns");
+
+async function fn({ device_id, tts_task_id, session_id, session_status }) {
     const { devLog } = G_config;
     if (!G_devices.get(device_id)) return;
-    devLog && tts_info("-> 客户端音频流播放完毕：", session_id || "无会话ID", tts_task_id || "无任务ID");
- 
-    const new_attr = { client_out_audio_ing: false, };
-    if (session_id === G_session_ids["tts_all_end"] || session_id === G_session_ids["tts_all_end_align"]) {
-        new_attr["session_id"] = "";
+    const { play_audio_on_end } = G_devices.get(device_id);
+    devLog && tts_info("-> 客户端音频流播放完毕-> 会话ID：" + session_id + "  会话状态：" + session_status + "  任务ID：" + tts_task_id);
 
-        // test...
-        console.log("AI 说完了 222")
+    const new_attr = { client_out_audio_ing: false, };
+    if (session_status === G_session_ids["tts_all_end"] || session_status === G_session_ids["tts_all_end_align"]) {
+        if (session_id !== G_session_ids["tts_fn"]) { // TTS 方法不应打乱对话 
+            // 如果是同一个会话的情况下为中断对话 
+            clear_sid(device_id);
+        }
+
+        // 音频播放结束 
+        G_devices.set(device_id, { ...G_devices.get(device_id), play_audio_ing: false });
+    }
+
+    if (session_status === G_session_ids["tts_all_end"]) {
+        tts_task_id === G_session_ids["play_music"] && play_audio_on_end && play_audio_on_end("play_end");
     }
 
     G_devices.set(device_id, {

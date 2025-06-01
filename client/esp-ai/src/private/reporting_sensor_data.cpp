@@ -43,25 +43,34 @@ void ESP_AI::reporting_sensor_data()
     {
         for (int i = 0; i < digital_read_pins.size(); i++)
         {
-            int pin = digital_read_pins[i];
-            int reading = digitalRead(pin);
-            digitalReadJSONData["type"] = "digitalRead";
-            digitalReadJSONData["pin"] = pin;
-            digitalReadJSONData["value"] = reading;
-            String sendData = JSON.stringify(digitalReadJSONData);
-            esp_ai_webSocket.sendTXT(sendData);
+
+            if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+            {
+                int pin = digital_read_pins[i];
+                int reading = digitalRead(pin);
+                digitalReadJSONData["type"] = "digitalRead";
+                digitalReadJSONData["pin"] = pin;
+                digitalReadJSONData["value"] = reading;
+                String sendData = JSON.stringify(digitalReadJSONData);
+                esp_ai_webSocket.sendTXT(sendData);
+                xSemaphoreGive(esp_ai_ws_mutex);
+            }
         }
         for (int i = 0; i < analog_read_pins.size(); i++)
         {
-            int pin = analog_read_pins[i];
-            int reading = analogRead(pin);
-            analogReadJSONData["type"] = "analogRead";
-            analogReadJSONData["pin"] = pin;
-            analogReadJSONData["value"] = reading;
-            String sendData = JSON.stringify(analogReadJSONData);
-            esp_ai_webSocket.sendTXT(sendData);
+            if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+            {
+                int pin = analog_read_pins[i];
+                int reading = analogRead(pin);
+                analogReadJSONData["type"] = "analogRead";
+                analogReadJSONData["pin"] = pin;
+                analogReadJSONData["value"] = reading;
+                String sendData = JSON.stringify(analogReadJSONData);
+                esp_ai_webSocket.sendTXT(sendData);
+                xSemaphoreGive(esp_ai_ws_mutex);
+            } 
         }
- 
+
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

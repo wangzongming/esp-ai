@@ -25,43 +25,6 @@
 const fs = require('fs')
 const axios = require('axios');
 const { PassThrough } = require('stream');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
-
-class AudioSender {
-    constructor(threshold, sendCallback) {
-        this.threshold = threshold;   // 缓存的阈值，达到此值时发送数据
-        this.cache = Buffer.alloc(0);  // 用于缓存接收到的音频数据
-        this.sendCallback = sendCallback;  // 发送回调函数
-    }
-
-    // 接收数据并将其添加到缓存
-    addData(chunk) {
-        this.cache = Buffer.concat([this.cache, chunk]);
-
-        // 如果缓存的大小达到阈值，执行发送操作
-        if (this.cache.length >= this.threshold) {
-            this.sendData();
-        }
-    }
-
-    // 执行数据发送操作
-    sendData() {
-        // console.log('发送数据，大小:', this.cache.length); 
-        this.sendCallback(this.cache);
-        this.cache = Buffer.alloc(0);
-    }
-
-    // 手动调用此方法来处理缓存中的剩余数据
-    flushRemaining() {
-        if (this.cache.length > 0) {
-            this.sendCallback(this.cache);
-            this.cache = Buffer.alloc(0);
-        }
-    }
-}
-
-
 
 /**
  * TTS 插件封装 - 讯飞 TTS
@@ -80,7 +43,7 @@ class AudioSender {
  * @param {Function}    cb                  TTS 服务返回音频数据时调用，eg: cb({ audio: 音频base64, ... })
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.tts_info("tts 专属信息")
 */
-function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
+function TTS_FN({ text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
         const { url = 'https://api.espai2.fun/ai_api/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
@@ -91,16 +54,19 @@ function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, lo
          * 服务返回 wav 流，需要转为 mp3 流
         */
         async function sendTTSRequest({ url, streaming, ...other_config }) {
-            const data = { ...other_config, streaming };
+            const data = { ...other_config, streaming, api_key };
 
             try {
-                connectServerBeforeCb();
-                const response = await axios.post(url, tts_params_set ? tts_params_set(data) : data, {
+                connectServerBeforeCb(); 
+                const response = await axios.post(url, {
+                    ...data,
+                    text: text,
+                    api_key: api_key
+                }, {
                     headers: {
-                        'Authorization': `Bearer ${api_key}`,
                         'Content-Type': 'application/json',
                     },
-                    responseType: streaming ? 'stream' : 'arraybuffer',
+                    responseType: 'stream'
                 });
                 const ws = {
                     close() {
@@ -109,67 +75,18 @@ function TTS_FN({ text, devLog, tts_config,  logWSServer, tts_params_set, cb, lo
                 };
                 logWSServer(ws)
 
-                connectServerCb(true); 
-
-                const threshold = 1280 * 5;
-                let dataSender = new AudioSender(threshold, (data) => {
-                    cb({ is_over: false, audio: data, ws });
-                });
-                const sampleRate = 24000;
-                const silenceDuration = 0.8;
-                const silenceSize = sampleRate * silenceDuration * 2;
-                const silenceBuffer = Buffer.alloc(silenceSize, 0);
+                connectServerCb(true);
                 const audioStream = response.data;
                 const stream = new PassThrough();
                 audioStream.pipe(stream);
-
-                // tts 服务需要改为流标志...
                 stream.on('data', (chunk) => {
-                    if (chunk) { 
-                        try {
-                            const res = JSON.parse(chunk.toString());
-                            if (res?.success === false) {
-                                console.error(`ESP-AI-TTS 服务错误：${res.message}`);
-                                ttsServerErrorCb(`ESP-AI-TTS  服务错误：${res.message}`, res.code);
-                                connectServerCb(false);
-                            }
-                        } catch (error) { }
-                    }
+                    cb({ is_over: false, audio: chunk, ws });
                 })
-
-                try {
-                    ffmpeg(stream)
-                        .setFfmpegPath(ffmpegPath)
-                        .inputFormat('wav')
-                        .audioCodec('libmp3lame')
-                        .outputFormat('mp3')
-                        .audioFrequency(sampleRate)
-                        .on('error', (error) => {
-                            console.error(`TTS MP3 转换出错 ${error}`);
-                            ttsServerErrorCb(`TTS MP3 转换出错 ${error}`);
-                            connectServerCb(false);
-                        })
-                        .pipe()
-                        .on('data', (chunk) => { 
-                            dataSender.addData(chunk);
-                            // fileWriter.write(chunk);  // 写入数据到文件 
-                        })
-                        .on('end', () => {
-                            // 在音频流结束时添加一些静音，TTS 服务的 bug
-                            dataSender.addData(silenceBuffer);  // 添加静音到发送器
-                            //  .write(silenceBuffer);    // 写入数据到文件 
-                            // fileWriter.end();   
-                            dataSender.flushRemaining();
-                            cb({ is_over: true, audio: "", ws });
-                            dataSender = null;
-                        });
-                } catch (err) {
-                    log.error(err);
-                    log.error(`如果您遇到了 ffmpeg-static 错误，那请卸载 ffmpeg-static 后重新安装，注意删除 package-lock.json 文件`);
-                    log.error(`1. 执行 npm uninstall ffmpeg-static`);
-                    log.error(`2. 执行 npm install ffmpeg-static`);
-                }
-
+                stream.on('end', () => {
+                    cb({ is_over: true, audio: "", ws });
+                    connectServerCb(false);
+                });
+ 
             } catch (error) {
                 console.error(`tts错误 ${error.message}`);
                 console.error(`Status: ${error.response?.status}`);

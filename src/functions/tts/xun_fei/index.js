@@ -53,8 +53,7 @@ function TTS_FN({ text, devLog, tts_config, iat_server, llm_server, tts_server, 
         if (!apiSecret) return log.error(`请配给 TTS 配置 apiSecret 参数。`)
         if (!appid) return log.error(`请配给 TTS 配置 appid 参数。`)
         connectServerBeforeCb();
-        const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, }));
-        // console.log('text', text)
+        const ws = new WebSocket(getServerURL("TTS", { appid, apiSecret, apiKey, iat_server, llm_server, tts_server, })); 
         // 如果 ws 服务是个 WebSocket 对象，请调用这个方法。框架在适合的时候会调用 .close() 方法
         logWSServer(ws)
 

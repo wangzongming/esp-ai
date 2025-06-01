@@ -27,7 +27,6 @@
  * @websit https://espai.fun
  */
 #include "get_position.h"
-#include <HTTPClient.h>
 
 
 void ESP_AI::get_position_wrapper(void *arg)
@@ -36,7 +35,6 @@ void ESP_AI::get_position_wrapper(void *arg)
     instance->get_position();
 }
 
-HTTPClient esp_ai_get_position_http; 
 void ESP_AI::get_position()
 {
     if (WiFi.status() != WL_CONNECTED)
@@ -53,7 +51,8 @@ void ESP_AI::get_position()
 
     DEBUG_PRINTLN(debug, "[Info] 定位中..."); 
 
-    String api2 = "https://api.espai2.fun/sdk/position"; 
+    String api2 = "http://api.espai2.fun/sdk/position";
+    HTTPClient esp_ai_get_position_http; 
     esp_ai_get_position_http.begin(api2);
     esp_ai_get_position_http.addHeader("Content-Type", "application/json");
     esp_ai_get_position_http.setTimeout(10000);   
@@ -80,15 +79,10 @@ void ESP_AI::get_position()
             DEBUG_PRINT(debug, "/");
             DEBUG_PRINTLN(debug, city);  
             esp_ai_get_position_http.end(); 
- 
-            delay(100);
             if (onPositionCb != nullptr)
             {
                 onPositionCb(ip, nation, province, city, latitude, longitude);
             }
-            // 删除任务
-            vTaskDelete(NULL);
-            return;
         }
         else
         {
@@ -102,6 +96,8 @@ void ESP_AI::get_position()
         DEBUG_PRINTLN(debug, "[Info] 定位请求失败");
         esp_ai_get_position_http.end();
     }
-     
+
+    // 任务执行完毕，删除自身 
+    get_position_task_handle = NULL;  
     vTaskDelete(NULL);
 }

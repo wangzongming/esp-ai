@@ -95,7 +95,7 @@ class volcengineAsrClient {
                     const sends = this.audioBuffers.splice(0, this.audioBuffers.length);
                     this.sendChunk(Buffer.concat(sends))
                 }
-            }, 500)
+            }, 200)
         });
         this.ws.on('message', (data) => {
             this.onMessage && this.onMessage(this.parseResponse(data));
@@ -197,7 +197,7 @@ class volcengineAsrClient {
     }
 
     sendChunk(chunk, isLastSegment) {
-        // test...
+        // test... 
         // this.writeStreamMP3.write(chunk);
         let audioMsgHeader;
         if (!isLastSegment) {

@@ -29,8 +29,7 @@ const gen_intention_prompt = require("./utils/gen_intention_prompt");
 const matchIntention = require("./instrance_fns/matchIntention")
 const tts = require("./instrance_fns/tts")
 const stop = require("./instrance_fns/stop")
-const newSession = require("./instrance_fns/newSession")
-const isPlaying = require("./instrance_fns/isPlaying")
+const newSession = require("./instrance_fns/newSession") 
 const pinMode = require("./instrance_fns/pinMode")
 const LEDCInit = require("./instrance_fns/LEDCInit")
 const ledcWrite = require("./instrance_fns/ledcWrite")
@@ -39,7 +38,9 @@ const digitalRead = require("./instrance_fns/digitalRead")
 const analogWrite = require("./instrance_fns/analogWrite")
 const analogRead = require("./instrance_fns/analogRead")
 const { reCache } = require("./functions/client_messages")
-
+const isSpeaking = require("./instrance_fns/isSpeaking")
+const awaitPlayerDone = require("./instrance_fns/awaitPlayerDone")
+const awaitIntention = require("./instrance_fns/awaitIntention")
 
 class EspAiInstance {
     constructor() { }
@@ -107,8 +108,7 @@ class EspAiInstance {
     tts = tts;
     stop = stop;
     newSession = newSession;
-    matchIntention = matchIntention;
-    isPlaying = isPlaying;
+    matchIntention = matchIntention; 
     pinMode = pinMode;
     LEDCInit = LEDCInit;
     ledcWrite = ledcWrite;
@@ -116,6 +116,9 @@ class EspAiInstance {
     digitalRead = digitalRead;
     analogWrite = analogWrite;
     analogRead = analogRead;
+    isSpeaking = isSpeaking;
+    awaitPlayerDone = awaitPlayerDone;
+    awaitIntention = awaitIntention;
 
     /**
      *  重启设备

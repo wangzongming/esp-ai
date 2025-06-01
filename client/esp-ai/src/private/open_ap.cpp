@@ -48,7 +48,7 @@ void ESP_AI::open_ap()
         DEBUG_PRINTLN(debug, "[Error] DNS 服务器启动失败"); 
     }
 
-    esp_ai_dec.write(qing_pei_wang, qing_pei_wang_len);
+    play_builtin_audio(qing_pei_wang, qing_pei_wang_len);
 
     xTaskCreate(ESP_AI::scan_wifi_wrapper, "scan_wifi", 1024 * 8, this, 1, NULL);
 

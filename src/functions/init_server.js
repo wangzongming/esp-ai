@@ -109,8 +109,9 @@ function init_server() {
                 const comm_args = { device_id };
                 try {
                     if (typeof data === "string") {
-                        const { type, tts_task_id, stc_time, session_id, sid, text, success, value, pin } = JSON.parse(data);
-                        comm_args.session_id = session_id;
+                        const { type, tts_task_id, stc_time, session_id, session_status, sid, text, success, value, pin } = JSON.parse(data);
+                        comm_args.session_id = session_id; 
+                        comm_args.session_status = session_status;
                         comm_args.tts_task_id = tts_task_id;
                         comm_args.sid = sid;
                         comm_args.stc_time = stc_time;
@@ -157,7 +158,7 @@ function init_server() {
                             case "re_cache":
                                 reCache(comm_args);
                                 break;
-                            case "client_available_audio": 
+                            case "client_available_audio":
                                 client_available_audio(comm_args);
                                 break;
 

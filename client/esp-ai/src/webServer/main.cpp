@@ -40,7 +40,7 @@ void ESP_AI::set_config()
     if (JSON.typeof(data) == "undefined")
     {
         DEBUG_PRINTLN(debug, ("传入数据解析失败或者传入了空数据。"));
-        esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
+        play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
         web_server_setCrossOrigin();
         String json_response = "{\"success\":false,\"message\":\"传入数据解析失败或者传入了空数据。\"}";
         esp_ai_server.send(200, "application/json", json_response);
@@ -71,7 +71,7 @@ void ESP_AI::set_config()
         DEBUG_PRINT(debug, F("wifi信息并未发生变化，不重新连接wifi。仅进行重新绑定设备。"));
     }
 
-    esp_ai_dec.write(lian_jie_zhong, lian_jie_zhong_len);
+    play_builtin_audio(lian_jie_zhong, lian_jie_zhong_len);
     ap_connect_err = "0";
     int connect_count = 0;
     // 10s 连不上Wifi的话就判定失败
@@ -106,11 +106,11 @@ void ESP_AI::set_config()
         esp_ai_net_status = "0";
         ap_connect_err = "1";
         DEBUG_PRINTLN(debug, ("配网页面设置 WIFI 连接失败"));
-        esp_ai_dec.write(lian_jie_shi_bai, lian_jie_shi_bai_len);
+        play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
         web_server_setCrossOrigin();
         String json_response = "{\"success\":false,\"message\":\"wifi连接失败，请检查账号密码，将会自动重启设备。\"}";
         esp_ai_server.send(200, "application/json", json_response);
-        delay(1000);
+        wait_mp3_player_done();
         ESP.restart();
         return;
     }
@@ -141,11 +141,72 @@ void ESP_AI::set_config()
         web_server_setCrossOrigin();
         String json_response = "{\"success\":true,\"message\":\"wifi 连接成功，设备激活成功, 即将重启设备。\"}";
         esp_ai_server.send(200, "application/json", json_response);
-        esp_ai_dec.write(pei_wang_cheng_gong, pei_wang_cheng_gong_len);
+        play_builtin_audio(pei_wang_cheng_gong, pei_wang_cheng_gong_len);
     }
 
     if (is_bind_ok)
     {
+        JSONVar loc_data = get_local_all_data();
+        String loc_wifi_name = loc_data["wifi_name"];
+        String loc_wifi_name2 = loc_data["wifi_name2"];
+        String loc_wifi_name3 = loc_data["wifi_name3"];
+        String loc_wifi_name4 = loc_data["wifi_name4"];
+        String loc_wifi_name5 = loc_data["wifi_name5"];
+        String loc_wifi_pwd = loc_data["wifi_pwd"];
+        String loc_wifi_pwd2 = loc_data["wifi_pwd2"];
+        String loc_wifi_pwd3 = loc_data["wifi_pwd3"];
+        String loc_wifi_pwd4 = loc_data["wifi_pwd4"];
+        String loc_wifi_pwd5 = loc_data["wifi_pwd5"];
+        if (wifi_name == loc_wifi_name2 && wifi_pwd == loc_wifi_pwd2)
+        {
+            data["wifi_name2"] = loc_wifi_name3;
+            data["wifi_name3"] = loc_wifi_name4;
+            data["wifi_name4"] = loc_wifi_name5;
+            data["wifi_name5"] = "";
+            data["wifi_pwd2"] = loc_wifi_pwd3;
+            data["wifi_pwd3"] = loc_wifi_pwd4;
+            data["wifi_pwd4"] = loc_wifi_pwd5;
+            data["wifi_pwd5"] = "";
+            keys = data.keys();
+        }
+        else if (wifi_name == loc_wifi_name3 && wifi_pwd == loc_wifi_pwd3)
+        {
+            data["wifi_name3"] = loc_wifi_name4;
+            data["wifi_name4"] = loc_wifi_name5;
+            data["wifi_name5"] = "";
+            data["wifi_pwd3"] = loc_wifi_pwd4;
+            data["wifi_pwd4"] = loc_wifi_pwd5;
+            data["wifi_pwd5"] = "";
+            keys = data.keys();
+        }
+        else if (wifi_name == loc_wifi_name4 && wifi_pwd == loc_wifi_pwd4)
+        {
+            data["wifi_name4"] = loc_wifi_name5;
+            data["wifi_name5"] = "";
+            data["wifi_pwd4"] = loc_wifi_pwd5;
+            data["wifi_pwd5"] = "";
+            keys = data.keys();
+        }
+        else if (wifi_name == loc_wifi_name5 && wifi_pwd == loc_wifi_pwd5)
+        {
+            data["wifi_name5"] = "";
+            data["wifi_pwd5"] = "";
+            keys = data.keys();
+        }
+        else if (loc_wifi_name != "")
+        {
+            // 去掉最旧的数据
+            data["wifi_name2"] = loc_wifi_name;
+            data["wifi_name3"] = loc_wifi_name2;
+            data["wifi_name4"] = loc_wifi_name3;
+            data["wifi_name5"] = loc_wifi_name4;
+            data["wifi_pwd2"] = loc_wifi_pwd;
+            data["wifi_pwd3"] = loc_wifi_pwd2;
+            data["wifi_pwd4"] = loc_wifi_pwd3;
+            data["wifi_pwd5"] = loc_wifi_pwd4;
+            keys = data.keys();
+        }
+
         for (int i = 0; i < keys.length(); i++)
         {
             String key = keys[i];
@@ -154,7 +215,7 @@ void ESP_AI::set_config()
         }
 
         // 重启板子
-        delay(2000);
+        wait_mp3_player_done();
         ESP.restart();
     }
 }
@@ -263,7 +324,7 @@ void ESP_AI::clear_config()
     esp_ai_server.send(200, "application/json", "{\"success\":true,\"message\":\"清除配网信息成功, 即将重启设备。\"}");
 
     // 重启板子
-    delay(2000);
+    vTaskDelay(pdMS_TO_TICKS(2000));
     ESP.restart();
 }
 

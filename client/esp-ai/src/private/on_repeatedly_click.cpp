@@ -39,7 +39,6 @@ void ESP_AI::on_repeatedly_click()
     long esp_ai_last_debounce_time = 0;
     int esp_ai_debounce_delay = 250;
     int esp_ai_prev_state = reset_btn_config.power == "high" ? 0 : 1;
-    int esp_ai_prev_state_listen = 0;
 
     long last_btn_time = 0;
     int click_count = 0;
@@ -65,12 +64,15 @@ void ESP_AI::on_repeatedly_click()
                         click_count++; 
                         if (click_count == 2)
                         {
-                            play_cache = "clear_cache";
+                            play_builtin_audio(san_ci, san_ci_len);
                         }
                         if (click_count == 5)
                         {
                             click_count = 0;
                             last_btn_time = 0;
+
+                            play_builtin_audio(hui_fu_chu_chang, hui_fu_chu_chang_len);
+                            wait_mp3_player_done();
 
                             // 结束对话音频
                             esp_ai_session_id = "";

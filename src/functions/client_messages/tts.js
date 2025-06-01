@@ -25,19 +25,8 @@
 
 const log = require("../../utils/log");
 async function fn({ device_id, text }) {
-    try {
-        const { ws } = G_devices.get(device_id);
-        const TTS_FN = require(`../tts`);
-        ws && ws.send(JSON.stringify({ type: "stc_time", stc_time: +new Date() + "" }));
-
-        text && TTS_FN(device_id, {
-            text: text,
-            reRecord: false,
-            pauseInputAudio: true,
-            onAudioOutOver: () => {
-                ws && ws.send("session_end");
-            }
-        })
+    try { 
+        await G_Instance.tts(device_id, text);
     } catch (err) {
         console.log(err);
         log.error(`play_audio_ws_conntceed 消息错误： ${err}`)

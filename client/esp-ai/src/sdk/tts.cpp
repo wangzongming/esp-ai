@@ -30,9 +30,13 @@
 
 void ESP_AI::tts(String text)
 {
-    JSONVar data;
-    data["type"] = "tts";
-    data["text"] = text;
-    String send_data = JSON.stringify(data);
-    esp_ai_webSocket.sendTXT(send_data);
+    if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+    {
+        JSONVar data;
+        data["type"] = "tts";
+        data["text"] = text;
+        String send_data = JSON.stringify(data);
+        esp_ai_webSocket.sendTXT(send_data);
+        xSemaphoreGive(esp_ai_ws_mutex);
+    }
 }

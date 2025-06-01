@@ -117,7 +117,9 @@ async function fn({ device_id }) {
         //     const session_id = await G_Instance.newSession(device_id);
         //     play_audio(
         //         // "https://xiaomingio.top/music.mp3"
-        //         "https://xiaomingio.top/music2.mp3"
+        //         "https://xiaomingio.top/music2.mp3" 
+        //         // "http://192.168.3.16:8000/ad.opus"
+        //         // "http://192.168.3.16:8000/ad_16.mp3"
         //         , ws, "play_music", session_id, device_id, 0, () => { 
         //         console.log("音乐播放完毕")
         //     })
@@ -132,12 +134,10 @@ async function fn({ device_id }) {
         // await TTS_FN(device_id, {
         //     // text: "哦，听起来不太好受。记得多穿衣服保暖。", 
         //     text: "东方财富最新的股价为13.74元/股。需要注意的是股市随时都在变化。", 
-        //     text_is_over: true,
-        //     // tts_task_id: "connected_reply"
+        //     text_is_over: true,  
         // }) 
         // return;
-
-        
+ 
 
         // 缓存提示音 
         if (user_config.iatDu !== false) {
@@ -154,18 +154,7 @@ async function fn({ device_id }) {
                 is_create_cache: true,
             })
         }
-
-        // 在iat结束后再下发即可 ing...
-        // const sleep_reply = _user_config.sleep_reply;
-        // if (sleep_reply !== false) {
-        //     await TTS_FN(device_id, {
-        //         text: sleep_reply, 
-        //         text_is_over: true,
-        //         session_id: G_session_ids.cache_sleep_reply,
-        //         is_create_cache: true,
-        //     })
-        // }
-
+ 
         // 播放ws连接成功语音
         if (connected_reply) { 
             await TTS_FN(device_id, {

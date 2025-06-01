@@ -24,9 +24,7 @@
  */
  
 async function fn({ device_id, session_id, value }) {
-    if (!G_devices.get(device_id)) return;  
-    // test...
-    console.log('客户端可用流：', (value / 1024) + " kb")
+    if (!G_devices.get(device_id)) return;   
     G_devices.set(device_id, {
         ...G_devices.get(device_id),
         client_available_audio: value,

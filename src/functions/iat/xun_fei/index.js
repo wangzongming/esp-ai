@@ -108,36 +108,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             if (audioBuffers.length) {
                 const sends = audioBuffers.splice(0, audioBuffers.length);
                 const frame = build_frame(Buffer.concat(sends));
-                iat_ws.send(JSON.stringify(frame));
-
-                // const sends = audioBuffers.splice(0, audioBuffers.length);
-                // const stream = Readable.from(Buffer.concat(sends));
-                // test...
-                // writeStreamMP3.write(Buffer.concat(sends));  
-
-                // clearTimeout(overTimer);
-                // ffmpeg(stream)
-                //     .setFfmpegPath(ffmpegPath)
-                //     .inputFormat('mp3')
-                //     .audioCodec('pcm_s16le')
-                //     .audioFrequency(16000)
-                //     .audioFilters('volume=10')
-                //     .outputOptions(['-ac 1'])
-                //     .outputFormat('s16le')
-                //     .on('error', (error) => {
-                //         console.error(`MP3 转换出错 ${error}`);
-                //     })
-                //     .pipe()
-                //     .on('data', (chunk) => { 
-                //         const frame = build_frame(chunk);
-                //         iat_ws.send(JSON.stringify(frame));
-                //     })
-                // .on("end", () => {
-                //     clearTimeout(overTimer);
-                //     overTimer = setTimeout(() => {
-                //         dataTransOver = true;
-                //     }, 500)
-                // });
+                iat_ws.send(JSON.stringify(frame)); 
 
             }
         }

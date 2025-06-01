@@ -69,6 +69,7 @@ bool ESP_AI::setWifiConfig(JSONVar data)
     if (WiFi.status() != WL_CONNECTED)
     {
         DEBUG_PRINTLN(debug, ("设置 WIFI 连接失败, 即将重启设备"));
+        wait_mp3_player_done();
         ESP.restart();
         return false;
     }
@@ -82,8 +83,9 @@ bool ESP_AI::setWifiConfig(JSONVar data)
         JSONVar value = data[key];
         set_local_data(key, String((const char *)value));
     }
-    delay(250);
+
     DEBUG_PRINTLN(debug, ("WIFI 连接成功, 即将重启设备更新设置。"));
+    wait_mp3_player_done();
     ESP.restart();
 
     DEBUG_PRINTLN(debug, ("==============================================="));

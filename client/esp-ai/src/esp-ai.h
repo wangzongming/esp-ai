@@ -58,18 +58,18 @@ public:
     void setVolume(float volume);
 
     /**
-     * 手动设置 wifi账号/wifi密码/api_key/本地缓存数据，设置后会重新连接wifi 
+     * 手动设置 wifi账号/wifi密码/api_key/本地缓存数据，设置后会重新连接wifi
      * 设置成功会返回 true，失败返回 false
-     * 
+     *
      * 使用案例：
-     * 
+     *
      *  JSONVar data;
      *  data["wifi_name"] = "111";
      *  data["wifi_pwd"] = "111";
      *  data["api_key"] = "xxx";
-     *  data["其他自定义数据"] = "xxx"; 
+     *  data["其他自定义数据"] = "xxx";
      *  esp_ai.setWifiConfig(data);
-     */ 
+     */
     bool setWifiConfig(JSONVar data);
 
     /**
@@ -112,7 +112,7 @@ public:
      * "2"      |  未连接服务
      * "3"      |  已连接服务器
      */
-    void onNetStatus(void (*func)(String status)); 
+    void onNetStatus(void (*func)(String status));
 
     /**
      * 设备会话状态回调
@@ -131,10 +131,15 @@ public:
     void onSessionStatus(void (*func)(String status));
 
     /**
+     * 设备准备就绪回调
+     */
+    void onReady(void (*func)());
+
+    /**
      * 用户配网成功后会执行一次，开发者可以在本函数中发出设备绑定的请求
      * 比如用户填入 etx1(设定为你服务的 api_key) 后，服务端将 device_id 和 etx1 在业务服务仅绑定
      * data 参数是配网页面中给到 set_config 接口的数据，直接使用 data["xxx"] 来读取数据，如：data["wifi_name"]
-     * 
+     *
      *
      * 返回 true 则绑定设备成功，将会自动保存wifi等信息
      * 返回 false 则绑定设备失败，将提示用绑定设备失败的提示
@@ -142,7 +147,7 @@ public:
      * 返回 json 字符串， message 会直接在配网页面弹出
      * "{\"success\":false,\"message\":\"设备绑定失败，重启设备试试呢。\"}"
      * "{\"success\":true,\"message\":\"设备激活成功，即将重启设备。\"}"
-     */ 
+     */
     void onBindDevice(String (*func)(JSONVar data));
 
     /**
@@ -161,7 +166,7 @@ public:
 
     /**
      * 获取存储在芯片中的全部数据
-     * JSONVar data = getLocalAllData(); 
+     * JSONVar data = getLocalAllData();
      * Serial.println(data["wifi_name"]);
      */
     JSONVar getLocalAllData();
@@ -210,14 +215,43 @@ public:
      * 如检查到电池没电了，应该提示没电了，而不应该让程序继续执行下去
      */
     void onBegin(bool (*func)());
-    
 
     /**
      * 情绪监听回调
      */
     void onEmotion(void (*func)(String emotion));
-    
-    
+
+    /**
+     * 挂起所有 xTaskCreate 任务
+     */
+    void suspendAllTask();
+
+    /**
+     * 恢复所有 xTaskCreate 任务
+     */
+    void resumeAllTask();
+
+    /**
+     * 删除所有 xTaskCreate 任务
+     */
+    void delAllTask();
+
+    /**
+     * 获取设备是否正在播放音频
+     */
+    bool isSpeaking();
+
+    /**
+     * 等待设备播放完毕
+     */
+    void awaitPlayerDone();
+
+    /**
+     * 播放 MP3 音频流
+     * 16k采样率，16位深度，单声道音频
+     */
+    void playBuiltinAudio(const unsigned char *data, size_t len);
+
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
     ESP_AI_i2s_config_speaker i2s_config_speaker;
@@ -226,9 +260,10 @@ private:
     ESP_AI_wake_up_config wake_up_config;
     ESP_AI_volume_config volume_config;
     ESP_AI_reset_btn_config reset_btn_config;
-    ESP_AI_lights_config lights_config; 
+    ESP_AI_lights_config lights_config;
     bool debug;
 
+    void (*onReadyCb)() = nullptr;
     void (*onEventCb)(String command_id, String data) = nullptr;
     void (*onErrorCb)(String code, String at_pos, String message) = nullptr;
     void (*onAPInfoCb)(String url, String ip, String ap_name) = nullptr;
@@ -236,12 +271,10 @@ private:
     void (*onConnectedWifiCb)(String device_ip) = nullptr;
     void (*onSessionStatusCb)(String status) = nullptr;
     void (*onPositionCb)(String ip, String nation, String province, String city, String latitude, String longitude) = nullptr;
-   
-    String (*onBindDeviceCb)(JSONVar data) = nullptr;
     void (*onRepeatedlyClickCb)() = nullptr;
     bool (*onBeginCb)() = nullptr;
     void (*onEmotionCb)(String emotion) = nullptr;
-    
+    String (*onBindDeviceCb)(JSONVar data) = nullptr;
 
     void speaker_i2s_setup();
     void adjustVolume(int16_t *buffer, size_t length, float volume);
@@ -253,11 +286,11 @@ private:
     static void on_ble_device_connected_wrapper(void *arg);
     void on_ble_device_connected();
     static void on_ble_device_disconnected_wrapper(void *arg);
-    void on_ble_device_disconnected(); 
+    void on_ble_device_disconnected();
     static void characteristic_callbacks_wrapper(void *arg);
-    void characteristic_callbacks();   
+    void characteristic_callbacks();
     void ble_connect_wifi();
-    
+
     void connect_ws();
 
     static void volume_listener_wrapper(void *arg);
@@ -299,12 +332,15 @@ private:
 
     static void on_repeatedly_click_wrapper(void *arg);
     void on_repeatedly_click();
- 
+
     static void on_wakeup_wrapper(void *arg);
     void on_wakeup();
-    
+
     static void play_audio_wrapper(void *arg);
     void play_audio();
+
+    static void send_audio_wrapper(void *arg);
+    void send_audio();
 
     void audio_inference_callback(uint32_t n_bytes);
     int i2s_deinit(void);
@@ -312,6 +348,10 @@ private:
     static void reporting_sensor_data_wrapper(void *arg);
     void reporting_sensor_data();
 
-    bool recive_status = true;
-    bool write_status = false;
+    TaskHandle_t wakeup_task_handle = NULL;
+    TaskHandle_t sensor_task_handle = NULL;
+    TaskHandle_t on_wakeup_task_handle = NULL;
+    TaskHandle_t get_position_task_handle = NULL;
+    TaskHandle_t send_audio_task_handle = NULL;
+    TaskHandle_t volume_listener_task_handle = NULL;
 };

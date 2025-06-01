@@ -40,19 +40,23 @@ function stop(device_id, at) {
         const {
             ws,
             tts_buffer_chunk_queue, iat_server_connect_ing, iat_server_connected, client_out_audio_ing,
-            tts_list = [], iat_ws, llm_ws, 
-            play_audio_ing, start_audio_time, play_audio_on_end, play_audio_seek, 
+            tts_list = [], iat_ws, llm_ws,
+            play_audio_ing, play_audio_on_end,
             tts_server_connect_ing, tts_server_connected,
-            llm_server_connect_ing, llm_server_connected
-        } = G_devices.get(device_id); 
+            llm_server_connect_ing, llm_server_connected, abort_controllers = []
+        } = G_devices.get(device_id);
         if (
             iat_server_connect_ing || iat_server_connected ||
             tts_server_connect_ing || tts_server_connected ||
             llm_server_connect_ing || llm_server_connected ||
             client_out_audio_ing || play_audio_ing
-        ) {
+        ) { 
+            abort_controllers.forEach((controller) => { 
+                controller.abort(); 
+            }) 
+
             // 播放音频时不应该断开连接
-            if(at !== "__play_music__"){ 
+            if (at !== "__play_music__") {
                 devLog && log.t_info("打断会话");
                 ws && ws.send(JSON.stringify({ type: "session_stop" }));
             }
@@ -70,19 +74,8 @@ function stop(device_id, at) {
                     play_audio_on_end: null,
                     play_audio_seek: 0,
                 })
-
-                // clearTimeout(iat_end_frame_timer);
                 tts_buffer_chunk_queue.clear();
-                const end_time = Date.now(); // 结束时间
-                const play_time = end_time - start_audio_time; // 播放时间 
-                play_audio_ing && play_audio_on_end && play_audio_on_end({
-                    start_time: start_audio_time,
-                    end_time: end_time,
-                    play_time: Math.floor(play_time / 1000),
-                    break_second: Math.floor(play_audio_seek + play_time / 1000),
-                    event: "ws_disconnect",
-                    seek: play_audio_seek
-                });
+                play_audio_ing && play_audio_on_end && play_audio_on_end("ws_disconnect");
                 iat_ws && iat_ws.close && iat_ws.close()
                 llm_ws && llm_ws.close && llm_ws.close()
             } catch (err) {
@@ -96,12 +89,12 @@ function stop(device_id, at) {
                 try {
                     ttsWS && ttsWS.close && ttsWS.close();
                 } catch (err) {
-                    console.log(err);
                     log.error(`[${device_id}] ${at} TTS 队列关闭失败`);
+
                 }
                 tts_list.delete(key)
             }
- 
+
             resolve(true);
         } else {
             resolve(true);

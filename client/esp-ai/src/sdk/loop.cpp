@@ -26,7 +26,7 @@
 #include "loop.h"
 
 void ESP_AI::loop()
-{   
+{
     if (esp_ai_status == "0_ap" && wifi_config.way == "AP")
     {
         esp_ai_dns_server.processNextRequest();
@@ -38,87 +38,23 @@ void ESP_AI::loop()
     if (WiFi.status() != WL_CONNECTED)
     {
 
+        // DEBUG_PRINTLN(debug, F("WiFi 断开，尝试重连..."));
         bool status_0 = esp_ai_net_status == "2" && esp_ai_net_status != "0" && ap_connect_err != "1";
         if (status_0)
         {
             // 内置状态处理
             status_change("0");
+
+            // 设备状态回调
+            if (onNetStatusCb != nullptr)
+            {
+                esp_ai_net_status = "0";
+                onNetStatusCb("0");
+                DEBUG_PRINTLN(debug, ("[Error] -> WIFI 异常断开，将自动重启板子"));
+                ESP.restart();
+            }
         }
-        // 设备状态回调
-        if (onNetStatusCb != nullptr && status_0)
-        {
-            esp_ai_net_status = "0";
-            onNetStatusCb("0");
-            DEBUG_PRINTLN(debug, ("[Error] -> WIFI 异常断开，将自动重启板子"));
-            ESP.restart();
-            delay(3000);
-        }
+
         return;
     }
-
-    bool is_use_edge_impulse = wake_up_scheme == "edge_impulse";
-    if (esp_ai_ws_connected && esp_ai_start_get_audio && esp_ai_tts_task_id == "" && !is_use_edge_impulse)
-    {
-        int vad = esp_ai_user_has_spoken ? wake_up_config.vad_course : wake_up_config.vad_first;
-        if (esp_ai_start_send_audio && !esp_ai_is_listen_model && last_silence_time > 0 && ((millis() - last_silence_time) > vad))
-        {  
-            // 静默时间过长
-            esp_ai_start_get_audio = false;
-            esp_ai_start_send_audio = false;
-            last_silence_time = 0;
-            DEBUG_PRINTLN(debug, ("[Info] -> 静默时间过长"));
-            esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
-
-            esp_ai_start_ed = "0";
-            // 内置状态处理
-            status_change("iat_end");
-            if (onSessionStatusCb != nullptr)
-            {
-                onSessionStatusCb("iat_end");
-            }
-        }
-        else
-        {
-            size_t bytes_read;
-            i2s_read(MIC_i2s_num, (void *)esp_ai_asr_sample_buffer, esp_ai_asr_sample_buffer_size, &bytes_read, 100);
-
-            if (esp_ai_start_send_audio && !esp_ai_is_listen_model)
-            {
-                if (is_silence(esp_ai_asr_sample_buffer, bytes_read))
-                { 
-                    if (last_silence_time == 0)
-                    {
-                        last_silence_time = millis();
-                    }
-                }
-                else
-                {
-                    if (last_not_silence_time > 0 && (millis() - last_not_silence_time >= 100))
-                    {
-                        // 切换到非静音状态
-                        last_silence_time = 0;
-                        esp_ai_user_has_spoken = true;
-                    }
-                    else
-                    {
-                        if (last_not_silence_time == 0)
-                        {
-                            last_not_silence_time = millis();
-                        }
-                    }
-                }
-            }
-
-            size_t sample_count = bytes_read / 2;
-            int gain_factor = 8;
-            for (size_t i = 0; i < sample_count; i++)
-            {
-                esp_ai_asr_sample_buffer[i] *= gain_factor;
-            }
-
-            esp_ai_mp3_encoder.write(esp_ai_asr_sample_buffer, bytes_read);
-        }
-    }
-
-    delay(20);
 }

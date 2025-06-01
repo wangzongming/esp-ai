@@ -34,9 +34,11 @@ function newSession(device_id) {
     !device_id && log.error(`调用 newSession 方法时，请传入 device_id`);
     if (!G_devices.get(device_id)) return;
     return new Promise((resolve) => {
+        const { devLog } = G_config;
         const { ws } = G_devices.get(device_id);
         const session_id = `${createSessionId()}`;
-        log.t_info("session ID: " + session_id)
+
+        devLog && log.t_info("session ID: " + session_id);
         ws.send(JSON.stringify({ type: "session_start", session_id }));
 
         // 初始化用户会话数据

@@ -30,15 +30,19 @@
 
 void ESP_AI::reCache()
 {
-    if(!esp_ai_cache_audio_du.empty()){ 
-        esp_ai_cache_audio_du.clear();
+
+    if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+    {
+        if (!esp_ai_cache_audio_du.empty())
+        {
+            esp_ai_cache_audio_du.clear();
+        }
+        if (!esp_ai_cache_audio_greetings.empty())
+        {
+            esp_ai_cache_audio_greetings.clear();
+        } 
+
+        esp_ai_webSocket.sendTXT("{ \"type\":\"re_cache\" }");
+        xSemaphoreGive(esp_ai_ws_mutex);
     }
-    if(!esp_ai_cache_audio_greetings.empty()){ 
-        esp_ai_cache_audio_greetings.clear();
-    }
-    if(!esp_ai_cache_audio_sleep_reply.empty()){ 
-        esp_ai_cache_audio_sleep_reply.clear();
-    } 
-    esp_ai_webSocket.sendTXT("{ \"type\":\"re_cache\" }");
-     
 }

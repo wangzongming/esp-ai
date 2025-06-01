@@ -34,13 +34,10 @@ async function tts(device_id, text, opts) {
         if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../functions/tts`);
         text && await TTS_FN(device_id, {
-            text: text,
-            pauseInputAudio: true,
+            text: text, 
             text_is_over: true,
-            need_record: false,
-            // 给 session_id 客户端可能播放不了
-            // 这里后期需要给，否则客户端调用 .tts 无法拿到进度
-            // session_id: "0010",
+            need_record: false, 
+            session_id: G_session_ids["tts_fn"],
             ...opts
         })
         // 这里不应发送这个标志。
