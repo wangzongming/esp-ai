@@ -52,9 +52,7 @@ bool ESP_AI::get_server_config()
     if (httpCode > 0)
     {
         String payload = http.getString();
-        Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
-        // Serial.println("payload: ");
-        // Serial.println(payload);
+        Serial.printf("[HTTPS] GET... code: %d\n", httpCode); 
         JSONVar parse_res = JSON.parse(payload);
         if (JSON.typeof(parse_res) == "undefined")
         {

@@ -32,20 +32,19 @@
 
 String ESP_AI_VERSION = "2.84.43";
 
-String esp_ai_start_ed = "0";       // AST 服务推理中
-bool esp_ai_ws_connected = false;   // ws 服务已经连接成功
-String esp_ai_session_id = "";      // 会话ID，用于判断是否应该丢弃会话
-String esp_ai_session_status = "";      // 会话状态 
-String esp_ai_tts_task_id = "";     // TTS chunk ID
-String esp_ai_status = "";          // 设备状态
-bool esp_ai_is_listen_model = true; // 是否为按住对话模式, 这个模式下按住按钮才会进行聆听，放开后进行LLM推理 
+String esp_ai_start_ed = "0";         // AST 服务推理中
+bool esp_ai_ws_connected = false;     // ws 服务已经连接成功
+String esp_ai_session_id = "";        // 会话ID，用于判断是否应该丢弃会话
+String esp_ai_session_status = "";    // 会话状态
+String esp_ai_tts_task_id = "";       // TTS chunk ID
+String esp_ai_status = "";            // 设备状态
+bool esp_ai_is_listen_model = true;   // 是否为按住对话模式, 这个模式下按住按钮才会进行聆听，放开后进行LLM推理
 bool esp_ai_sleep = false;            // 是否为休眠状态，开发中...
 bool esp_ai_played_connected = false; // 是否已经播放过 服务连接成功 的提示语了
 bool asr_ing = false;                 // 硬件是否正在进行收音
 String esp_ai_prev_session_id = "";   // 上一轮会话ID
 
-
-/** 
+/**
  * [特定的数据帧]
  * 0000 -> 嘟提示音数据
  * 0001 -> 服务连接成功提示语
@@ -53,7 +52,7 @@ String esp_ai_prev_session_id = "";   // 上一轮会话ID
  * 1000 -> 提示音缓存数据
  * 1001 -> 唤醒问候语缓存数据
  * 1002 -> 休息时回复缓存数据
- * xxxx -> 正常会话ID  
+ * xxxx -> 正常会话ID
  */
 String SID_TONE = "0000";
 String SID_CONNECTED_SERVER = "0001";
@@ -62,7 +61,7 @@ String SID_WAKEUP_REP_CACHE = "1001";
 String SID_SLEEP_REP_CACHE = "1002";
 String SID_TTS_FN = "0010";
 
-/** 
+/**
  *[会话状态]
  * 00 -> TTS 片段
  * 01 -> TTS 片段（并且是分组最后一个片段）
@@ -150,7 +149,7 @@ int16_t *mic_sample_buffer = NULL;
 
 // 音频缓存
 std::vector<uint8_t> esp_ai_cache_audio_du;
-std::vector<uint8_t> esp_ai_cache_audio_greetings; 
+std::vector<uint8_t> esp_ai_cache_audio_greetings;
 
 long last_silence_time = 0;
 long last_not_silence_time = 0;
@@ -233,6 +232,7 @@ JSONVar get_local_all_data()
     JSONVar data;
 
     String keys_list = esi_ai_prefs.getString("_keys_list_", "");
+  
     if (keys_list != "")
     {
         int start = 0;
@@ -259,9 +259,25 @@ JSONVar get_local_all_data()
  * 清除本地存储的所有信息
  */
 void clear_local_all_data()
-{
-    esi_ai_prefs.clear();
+{  
+    // 擦除整个NVS分区（所有命名空间数据都会被清除）
+    esp_err_t err = nvs_flash_erase();
+    if (err != ESP_OK)
+    {
+        Serial.printf("NVS擦除失败: %d\n", err);
+    }
+    else
+    {
+        Serial.println("NVS擦除成功"); 
+        // 擦除后需要重新初始化NVS
+        err = nvs_flash_init();
+        if (err != ESP_OK)
+        {
+            Serial.printf("NVS初始化失败: %d\n", err);
+        }
+    }
 }
+ 
 
 /**
  * set_local_data("wifi_name", "oldwang");
@@ -269,9 +285,37 @@ void clear_local_all_data()
 void set_local_data(String field_name, String new_value)
 {
     esi_ai_prefs.begin("esp-ai-kv", false);
-
     String keys_list = esi_ai_prefs.getString("_keys_list_", "");
-    if (keys_list.indexOf(field_name) == -1)
+    bool key_exists = false;
+    if (keys_list != "")
+    {
+        // 将键列表拆分为数组进行精确匹配
+        int index = 0;
+        while (index < keys_list.length())
+        {
+            int next_comma = keys_list.indexOf(',', index);
+            String key;
+            if (next_comma == -1)
+            {
+                key = keys_list.substring(index);
+                index = keys_list.length();
+            }
+            else
+            {
+                key = keys_list.substring(index, next_comma);
+                index = next_comma + 1;
+            }
+
+            if (key == field_name)
+            {
+                key_exists = true;
+                break;
+            }
+        }
+    }
+
+    // 如果键不存在，则添加到键列表
+    if (!key_exists)
     {
         if (keys_list != "")
         {
@@ -281,6 +325,7 @@ void set_local_data(String field_name, String new_value)
         esi_ai_prefs.putString("_keys_list_", keys_list);
     }
 
+    // 存储或更新键值对
     esi_ai_prefs.putString(field_name.c_str(), new_value.c_str());
     esi_ai_prefs.end();
 }
@@ -315,20 +360,24 @@ String decodeURIComponent(const String &encoded)
                 decoded += decodedChar;
                 i += 2; // 跳过已经处理的两位十六进制字符
             }
-            else if (encoded[i] == '+')
-            {
-                // 处理 + 符号，它通常代表空格
-                decoded += ' ';
-            }
             else
-
             {
-                // 普通字符直接添加到结果中
+                // 不完整的 % 序列，按原样添加
                 decoded += encoded[i];
             }
         }
-        return decoded;
+        else if (encoded[i] == '+')
+        {
+            // 处理 + 符号，它通常代表空格
+            decoded += ' ';
+        }
+        else
+        {
+            // 普通字符直接添加到结果中
+            decoded += encoded[i];
+        }
     }
+    return decoded;
 }
 
 String get_ap_name(String ap_name)
@@ -341,7 +390,7 @@ String get_ap_name(String ap_name)
 }
 
 // 接收到的客户端蓝牙数据
-String ESP_AI_BLE_RD;
+String ESP_AI_BLE_RD = "";
 String ESP_AI_BLE_ERR = "";
 
 void espai_system_mem_init()
@@ -421,15 +470,15 @@ void wait_mp3_player_done()
     while (mp3_player_is_playing())
     {
         vTaskDelay(pdMS_TO_TICKS(50));
-        Serial.printf("*");
+        // Serial.printf("*");
     }
-    Serial.printf("\n");
+    // Serial.printf("\n");
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
 void play_builtin_audio(const unsigned char *data, size_t len)
 {
-    spk_ing = true; 
+    spk_ing = true;
     size_t remaining = len;
     const unsigned char *current = data;
 
@@ -442,3 +491,8 @@ void play_builtin_audio(const unsigned char *data, size_t len)
     }
     spk_ing = false;
 }
+
+BLEServer *esp_ai_ble_server;
+BLECharacteristic *esp_ai_ble_characteristic;
+BLEService *esp_ai_ble_service;
+BLEAdvertising *esp_ai_ble_advertising;

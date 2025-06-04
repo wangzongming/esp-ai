@@ -28,12 +28,6 @@
  */
 #include "open_ble_server.h"
 
-BLEServer *esp_ai_ble_server;
-BLECharacteristic *esp_ai_ble_characteristic;
-BLEService *esp_ai_ble_service;
-BLEAdvertising *esp_ai_ble_advertising;
-
- 
 /**
  * 蓝牙连接回调
  */
@@ -98,7 +92,11 @@ public:
                     rxload += (char)rxValue[i];
                 }
             }
-            ESP_AI_BLE_RD = rxload;
+
+            String decodedString = decodeURIComponent(rxload);
+            ESP_AI_BLE_RD = decodedString;
+            Serial.print("接收到数据：");
+            Serial.println(ESP_AI_BLE_RD);
             // 调用连接时的回调函数
             if (onWriteCb)
             {
@@ -130,57 +128,20 @@ void ESP_AI::on_ble_device_disconnected()
 
 void ESP_AI::characteristic_callbacks_wrapper(void *arg)
 {
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->characteristic_callbacks();
 }
 void ESP_AI::characteristic_callbacks()
 {
-    // DEBUG_PRINTLN(debug, "[Info] 接收到特征值");
-    // DEBUG_PRINTLN(debug, ESP_AI_BLE_RD);
-    String decodedString = decodeURIComponent(ESP_AI_BLE_RD);
-    DEBUG_PRINTLN(debug, "[Info] 收到蓝牙数据");
-    DEBUG_PRINTLN(debug, decodedString);
-    JSONVar data = JSON.parse(decodedString);
-
-    String loc_wifi_name = get_local_data("wifi_name");
-    String loc_wifi_pwd = get_local_data("wifi_pwd");
-    if (JSON.typeof(data) == "undefined")
-    {
-        DEBUG_PRINTLN(debug, ("传入数据解析失败或者传入了空数据。"));
-        play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
-
-        String json_response = "{\"success\":false,\"message\":\"传入数据解析失败或者传入了空数据。\"}";
-        esp_ai_ble_characteristic->setValue(json_response.c_str());
-        esp_ai_ble_characteristic->notify();
-        return;
-    }
-
-    // 将数据都全部存入本地
-    play_builtin_audio(lian_jie_zhong, lian_jie_zhong_len);
-    JSONVar keys = data.keys();
-    for (int i = 0; i < keys.length(); i++)
-    {
-        String key = keys[i];
-        JSONVar value = data[key];
-        set_local_data(key, String((const char *)value));
-    }
-    // 记录这是蓝牙临时数据
-    set_local_data("_ble_temp_", "1");
-    // 重启板子
-    wait_mp3_player_done();
-    ESP.restart(); 
 }
 
 void ESP_AI::ble_connect_wifi()
 {
     JSONVar data = get_local_all_data();
     String wifi_name = (const char *)data["wifi_name"];
-    String wifi_pwd = (const char *)data["wifi_pwd"]; 
+    String wifi_pwd = (const char *)data["wifi_pwd"];
  
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifi_name, wifi_pwd);
     DEBUG_PRINT(debug, F("connect wifi ing..."));
- 
 
     ap_connect_err = "0";
     int connect_count = 0;
@@ -213,10 +174,15 @@ void ESP_AI::ble_connect_wifi()
     // 如果失败，连接时间将会 >= 7500ms, 其他情况都只能说明 wifi 连接成功了
     if (WiFi.status() != WL_CONNECTED)
     {
+        Serial.println("wifi 连接失败");
+
         esp_ai_net_status = "0";
         ap_connect_err = "1";
         DEBUG_PRINTLN(debug, F("配网页面设置 WIFI 连接失败"));
         play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        wait_mp3_player_done();
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
         // 从新打开蓝牙，并且告知错误信息
         ESP_AI_BLE_ERR = "{\"success\":false,\"message\":\"wifi连接失败，请检查账号密码。\"}";
@@ -246,8 +212,10 @@ void ESP_AI::ble_connect_wifi()
     {
         set_local_data("_ble_temp_", "0"); // 清除临时标识
         play_builtin_audio(pei_wang_cheng_gong, pei_wang_cheng_gong_len);
+        vTaskDelay(pdMS_TO_TICKS(100));
         // 重启板子
         wait_mp3_player_done();
+        vTaskDelay(pdMS_TO_TICKS(1000));
         ESP.restart();
     }
     else

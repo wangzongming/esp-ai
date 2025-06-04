@@ -25,6 +25,47 @@
  */
 #include "loop.h"
 
+
+void handle_ble_data()
+{
+    if (ESP_AI_BLE_RD != "")
+    { 
+        JSONVar data = JSON.parse(ESP_AI_BLE_RD);
+        ESP_AI_BLE_RD = ""; 
+        if (JSON.typeof(data) == "undefined")
+        {
+            DEBUG_PRINTLN(true, ("传入数据解析失败或者传入了空数据。"));
+            play_builtin_audio(lian_jie_shi_bai, lian_jie_shi_bai_len);
+            wait_mp3_player_done(); 
+
+            String json_response = "{\"success\":false,\"message\":\"传入数据解析失败或者传入了空数据。\"}";
+            esp_ai_ble_characteristic->setValue(json_response.c_str());
+            esp_ai_ble_characteristic->notify();
+            ESP_AI_BLE_RD = "";
+            return;
+        }
+ 
+        // 将数据都全部存入本地
+        play_builtin_audio(lian_jie_zhong, lian_jie_zhong_len);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        wait_mp3_player_done(); 
+        JSONVar keys = data.keys();
+        for (int i = 0; i < keys.length(); i++)
+        {
+            String key = keys[i];
+            JSONVar value = data[key];
+            set_local_data(key, String((const char *)value));
+        } 
+
+        // 记录这是蓝牙临时数据
+        set_local_data("_ble_temp_", "1");
+        vTaskDelay(pdMS_TO_TICKS(100));
+        // 重启板子
+        ESP.restart();
+    }
+}
+
+
 void ESP_AI::loop()
 {
     if (esp_ai_status == "0_ap" && wifi_config.way == "AP")
@@ -33,7 +74,9 @@ void ESP_AI::loop()
     }
 
     esp_ai_server.handleClient();
-    esp_ai_webSocket.loop();
+    esp_ai_webSocket.loop(); 
+
+    handle_ble_data();
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -54,7 +97,7 @@ void ESP_AI::loop()
                 ESP.restart();
             }
         }
-
         return;
     }
+
 }

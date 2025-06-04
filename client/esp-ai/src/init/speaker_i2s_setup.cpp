@@ -53,12 +53,11 @@ void ESP_AI::speaker_i2s_setup()
     config.pin_ws = i2s_config_speaker.ws_io_num;     // LCK
     config.pin_bck = i2s_config_speaker.bck_io_num;   // BCK
     config.pin_data = i2s_config_speaker.data_in_num; // DIN
-    esp_ai_spk_i2s.begin(config); 
- 
+    esp_ai_spk_i2s.begin(config);
+
     esp_ai_spk_queue.begin();
-    esp_ai_volume.begin(config); 
+    esp_ai_volume.begin(config);
     esp_ai_volume.setVolume(volume_config.volume);
     esp_ai_dec.begin(config);
     esp_ai_copier.begin();
-
 }

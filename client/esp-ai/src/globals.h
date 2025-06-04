@@ -73,6 +73,7 @@
 #include "esp_gap_ble_api.h"
 
 #include <HTTPClient.h>
+#include "nvs_flash.h"
 
 #include "audio/zh/lian_jie_shi_bai.h"
 #include "audio/zh/lian_jie_zhong.h"
@@ -496,3 +497,9 @@ String decodeURIComponent(const String &encoded);
 String get_ap_name(String ap_name);
 extern String ESP_AI_BLE_RD;
 extern String ESP_AI_BLE_ERR;
+
+
+extern BLEServer *esp_ai_ble_server;
+extern BLECharacteristic *esp_ai_ble_characteristic;
+extern BLEService *esp_ai_ble_service;
+extern BLEAdvertising *esp_ai_ble_advertising;

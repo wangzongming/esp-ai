@@ -42,7 +42,7 @@ void ESP_AI::on_repeatedly_click()
 
     long last_btn_time = 0;
     int click_count = 0;
-    int click_max_delay = 1000; 
+    int click_max_delay = 1000;
 
     while (true)
     {
@@ -50,7 +50,7 @@ void ESP_AI::on_repeatedly_click()
         long curTime = millis();
         int target_val = reset_btn_config.power == "high" ? 1 : 0;
         if (reading == target_val)
-        { 
+        {
             if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
             {
                 esp_ai_last_debounce_time = curTime;
@@ -61,7 +61,7 @@ void ESP_AI::on_repeatedly_click()
                     if ((last_btn_time == 0) || (millis() - last_btn_time) <= click_max_delay)
                     {
                         last_btn_time = millis();
-                        click_count++; 
+                        click_count++;
                         if (click_count == 2)
                         {
                             play_builtin_audio(san_ci, san_ci_len);
@@ -82,6 +82,7 @@ void ESP_AI::on_repeatedly_click()
                                 onRepeatedlyClickCb();
                             }
                             clearData();
+                            vTaskDelay(100 / portTICK_PERIOD_MS);
                             ESP.restart();
                             // 删除任务
                             vTaskDelete(NULL);

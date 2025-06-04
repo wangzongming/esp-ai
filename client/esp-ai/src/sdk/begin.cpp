@@ -176,7 +176,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
             return;
         }
     }
-
+  
     String loc_device_id = get_device_id();
     // 依次读取 5 组 wifi 信息
     String loc_wifi_name[5] = {"", "", "", "", ""};
@@ -184,7 +184,7 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
     JSONVar data = get_local_all_data();
     JSONVar keys = data.keys();
     for (int i = 0; i < keys.length(); i++)
-    {
+    {  
         String key = keys[i];
         if (key != "")
         {
@@ -238,14 +238,24 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 
     DEBUG_PRINTLN(debug, F("==================== Connect WIFI ===================="));
     ap_connect_err = "0";
-    if (loc_wifi_name[0] == "")
+
+    bool not_wifi_info = true;
+    for (int i = 0; i < 5; i++)
+    { 
+        if (loc_wifi_name[i] != "") // ssid 不能为空
+        {
+            not_wifi_info = false;
+        }
+    }
+
+    if (not_wifi_info)
     {
         loc_wifi_name[0] = wifi_config.wifi_name;
         loc_wifi_pwd[0] = wifi_config.wifi_pwd;
-    }
-    // wifi_pwd 可以为空（无密码）
+    } 
 
-    if (loc_wifi_name[0] == "")
+    // wifi_pwd 可以为空（无密码）
+    if (loc_wifi_name[0] == "" && not_wifi_info)
     {
         DEBUG_PRINTLN(debug, F("[Info] 没有wifi信息，请配网"));
         DEBUG_PRINT(debug, F("[Info] 配网方式："));
@@ -355,9 +365,10 @@ void ESP_AI::begin(ESP_AI_CONFIG config)
 
     if (wake_up_scheme == "edge_impulse")
     {
-        wakeup_init();
-
-        xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, &wakeup_task_handle);
+        Serial.println(F("[Error] edge_impulseh唤醒方案已经废弃，请尝试其他唤醒方案。"));
+        return;
+        // wakeup_init();
+        // xTaskCreate(ESP_AI::wakeup_inference_wrapper, "wakeup_inference", 1024 * 6, this, 1, &wakeup_task_handle);
     }
 
     if (String(server_config.ip) == "custom-made")
