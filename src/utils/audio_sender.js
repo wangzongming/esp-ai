@@ -11,15 +11,16 @@ class Audio_sender {
         this.accumulated_data = Buffer.alloc(0);
         this.check_count = 0;
         this.started = false;
+        this.stoped = false;
         this.device_id = device_id;
-        // 发送速率，单位ms
-        this.send_speed = 200;
+        // 发送速率，单位ms  
+        this.send_speed = 500;
         // 发送流的大小，动态调整
         this.send_num = 1024 * 3;
         // 动态大小
         this.add_count = 1;
 
-        // 客户端最大的缓存能力 字节流。
+        // 客户端最大的缓存能力 字节流。 
         this.client_max_available_audio = 1024 * 20;
     }
 
@@ -30,7 +31,7 @@ class Audio_sender {
         return new Promise((resolve) => {
             this.started = true;
             this.check_count = 0;
-            this.accumulated_data = Buffer.alloc(0); 
+            this.accumulated_data = Buffer.alloc(0);
             if (!G_devices.get(this.device_id)) return;
             G_devices.set(this.device_id, { ...G_devices.get(this.device_id), play_audio_ing: true, });
 
@@ -45,12 +46,12 @@ class Audio_sender {
 
                     this.check_count++;
                     this.send_timer = null;
-                    setTimeout(this.sender, 100);
+                    setTimeout(this.sender, 80);
                     return;
                 };
 
                 if (!G_devices.get(this.device_id)) return;
-
+                if (this.stoped) return;
                 // 流量控制 
                 let send_num = this.send_num * this.add_count;
                 let send_speed = this.send_speed;
@@ -59,17 +60,17 @@ class Audio_sender {
                 if (client_available_audio < this.client_max_available_audio) {
                     if (send_num < max) {
                         this.add_count += 1;
-                        send_speed = 100;
+                        send_speed = 80;
                     }
                 } else {
                     if (this.add_count > 1) {
                         this.add_count -= 1;
-                        send_speed = 200;
+                        send_speed = this.send_speed;
                     }
                 }
 
                 if (client_available_audio > this.client_max_available_audio) {
-                    setTimeout(this.sender, 10);
+                    setTimeout(this.sender, 5);
                     return;
                 }
 
@@ -79,10 +80,15 @@ class Audio_sender {
                     data = this.accumulated_data;
                 } else {
                     data = this.accumulated_data.slice(0, send_num);
-                }   
-
-                const { session_id: now_session_id } = G_devices.get(this.device_id); 
-                if (now_session_id && session_id && now_session_id !== session_id) return; 
+                }
+ 
+                const { session_id: now_session_id } = G_devices.get(this.device_id);
+                if (now_session_id && session_id && now_session_id !== session_id && !([
+                    G_session_ids["cache_sleep_reply"],
+                    G_session_ids["cache_du"],
+                    G_session_ids["cache_hello"],
+                    G_session_ids["tts_fn"], 
+                ].includes(session_id))) return;
 
                 // session status
                 let ss = G_session_ids["tts_session"];
@@ -96,11 +102,9 @@ class Audio_sender {
                     // 删除最后两个字节 
                     real_data = data.slice(0, data_len - 2);
                 }
-                // console.log("发送-> 会话ID:", session_id, " 会话状态:", ss, " 数据长度:", real_data.length);
-                if(!session_id){
-                    log.error(`缺失会话ID，发送失败。`);
-                    return;
-                }
+                // log.tts_info("发送-> 会话ID:", session_id, " 会话状态:", ss, " 数据长度:", real_data.length, " 客户端有效音频:", this.client_max_available_audio, this.stoped);
+                if (!session_id) return log.error(`缺失会话ID，发送失败。`);
+
                 const combinedBuffer = Buffer.concat([Buffer.from(session_id, 'utf-8'), Buffer.from(ss, 'utf-8'), real_data]);
                 this.ws.send(combinedBuffer, () => {
                     clearTimeout(this.send_timer);
@@ -112,7 +116,7 @@ class Audio_sender {
                     }
                 });
             };
-            this.sender(); 
+            this.sender();
         })
     }
 
@@ -126,16 +130,20 @@ class Audio_sender {
     /**
      * 停止音频发送
     */
-    stop() {
+    stop() { 
         this.check_count = 0;
         this.accumulated_data = Buffer.alloc(0);
         clearInterval(this.send_timer);
         this.send_timer = null;
         this.started = false;
-
-
+        this.stoped = true;
+        if (this.ws._socket && this.ws._socket._writableState) {
+            // 清空内部缓冲区
+            this.ws._socket._writableState.buffer = [];
+            this.ws._socket._writableState.length = 0;
+        } 
         if (!G_devices.get(this.device_id)) return;
-        G_devices.set(this.device_id, { ...G_devices.get(this.device_id), play_audio_ing: false, });
+        G_devices.set(this.device_id, { ...G_devices.get(this.device_id), play_audio_ing: false, audio_sender: null, });
     }
     /**
      * 获取缓冲区大小

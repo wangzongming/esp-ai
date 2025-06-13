@@ -148,6 +148,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         onEventCb(command_id, data);
                     }
+                    // 应答帧
+                    if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+                    {
+                        esp_ai_webSocket.sendTXT("{ \"type\":\"instruct_ack\"}");
+                        xSemaphoreGive(esp_ai_ws_mutex);
+                    }
                 }
 
                 // tts task log
@@ -172,6 +178,14 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
                 else if (type == "session_stop")
                 {
+                    // 应答帧
+                    if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+                    {
+                        String sid = (const char *)parseRes["session_id"];
+                        esp_ai_webSocket.sendTXT("{ \"type\":\"session_stop_ack\", \"session_id\": \"" + sid + "\"}");
+                        xSemaphoreGive(esp_ai_ws_mutex);
+                    }
+
                     // 上报音频时
                     if (esp_ai_start_send_audio)
                     {
@@ -179,15 +193,23 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         return;
                     }
 
-                    // 这里仅仅是停止，并不能结束录音
+                    /**
+                     * 这里仅仅是停止，并不能结束录音
+                     * 还有这里不能结束播放，可能是 .tts 的播放音，除非用户指定
+                     */
                     esp_ai_session_id = "";
+                    if (data == "1")
+                    {
+                        asr_ing = false;
+                        mp3_player_stop();
+                    }
                 }
 
                 else if (type == "auth_fail")
                 {
                     String message = (const char *)parseRes["message"];
                     String code = (const char *)parseRes["code"];
-                    Serial.println("[Error] -> 连接服务失败，鉴权失败：code: " + code + ", message: "+ message);
+                    Serial.println("[Error] -> 连接服务失败，鉴权失败：code: " + code + ", message: " + message);
                     Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。"));
                     Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
                     Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
@@ -216,6 +238,11 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         play_builtin_audio(chao_ti_wei_qi_yong, chao_ti_wei_qi_yong_len);
                     }
+                    else if (code == "102" || code == "101" || code == "100")
+                    {
+                        esp_ai_session_id = "";
+                        asr_ing = false;
+                    }
 
                     if (onErrorCb != nullptr)
                     {
@@ -236,6 +263,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     }
                     else if (status == "iat_start")
                     {
+                        send_start_time = 0;
                         // 开始发送音频时，先等话说完
                         wait_mp3_player_done();
                         // 正在说话时就不要继续推理了，否则会误唤醒
@@ -285,6 +313,12 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     if (!esp_ai_cache_audio_greetings.empty())
                     {
                         esp_ai_cache_audio_greetings.clear();
+                    }
+                    // 应答帧
+                    if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+                    {
+                        esp_ai_webSocket.sendTXT("{ \"type\":\"clear_cache_ack\"}");
+                        xSemaphoreGive(esp_ai_ws_mutex);
                     }
                 }
                 else if (type == "set_local_data")
@@ -409,12 +443,14 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         session_status_string[2] = '\0';
         esp_ai_session_status = String(session_status_string);
 
+        // // test...
         // Serial.print("内容长度：");
         // Serial.print(length);
         // Serial.print("  会话ID：");
         // Serial.print(sid);
         // Serial.print("  会话状态：");
         // Serial.print(esp_ai_session_status);
+        // Serial.println("");
 
         // 提取音频数据
         uint8_t *audioData = payload + 6;

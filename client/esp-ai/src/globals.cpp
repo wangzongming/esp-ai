@@ -30,7 +30,7 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.84.43";
+String ESP_AI_VERSION = "2.86.49";
 
 String esp_ai_start_ed = "0";         // AST 服务推理中
 bool esp_ai_ws_connected = false;     // ws 服务已经连接成功
@@ -136,7 +136,7 @@ ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.9};
 // { wifi 账号， wifi 密码, "热点名字", "配网页面HTML", "配网方式：AP | BLE" }
 ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", "", "AP"};
 // { ip， port, api_key }
-ESP_AI_server_config default_server_config = {"https", "node.espai2.fun", 443, "", ""};
+ESP_AI_server_config default_server_config = {"http", "node.espai.fun", 80, "", ""};
 
 inference_t inference;
 // Set this to true to see e.g. features generated from the raw signal
@@ -473,7 +473,7 @@ void wait_mp3_player_done()
         // Serial.printf("*");
     }
     // Serial.printf("\n");
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 void play_builtin_audio(const unsigned char *data, size_t len)

@@ -42,7 +42,13 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
         if (!G_devices.get(device_id)) return;
         const { ws: ws_client, tts_list, session_id: now_session_id } = G_devices.get(device_id);
         if (!ws_client) return; 
-        if (!is_create_cache && session_id && now_session_id && session_id !== now_session_id) return;
+        if (
+            !is_create_cache &&
+            session_id &&
+            now_session_id &&
+            session_id !== now_session_id &&
+            !([G_session_ids["tts_fn"]].includes(session_id))
+        ) return; 
 
         !is_create_cache && onTTScb && onTTScb({
             device_id,
@@ -132,7 +138,6 @@ function TTSFN(device_id, opts) {
                 const plugin = plugins.find(item => item.name === tts_server && item.type === "TTS")?.main;
 
                 const TTS_FN = plugin || require(`./${tts_server}`);
-
                 if (!is_pre_connect) {
                     if (!text || !(`${text}`.replace(/\s/g, ''))) {
                         return true;
@@ -188,6 +193,7 @@ function TTSFN(device_id, opts) {
                         devLog && log.tts_info("-> TTS 服务连接成功！")
                         G_devices.set(device_id, {
                             ...G_devices.get(device_id),
+                            audio_sender: audio_sender,
                             tts_server_connected: true,
                             tts_server_connect_ing: false,
                         })
@@ -200,7 +206,8 @@ function TTSFN(device_id, opts) {
                         audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
                             G_devices.set(device_id, {
                                 ...G_devices.get(device_id),
-                                resolve_tts_task: null
+                                resolve_tts_task: null,
+                                audio_sender: null,
                             })
                             resolve(true);
                         });

@@ -78,10 +78,8 @@ class EspAiInstance {
     updateClientConfig(device_id, config) {
         !device_id && log.error(`调用 updateClientConfig 方法时，请传入 device_id`);
         const oldConfig = G_devices.get(device_id);
-        if (oldConfig) {
-            // const { ws: ws_client } = G_devices.get(device_id);
-            // 缓存信息不可在此处清楚，本函数仅仅用于更新配置
-            // ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
+        if (oldConfig) { 
+            // 缓存信息不可在此处清除，本函数仅仅用于更新配置 
             const new_config = {
                 ...oldConfig,
                 user_config: {

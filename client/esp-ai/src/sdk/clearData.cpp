@@ -30,41 +30,5 @@
 
 void ESP_AI::clearData()
 {
-    clear_local_all_data();
-    
-    // JSONVar loc_data = get_local_all_data();
-    // String loc_wifi_name = loc_data["wifi_name"];
-    // if (loc_wifi_name == "")
-    // {
-    //     // 在配网页面调用清除就清除全部配网数据
-    //     set_local_data("wifi_name5", "");
-    //     set_local_data("wifi_name4", "");
-    //     set_local_data("wifi_name3", "");
-    //     set_local_data("wifi_name2", "");
-    //     set_local_data("wifi_pwd5", "");
-    //     set_local_data("wifi_pwd4", "");
-    //     set_local_data("wifi_pwd3", "");
-    //     set_local_data("wifi_pwd2", "");
-    // }
-    // else
-    // {
-    //     set_local_data("wifi_name5", loc_data["wifi_name4"]);
-    //     set_local_data("wifi_name4", loc_data["wifi_name3"]);
-    //     set_local_data("wifi_name3", loc_data["wifi_name2"]);
-    //     set_local_data("wifi_name2", loc_data["wifi_name"]);
-    //     set_local_data("wifi_pwd5", loc_data["wifi_pwd4"]);
-    //     set_local_data("wifi_pwd4", loc_data["wifi_pwd3"]);
-    //     set_local_data("wifi_pwd3", loc_data["wifi_pwd2"]);
-    //     set_local_data("wifi_pwd2", loc_data["wifi_pwd"]);
-    // }
-    // set_local_data("wifi_name", "");
-    // set_local_data("wifi_pwd", "");
-    // set_local_data("api_key", "");
-    // set_local_data("ext1", "");
-    // set_local_data("ext2", "");
-    // set_local_data("ext3", "");
-    // set_local_data("ext4", "");
-    // set_local_data("ext5", "");
-    // set_local_data("ext6", "");
-    // set_local_data("ext7", "");
+    clear_local_all_data(); 
 }

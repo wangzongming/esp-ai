@@ -91,6 +91,7 @@ function main(config = {}) {
          * 
          *       // 指令相关参数
          *       intention_ing: boolean,  
+         *       stop_ack_fn: () => void,
          * 
          * }]
         */

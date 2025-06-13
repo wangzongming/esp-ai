@@ -32,23 +32,35 @@ void ESP_AI::wakeUp(String scene)
 {
     if (asr_ing)
     {
+        // 上一次唤醒距离本次唤醒时间过长时需要考虑结束上次唤醒 ...
         DEBUG_PRINTLN(debug, F("[Info] -> 正在聆听中，唤醒无效。"));
-        return;
+        if (send_start_time != 0)
+        {
+            DEBUG_PRINTLN(debug, F("[Info] -> 考虑硬件是否出现问题..."));
+            esp_ai_session_id = "";
+            asr_ing = false;
+        }
+        else
+        {
+            return;
+        }
     }
 
     if (esp_ai_ws_connected)
     {
-        esp_ai_session_id = ""; 
+        esp_ai_session_id = "";
         if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
         {
-            // 提示服务器start
+            /**
+             * 会话开始
+             * 但这里不能相信服务器会百分百响应
+             * */
             DEBUG_PRINTLN(debug, F("[Info] -> 发送 start"));
             esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
-
+            send_start_time = millis();
             // esp_ai_webSocket.disableHeartbeat();
             xSemaphoreGive(esp_ai_ws_mutex);
         }
- 
 
         mp3_player_stop();
 

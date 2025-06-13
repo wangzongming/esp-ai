@@ -45,7 +45,7 @@ const { PassThrough } = require('stream');
 */
 function TTS_FN({ text, devLog, tts_config, logWSServer, tts_params_set, cb, log, ttsServerErrorCb, connectServerCb, connectServerBeforeCb }) {
     try {
-        const { url = 'https://api.espai2.fun/ai_api/tts', reference_id = "xiao_ming", api_key, ...other_config } = tts_config;
+        const { url = 'https://api.espai2.fun/ai_api/tts', reference_id = "cosyvoice-v2-espai-ad258e829c08424db6ce59ac7a38b417", api_key, ...other_config } = tts_config;
         if (!api_key) return log.error(`请配给 TTS 配置 api_key 参数。`)
         if (!url) return log.error(`请配给 TTS 配置 url 参数。`);
         let shouldClose = false;

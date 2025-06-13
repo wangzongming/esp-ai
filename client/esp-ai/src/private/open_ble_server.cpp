@@ -27,6 +27,10 @@
  * @websit https://espai.fun
  */
 #include "open_ble_server.h"
+#include <esp_gatts_api.h> // Added for esp_ble_gatts_cb_param_t
+
+const String EOT_MARKER = "--END--";
+String ESP_AI_BLE_INCOMING_BUFFER = ""; // 初始化为空字符串
 
 /**
  * 蓝牙连接回调
@@ -47,6 +51,7 @@ public:
 
     void onConnect(BLEServer *pServer)
     {
+
         // 调用连接时的回调函数
         if (connectCallback)
         {
@@ -80,10 +85,10 @@ public:
     // 构造函数，用于传入连接和断开时要调用的函数
     CharacteristicCallbacks(OnWriteCb writeCb) : onWriteCb(writeCb) {}
     void onWrite(BLECharacteristic *esp_ai_ble_characteristic)
-    {
+    {  
         std::string rxValue = esp_ai_ble_characteristic->getValue();
         if (rxValue.length() > 0)
-        {
+        { 
             String rxload = "";
             for (int i = 0; i < rxValue.length(); i++)
             {
@@ -91,16 +96,35 @@ public:
                 {
                     rxload += (char)rxValue[i];
                 }
+            } 
+            if (rxload.equals(EOT_MARKER))
+            { 
+                if (ESP_AI_BLE_INCOMING_BUFFER.length() > 0)
+                {
+                    // 之前缓存的数据现在是完整的了
+                    // 注意：您的 decodeURIComponent 函数需要能正确处理 ESP_AI_BLE_INCOMING_BUFFER
+                    String decodedString = decodeURIComponent(ESP_AI_BLE_INCOMING_BUFFER);
+                    ESP_AI_BLE_RD = decodedString; // 将解码后的完整数据存入 ESP_AI_BLE_RD 
+                    Serial.print("[BLE Recv] 完整数据接收并解码: ");
+                    Serial.println(ESP_AI_BLE_RD); 
+                    // 调用之前的回调函数，现在 ESP_AI_BLE_RD 包含完整数据
+                    if (onWriteCb)
+                    {
+                        onWriteCb(&esp_ai_ble_characteristic); // 回调函数可能依赖 ESP_AI_BLE_RD
+                    }
+                }
+                else
+                {
+                    Serial.println("[BLE Recv] End marker received, but buffer was empty. No data to process.");
+                }
+                // 清空缓冲区，为下一条完整消息做准备
+                ESP_AI_BLE_INCOMING_BUFFER = "";
             }
-
-            String decodedString = decodeURIComponent(rxload);
-            ESP_AI_BLE_RD = decodedString;
-            Serial.print("接收到数据：");
-            Serial.println(ESP_AI_BLE_RD);
-            // 调用连接时的回调函数
-            if (onWriteCb)
+            else
             {
-                onWriteCb(&esp_ai_ble_characteristic);
+                // 这不是结束标记，是普通的数据块，追加到缓冲区
+                ESP_AI_BLE_INCOMING_BUFFER += rxload;
+                Serial.printf("[BLE Recv] Chunk appended. Total buffered length: %d\n", ESP_AI_BLE_INCOMING_BUFFER.length());
             }
         }
     }
@@ -138,7 +162,7 @@ void ESP_AI::ble_connect_wifi()
     JSONVar data = get_local_all_data();
     String wifi_name = (const char *)data["wifi_name"];
     String wifi_pwd = (const char *)data["wifi_pwd"];
- 
+
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifi_name, wifi_pwd);
     DEBUG_PRINT(debug, F("connect wifi ing..."));
@@ -229,11 +253,14 @@ void ESP_AI::open_ble_server()
 {
     String ap_name = get_ap_name(wifi_config.ap_name);
     BLEDevice::init(ap_name.c_str());
+    BLEDevice::setMTU(517);  
+
     esp_ai_ble_server = BLEDevice::createServer();
     // 服务连接回调
     esp_ai_ble_server->setCallbacks(new MyServerCallbacks(ESP_AI::on_ble_device_connected_wrapper, ESP_AI::on_ble_device_disconnected_wrapper));
     // 创建一个服务
     esp_ai_ble_service = esp_ai_ble_server->createService(BLE_SERVICE_UUID);
+
     // 创建特征，注意，PROPERTY_READ PROPERTY_WRITE PROPERTY_NOTIFY 这三个都得启用
     esp_ai_ble_characteristic = esp_ai_ble_service->createCharacteristic(
         BLE_CHARACTERISTIC_UUID,

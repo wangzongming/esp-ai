@@ -29,9 +29,13 @@ const log = require("../utils/log");
 /***
  * 终止会话
  * 一般配合 .newSession 使用，用于重启一个会话，单独使用时就为停止会话
+ * 
+ * @param {String} device_id 设备ID
+ * @param {String} at 在什么情况下的打断，一句描述语句
+ * @param {Boolean} stop_all 是否停止所有（包括 .tts 方法播放的音频）
 */
 
-function stop(device_id, at) {
+function stop(device_id, at, stop_all) {
     !device_id && log.error(`调用 stop 方法时，请传入 device_id`);
     // 清空该设备的所有任务
     if (!G_devices.get(device_id)) return;
@@ -43,22 +47,29 @@ function stop(device_id, at) {
             tts_list = [], iat_ws, llm_ws,
             play_audio_ing, play_audio_on_end,
             tts_server_connect_ing, tts_server_connected,
-            llm_server_connect_ing, llm_server_connected, abort_controllers = []
+            llm_server_connect_ing, llm_server_connected, abort_controllers = [],
+            audio_sender,
+            session_id, client_version_arr
         } = G_devices.get(device_id);
         if (
             iat_server_connect_ing || iat_server_connected ||
             tts_server_connect_ing || tts_server_connected ||
             llm_server_connect_ing || llm_server_connected ||
             client_out_audio_ing || play_audio_ing
-        ) { 
-            abort_controllers.forEach((controller) => { 
-                controller.abort(); 
-            }) 
+        ) {
+            abort_controllers.forEach((controller) => controller.abort());
+            audio_sender && audio_sender.stop(); 
 
             // 播放音频时不应该断开连接
             if (at !== "__play_music__") {
                 devLog && log.t_info("打断会话");
-                ws && ws.send(JSON.stringify({ type: "session_stop" }));
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    session_stop_ack: () => {
+                        resolve(true);
+                    }
+                });
+                ws && ws.send(JSON.stringify({ type: "session_stop", data: stop_all ? "1" : "", session_id }));
             }
             try {
                 G_devices.set(device_id, {
@@ -76,7 +87,11 @@ function stop(device_id, at) {
                 })
                 tts_buffer_chunk_queue.clear();
                 play_audio_ing && play_audio_on_end && play_audio_on_end("ws_disconnect");
-                iat_ws && iat_ws.close && iat_ws.close()
+                if (iat_ws && iat_ws.end) {
+                    iat_ws.end()
+                } else {
+                    iat_ws && iat_ws.close && iat_ws.close()
+                }
                 llm_ws && llm_ws.close && llm_ws.close()
             } catch (err) {
                 console.log(err);
@@ -95,7 +110,9 @@ function stop(device_id, at) {
                 tts_list.delete(key)
             }
 
-            resolve(true);
+            // 旧版兼容，新版不走这里，而是走 ACK
+            // 旧版没有 ACK 帧，也不会走 ACK 回调，所以只需要在这里做兼容即可
+            Number(client_version_arr[0]) === 2 && Number(client_version_arr[0]) < 86 && resolve(true);
         } else {
             resolve(true);
         }

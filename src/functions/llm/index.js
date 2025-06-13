@@ -115,16 +115,14 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                                 Buffer.from(session_id, 'utf-8'),
                                 Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'),
                             ]);
-                            ws_client.send(combinedBuffer);
-                            // ws_client.send(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+                            ws_client.send(combinedBuffer); 
                         } else {
                             devLog && log.llm_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end"]}`);
                             const combinedBuffer = Buffer.concat([
                                 Buffer.from(session_id, 'utf-8'),
                                 Buffer.from(G_session_ids["tts_all_end"], 'utf-8'),
                             ]);
-                            ws_client.send(combinedBuffer);
-                            // ws_client.send(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                            ws_client.send(combinedBuffer); 
                         }
 
                     })

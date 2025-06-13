@@ -263,6 +263,8 @@ private:
     ESP_AI_lights_config lights_config;
     bool debug;
 
+    long send_start_time = 0;
+
     void (*onReadyCb)() = nullptr;
     void (*onEventCb)(String command_id, String data) = nullptr;
     void (*onErrorCb)(String code, String at_pos, String message) = nullptr;

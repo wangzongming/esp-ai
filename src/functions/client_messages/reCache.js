@@ -33,7 +33,7 @@ async function fn({ device_id }) {
     }
 
     // 缓存问候语 
-    const f_reply = user_config.f_reply; 
+    const f_reply = user_config.f_reply;  
     if (f_reply !== false) { 
         await TTS_FN(device_id, {
             text: f_reply,

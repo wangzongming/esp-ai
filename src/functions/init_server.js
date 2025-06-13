@@ -30,7 +30,7 @@ const isOutTimeErr = require("../utils/isOutTimeErr");
 const TTS_buffer_chunk_queue = require("../utils/tts_buffer_chunk_queue");
 const {
     audio, start, play_audio_ws_conntceed, client_out_audio_ing: client_out_audio_ing_fn, reCache,
-    client_out_audio_over, cts_time, set_wifi_config_res, digitalRead, analogRead, iat_end, client_available_audio
+    client_out_audio_over, cts_time, set_wifi_config_res, digitalRead, analogRead, iat_end, client_available_audio, session_stop_ack
 } = require("../functions/client_messages");
 const error_catch_hoc = require("./device_fns/error_catch")
 
@@ -87,6 +87,7 @@ function init_server() {
                 await_out_tts: [],
                 client_params,
                 client_version,
+                client_version_arr: client_version?.split?.("."),
                 error_catch: error_catch_hoc(ws),
                 tts_buffer_chunk_queue: new TTS_buffer_chunk_queue(device_id),
                 // 已输出流量 kb
@@ -109,8 +110,9 @@ function init_server() {
                 const comm_args = { device_id };
                 try {
                     if (typeof data === "string") {
+                        // console.log('data', data)
                         const { type, tts_task_id, stc_time, session_id, session_status, sid, text, success, value, pin } = JSON.parse(data);
-                        comm_args.session_id = session_id; 
+                        comm_args.session_id = session_id;
                         comm_args.session_status = session_status;
                         comm_args.tts_task_id = tts_task_id;
                         comm_args.sid = sid;
@@ -161,7 +163,9 @@ function init_server() {
                             case "client_available_audio":
                                 client_available_audio(comm_args);
                                 break;
-
+                            case "session_stop_ack":
+                                session_stop_ack(comm_args);
+                                break; 
                         }
                     } else {
                         ws.isAlive = true;
