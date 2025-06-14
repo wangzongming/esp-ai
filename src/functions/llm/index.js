@@ -38,8 +38,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         const { devLog, onLLMcb, llm_qa_number, ai_server } = G_config;
         if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../tts`);
-        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue, tts_server } = G_devices.get(device_id);
-        // if(stoped) return;
+        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue } = G_devices.get(device_id); 
         if (!texts.index) {
             texts.index = 0;
         }
@@ -58,35 +57,17 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             }))
         });
 
-        /**
-         * 向客户端发送情绪
-        */
-        const sendEmotion = async (text) => {
-            try {
-                const response = await axios.post(`${ai_server}/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
-                const { success, message: res_msg, data } = response.data;
-                if (success) {
-                    ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
-                } else {
-                    log.error('-> 情绪推理失败：' + res_msg);
-                }
-            } catch (err) {
-                log.error('-> 情绪推理失败：');
-                console.log(err);
-            }
-        }
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
-
         if (is_over) {
             devLog && log.llm_info('-> LLM 推理完毕');
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0)
-            ttsText && sendEmotion(ttsText);
+            ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
- 
+
 
             if (textNowNull && (ttsText.replace(/\s/g, '')).replace(/[,;!?()<>"‘”《》’!?【】。、，；！？（）”’…~～]?/g, "") !== "") {
                 // 添加音频播放任务
@@ -115,14 +96,14 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
                                 Buffer.from(session_id, 'utf-8'),
                                 Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'),
                             ]);
-                            ws_client.send(combinedBuffer); 
+                            ws_client.send(combinedBuffer);
                         } else {
                             devLog && log.llm_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end"]}`);
                             const combinedBuffer = Buffer.concat([
                                 Buffer.from(session_id, 'utf-8'),
                                 Buffer.from(G_session_ids["tts_all_end"], 'utf-8'),
                             ]);
-                            ws_client.send(combinedBuffer); 
+                            ws_client.send(combinedBuffer);
                         }
 
                     })
@@ -155,8 +136,8 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             }));
         }
         else {
-            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index)
-            ttsText && sendEmotion(ttsText);
+            const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index);
+            ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
             if (ttsText) {
                 devLog && log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
@@ -192,7 +173,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
 */
 function extractBeforeLastPunctuation(str, isLast, index) {
     // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格  
-    const punctuationRegex = /[。！？!?；;！？…~～]|(?<![A-Za-z0-9])\.(?![A-Za-z0-9])|(?<![A-Za-z])'(?![A-Za-z])/g;
+    const punctuationRegex = /[。，！？!?；;！？…~～]|(?<![A-Za-z0-9])\.(?![A-Za-z0-9])|(?<![A-Za-z])'(?![A-Za-z])/g;
     const matches = [...str.matchAll(punctuationRegex)];
 
     if (!isLast && str.length <= 1) return {};
@@ -204,8 +185,7 @@ function extractBeforeLastPunctuation(str, isLast, index) {
     const lastIndex = matchData[matchData.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
-        // 这里是否考虑提供配置让用户决策
-        const min_len = (index === 1 ? 2 : Math.min(index * 30, 100));
+        const min_len = (index <= 1 ? 1 : Math.min(index * 30, 100));
         if ((res.length < min_len) && !isLast) {
             return {}
         }
@@ -213,9 +193,7 @@ function extractBeforeLastPunctuation(str, isLast, index) {
         return { speak_text, org_text: res }
     } else {
         // 如果没有找到标点符号，并且是最后一段文字，则返回整个字符串
-        if (!isLast) {
-            return {};
-        }
+        if (!isLast) return {};
         // 表情符号目前还没有好的方式去处理...
         const emojiRegex = /[\u{1F300}-\u{1F6FF}|\u{1F900}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F680}-\u{1F6C0}]/ug;
 
@@ -361,3 +339,24 @@ module.exports = (device_id, opts) => {
     }
 
 };
+
+
+/**
+* 向客户端发送情绪
+*/
+const sendEmotion = async ({ ai_server, text, ws_client, device_id }) => {
+    try {
+        const response = await axios.post(`${ai_server}/ai_api/emotion_detection`, { text }, { headers: { 'Content-Type': 'application/json' } });
+        const { success, message: res_msg, data } = response.data;
+        if (success) {
+            const { prev_emo } = G_devices.get(device_id);
+            prev_emo !== data && ws_client && ws_client.send(JSON.stringify({ type: "emotion", data }));
+            G_devices.set(device_id, { ...G_devices.get(device_id), prev_emo: data })
+        } else {
+            log.error('-> 情绪推理失败：' + res_msg);
+        }
+    } catch (err) {
+        log.error('-> 情绪推理失败：');
+        console.log(err);
+    }
+}

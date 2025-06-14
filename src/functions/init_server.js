@@ -55,6 +55,7 @@ function init_server() {
         const wss = new WebSocket.Server({ port });
         wss.on('connection', async function connection(ws, req) {
             const client_params = parseUrlParams(req.url);
+            log.t_info(`设备连接参数：`, req.url);
             const client_version = client_params.v;
             const device_id = client_params.device_id;
             if (!device_id) {
@@ -165,7 +166,7 @@ function init_server() {
                                 break;
                             case "session_stop_ack":
                                 session_stop_ack(comm_args);
-                                break; 
+                                break;
                         }
                     } else {
                         ws.isAlive = true;
@@ -178,6 +179,7 @@ function init_server() {
                 } catch (err) {
                     console.log(err);
                     log.error(`消息处理错误：${err}`)
+                    log.error(`消息数据：${data}`)
                 }
 
             });
@@ -219,9 +221,9 @@ function init_server() {
             ws.on('close', (code, reason) => {
                 devLog && log.info(``);
                 devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
+                devLog && log.t_red_info(`CLOSED: ${ws.CLOSED}`);
                 devLog && log.info(``);
                 onDeviceDisConnect && onDeviceDisConnect({ device_id, client_params, instance: G_Instance });
-
                 G_Instance.stop(device_id, "设备断开服务时");
                 G_devices.delete(device_id);
             });

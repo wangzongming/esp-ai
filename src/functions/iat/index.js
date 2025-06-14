@@ -231,15 +231,12 @@ module.exports = async (device_id, connected_cb) => {
         */
         let done_timer = null;  
         const onIATText = (text) => {
-            if (vad_ended) return;
-            log.t_red_info("text: ", text);
-
+            if (vad_ended) return; 
             if (text !== prev_asr_text) {
                 clearTimeout(asr_timeouter); 
                 prev_asr_text = text; 
                 clearTimeout(done_timer); 
-                done_timer = setTimeout(() => { 
-                    log.t_red_info("开始请求语义结束: ", text); 
+                done_timer = setTimeout(() => {  
                     const over_do = () => {
                         if (!G_devices.get(device_id)) return;
                         const { iat_ws } = G_devices.get(device_id)
@@ -277,25 +274,4 @@ module.exports = async (device_id, connected_cb) => {
         log.error(`IAT 错误： ${err}`)
     }
 };
-
-/**
-* 判断语义是否完整
-*/
-const axios = require('axios');
-async function done_talking({ ai_server, text, api_key, prev_text, signal }) {
-    try {
-        if (!text) return false;
-        const response = await axios.post(`${ai_server}/ai_api/done_talking`, { text, api_key, prev_text }, { signal, headers: { 'Content-Type': 'application/json' } });
-        const { success, message: res_msg, data } = response.data;
-        if (success) {
-            return data;
-        } else {
-            log.error('-> 语义推理失败：' + res_msg);
-            return false;
-        }
-    } catch (err) {
-        // log.error('-> 语义推理失败，请求失败：');
-        // console.log(err);
-        return false;
-    }
-}
+ 

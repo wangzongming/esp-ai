@@ -92,6 +92,9 @@ function main(config = {}) {
          *       // 指令相关参数
          *       intention_ing: boolean,  
          *       stop_ack_fn: () => void,
+         *          
+         *       // 上一次 LLM 的情绪
+         *       prev_emo: string
          * 
          * }]
         */
@@ -118,12 +121,12 @@ function main(config = {}) {
 
             // task_id
             play_music: "play_music",
-        } 
+        }
 
 
         const init_server = require("./functions/init_server")
         const _config = IS_DEV ? require("./config_dev") : require("./config")
- 
+
 
         global.G_ws_server = null;
         global.G_config = { ..._config, ...config };

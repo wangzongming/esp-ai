@@ -41,8 +41,7 @@ async function fn({ device_id, _ws }) {
         const { auth } = G_config;
         const { ws, client_params } = G_devices.get(device_id);
 
-
-        if (auth) {
+        if (auth && client_params) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
                 ws,
                 client_params: client_params,
@@ -67,7 +66,19 @@ async function fn({ device_id, _ws }) {
                 }, 5000)
                 return;
             };
-        } 
+        }
+        if (!client_params) {
+            ws.send(JSON.stringify({
+                type: "auth_fail",
+                message: `未知错误`,
+                code: "003"
+            }));
+            // 防止大量失效用户重复请求
+            setTimeout(() => {
+                ws.close();
+            }, 5000)
+            return;
+        }
 
         const start_iat = async (connect_cb) => {
             if (!G_devices.get(device_id)) return;

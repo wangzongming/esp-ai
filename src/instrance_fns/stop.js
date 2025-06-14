@@ -58,7 +58,7 @@ function stop(device_id, at, stop_all) {
             client_out_audio_ing || play_audio_ing
         ) {
             abort_controllers.forEach((controller) => controller.abort());
-            audio_sender && audio_sender.stop(); 
+            audio_sender && audio_sender.stop();
 
             // 播放音频时不应该断开连接
             if (at !== "__play_music__") {
@@ -104,14 +104,13 @@ function stop(device_id, at, stop_all) {
                 try {
                     ttsWS && ttsWS.close && ttsWS.close();
                 } catch (err) {
-                    log.error(`[${device_id}] ${at} TTS 队列关闭失败`);
-
+                    log.error(`[${device_id}] ${at} TTS 队列关闭失败：` + err);
+                    console.log(err)
                 }
                 tts_list.delete(key)
             }
 
-            // 旧版兼容，新版不走这里，而是走 ACK
-            // 旧版没有 ACK 帧，也不会走 ACK 回调，所以只需要在这里做兼容即可
+            // 旧版兼容，新版不走这里，而是走 ACK，旧版没有 ACK 帧，也不会走 ACK 回调，所以只需要在这里做兼容即可
             Number(client_version_arr[0]) === 2 && Number(client_version_arr[0]) < 86 && resolve(true);
         } else {
             resolve(true);
