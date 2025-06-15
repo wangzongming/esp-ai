@@ -264,6 +264,8 @@ private:
     bool debug;
 
     long send_start_time = 0;
+    bool ready_ed = false;
+    int asr_break_num = 0; 
 
     void (*onReadyCb)() = nullptr;
     void (*onEventCb)(String command_id, String data) = nullptr;

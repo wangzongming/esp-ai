@@ -72,7 +72,7 @@ void ESP_AI::connect_ws()
                        "&ext6=" + loc_ext6 +
                        "&ext7=" + loc_ext7 +
                        "&" + server_config.params;
-
+ 
     // ws 服务
     if (String(server_config.protocol) == "https")
     {

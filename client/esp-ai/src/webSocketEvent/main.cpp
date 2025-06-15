@@ -54,6 +54,8 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 esp_ai_net_status = "2";
                 onNetStatusCb("2");
             }
+            
+            connect_ws();
         }
         break;
     case WStype_CONNECTED:
@@ -543,9 +545,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             if (is_first_connect && onReadyCb != nullptr)
             {
                 wait_mp3_player_done();
-                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                vTaskDelay(300 / portTICK_PERIOD_MS);
                 onReadyCb();
             }
+            ready_ed = true;
             return;
         }
         else if (esp_ai_session_status == SID_TTS_CHUNK_END)

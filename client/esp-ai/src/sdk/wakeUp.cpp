@@ -30,10 +30,14 @@
 
 void ESP_AI::wakeUp(String scene)
 {
-    if (asr_ing)
-    {
+    if (!ready_ed)
+        return;
+
+    if (asr_ing && asr_break_num < 1)
+    {  
         // 上一次唤醒距离本次唤醒时间过长时需要考虑结束上次唤醒 ...
         DEBUG_PRINTLN(debug, F("[Info] -> 正在聆听中，唤醒无效。"));
+        asr_break_num += 1;
         if (send_start_time != 0)
         {
             DEBUG_PRINTLN(debug, F("[Info] -> 考虑硬件是否出现问题..."));
@@ -45,6 +49,9 @@ void ESP_AI::wakeUp(String scene)
             return;
         }
     }
+
+    // 重置中断次数
+    asr_break_num = 0;
 
     if (esp_ai_ws_connected)
     {
