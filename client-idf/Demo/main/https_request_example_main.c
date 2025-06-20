@@ -44,7 +44,7 @@
 #include "esp_crt_bundle.h"
 #endif
 #include "time_sync.h"
-
+#if 1
 /* Constants that aren't configurable in menuconfig */
 #define WEB_SERVER "www.howsmyssl.com"
 #define WEB_PORT "443"
@@ -323,3 +323,5 @@ void app_main_https(void)
 
     xTaskCreate(&https_request_task, "https_get_task", 8192, NULL, 5, NULL);
 }
+
+#endif
