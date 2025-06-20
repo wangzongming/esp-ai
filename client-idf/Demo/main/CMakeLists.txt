@@ -1,6 +1,6 @@
 set(COMPONENT_SRCDIRS  .)
 # ✅ 将当前目录下所有 .c 文件加入编译
-file(GLOB_RECURSE COMPONENT_SRCS "ws_echo_server.c" "https_request_example_main.c" "play_baidu_speech_mp3_example.c" "main.c" "*.c")
+file(GLOB_RECURSE COMPONENT_SRCS "esp_32_s_3_pcm_ws.c" "ws_echo_server.c" "https_request_example_main.c" "play_baidu_speech_mp3_example.c" "main.c" "*.c")
 # ✅ 显式添加 cloud_services 头文件路径
 set(COMPONENT_ADD_INCLUDEDIRS 
     .
@@ -25,8 +25,16 @@ set(EXTRA_COMPONENT_DIRS "D:/ESPIDF/esp32_5.2/TOOL/esp-adf/components")
 
 # 使用 IDF 的新版本宏替代旧版 `register_component()`
 idf_component_register(
-    SRCS ${COMPONENT_SRCS}
-    INCLUDE_DIRS ${COMPONENT_ADD_INCLUDEDIRS}
-    REQUIRES ${COMPONENT_REQUIRES}
-    EMBED_TXTFILES server_root_cert.pem local_server_cert.pem
+    SRCS
+    
+        ${COMPONENT_SRCS}
+        "WebSocket/websocket_rx_handler.c"
+    INCLUDE_DIRS
+        ${COMPONENT_ADD_INCLUDEDIRS}
+        "WebSocket"
+    REQUIRES
+        ${COMPONENT_REQUIRES}
+    EMBED_TXTFILES
+        server_root_cert.pem
+        local_server_cert.pem
 )

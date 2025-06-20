@@ -56,6 +56,8 @@
 #include "model_path.h"
 #include "esp_mn_speech_commands.h"
 #include "play_baidu_speech_mp3_example.h"
+
+#include "websocket_rx_handler.h"
 #define NO_ENCODER  (0)
 #define ENC_2_AMRNB (1)
 #define ENC_2_AMRWB (2)
@@ -477,10 +479,13 @@ extern void zx_app_main(void);
 extern void app_main_mp3(void);
 extern void app_main_https(void);
 extern void app_main_websocket(void);
+extern void i2sInit(void);
 void app_main(void)
 {
+
     log_clear();
-    app_main_websocket();
+    i2sInit();
+   // app_main_websocket();
 #if 1
 app_main_https();
 vTaskDelay(10000/ portTICK_PERIOD_MS);
