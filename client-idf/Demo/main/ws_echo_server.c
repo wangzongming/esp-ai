@@ -9,11 +9,12 @@
 #include "nvs_flash.h"
 #include "esp_websocket_client.h"
 #include "protocol_examples_common.h"
-
+#if 0
 static const char *TAG = "WS_CLIENT";
-
+//// ESP_AI_server_config server_config = {"http", "node.espai.fun", 80, "api_key=1227f3e384d04369b350c04429b36b88"};
 /* WebSocket配置 *///ws://192.168.10.2:5000/
 //#define WEBSOCKET_URI "ws://192.168.10.2:5000/"
+//#define WEBSOCKET_URI "ws://node.espai.fun:80/?api_key=1227f3e384d04369b350c04429b36b88&device_id=94:BB:43:ED:67:98&v=1.0.0"
 #define WEBSOCKET_URI "ws://192.168.10.2:8088/?v=1.0.0&device_id=94:BB:43:ED:67:98"
 // 如需使用SSL（wss://），请使用：
 // #define WEBSOCKET_URI "wss://echo.websocket.org"
@@ -90,11 +91,16 @@ void app_main_websocket(void)
 
     // 发送测试消息
     int i = 0;
+     uint8_t buffer[1024];
     while (1) {
         if (esp_websocket_client_is_connected(client)) {
             char message[64];
             snprintf(message, sizeof(message), "Hello from ESP32S3 %d", i++);
             esp_websocket_client_send_text(client, message, strlen(message), portMAX_DELAY);
+         // 假设你采集了一段音频数据到 buffer 中
+
+// 发送音频数据（二进制）
+//esp_websocket_client_send_bin(client, buffer, len, portMAX_DELAY);
             ESP_LOGI(TAG, "Sent: %s", message);
         }
         vTaskDelay(pdMS_TO_TICKS(5000));
@@ -117,3 +123,5 @@ void wakeUp(void)
     }
     #endif
 }
+
+#endif
