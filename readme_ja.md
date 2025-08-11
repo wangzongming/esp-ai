@@ -35,8 +35,28 @@
 
 </div>
 
+ 
+
+<br/>
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/TFT屏幕" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/feng_main.gif" height="300">
+</p>
+
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/espai带屏幕版本" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/大白"  height="300">
+</p>
+
+
+
+
 <h2>
 <a href="./readme_zh.md">👉简体中文</a>
+</h2>
+
+<h2>
+<a href="./readme_english.md">👉English</a> 
 </h2>
 
 > 開発ボードに完全なAI対話ソリューションを提供します。これには、`ESP32`シリーズ開発ボードの`IAT(ASR)+LLM+TTS`統合ソリューションが含まれますが、これに限定されません。既存のプロジェクトに影響を与えずに、依存関係としてプロジェクトに注入されます。
@@ -74,12 +94,13 @@ ESP-AIに基づいて、企業や個人にエンドサービスと管理サー�
 - ✔️ クライアント設定のウェブページを提供
 - ✔️ 高い同時接続シナリオに簡単に対応（負荷分散のためにNginxが必要）
 - ✔️ すぐに使える
+- ✔️ `esp32s3`/`esp32c3`
+- ✔️ `OPEN API` 
 
 # 🧐 次のステップ
 
 - [ ] 🤔 内蔵オフラインウェイクアップの精度向上（現在はTianwen ASRProの使用を推奨） 
-- [ ] 🤔 オンラインウェイクワード生成 
-- [ ] 🤔 他の言語でのプラグイン開発（Node.jsに依存しないプラグイン開発） 
+- [ ] 🤔 オンラインウェイクワード生成  
 
 # 📦 インストール
 
@@ -102,10 +123,19 @@ docker run -itd -p 8088:8088 -v /esp-ai-server/index.js:/server/index.js --name 
 
 
 # 🏪 ディスカッショングループ
-QQディスカッショングループ: 854445223
+
+<p>QQ 交流群1: 854445223</p>
+<p>QQ 交流群2: 952051286</p>
  
-# 🎥 ケーススタディビデオ
-[bilibili](https://www.bilibili.com/video/BV1gE421w7Dw/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b)
+# 🎥 ケーススタディビデオ 
+
+【生活不易，Doro卖艺！】 https://www.bilibili.com/video/BV1uvbKzREYP/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【一键制作你的AI动图桌宠（在线免费制作）】 https://www.bilibili.com/video/BV1xut4zuEf8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【ESP-AI 玩偶方案板】 https://www.bilibili.com/video/BV1YTbDzQEk8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【强噪音下对话和tft屏(ESP-AI新版预)】 https://www.bilibili.com/video/BV1KD7KzsEoc/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
  
 
 ## 🤝 貢献 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)

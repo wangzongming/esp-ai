@@ -36,6 +36,20 @@
 
 </div>
 
+
+<br/>
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/TFT屏幕" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/feng_main.gif" height="300">
+</p>
+
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/espai带屏幕版本" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/大白"  height="300">
+</p>
+
+
+
 <br />
 
 # language
@@ -85,12 +99,13 @@ It offers free ASR (Automatic Speech Recognition), TTS (Text-to-Speech), and LLM
 - ✔️ Client configuration webpage provided
 - ✔️ Easily handles high concurrency scenarios (requires Nginx for load balancing)
 - ✔️ Ready to use out of the box
+- ✔️ Supports `esp32s3`/`esp32c3`
+- ✔️ Supports `OPEN API` 
 
 # 🧐 Next Steps
 
 - [ ] 🤔 Improve accuracy of built-in offline wake-up (currently recommended to use Tianwen ASRPro) 
-- [ ] 🤔 Online wake word generation 
-- [ ] 🤔 Develop plugins in other languages (to avoid relying solely on Node.js for plugin development) 
+- [ ] 🤔 Online wake word generation  
 
 # 📦 Install
 
@@ -113,12 +128,20 @@ Below are the `Node.js` and `Arduino` codes you need to write if you only requir
 
 
 # 🏪 Discussion Group
-QQ Discussion Group: 854445223
- 
-# 🎥 Case Study Video
-[bilibili](https://www.bilibili.com/video/BV1gE421w7Dw/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b)
- 
 
+<p>QQ 交流群1: 854445223</p>
+<p>QQ 交流群2: 952051286</p>
+ 
+# 🎥 Case Study Video 
+
+【生活不易，Doro卖艺！】 https://www.bilibili.com/video/BV1uvbKzREYP/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【一键制作你的AI动图桌宠（在线免费制作）】 https://www.bilibili.com/video/BV1xut4zuEf8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【ESP-AI 玩偶方案板】 https://www.bilibili.com/video/BV1YTbDzQEk8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【强噪音下对话和tft屏(ESP-AI新版预)】 https://www.bilibili.com/video/BV1KD7KzsEoc/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+ 
 ## 🤝 Contributing [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
 Let's build a better `esp-ai` together.

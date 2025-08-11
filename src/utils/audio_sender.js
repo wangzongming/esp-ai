@@ -15,13 +15,15 @@ class Audio_sender {
         this.device_id = device_id;
         // 发送速率，单位ms  
         this.send_speed = 500;
+        // this.send_speed = 200; // test...
         // 发送流的大小，动态调整
-        this.send_num = 1024 * 3;
+        this.send_num = 1024 * 3; 
         // 动态大小
         this.add_count = 1;
 
         // 客户端最大的缓存能力 字节流。 
         this.client_max_available_audio = 1024 * 20;
+        // this.client_max_available_audio = 1024 * 10; // test...
     }
 
     /**

@@ -36,9 +36,35 @@
 
 </div>
 
-<a href="./readme_english.md">English</a>
- 
- 
+
+<br/>
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/TFT屏幕" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/feng_main.gif" height="300">
+</p>
+
+<p align="center">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/espai带屏幕版本" height="300">
+  <img src="https://esp-ai2.oss-cn-beijing.aliyuncs.com/icon/官方固件/大白"  height="300">
+</p>
+
+
+
+
+
+
+
+<br/>
+
+# 其他语言
+<h3>
+<a href="./readme_english.md">👉English</a> 
+</h3>
+<h3> 
+<a href="./readme_ja.md">👉Japanese</a>
+</h3>
+
+
 > 为你的开发板提供全套的AI对话方案，包括但不限于 `ESP32` 系列开发板的 `IAT(ASR)+LLM+TTS` 集成方案。依赖式注入到项目，不影响现有项目。
 
 对于开发机器人的对话功能，您仅需准备好 `IAT(ASR)`、`LLM`、`TTS` 服务，其他的事情交给 `ESP-AI`。
@@ -76,12 +102,13 @@
 - ✔️ 客户端配网页面提供
 - ✔️ 轻松应付大并发场景(需配合Nginx做负载均衡) 
 - ✔️ 开箱即用
+- ✔️ 支持 `esp32s3`/`esp32c3`
+- ✔️ 提供 `OPEN API` 接入
 
 # 🧐 下一步 
 
 - [ ] 🤔 内置离线唤醒精准度提升(目前建议使用天问asrpro)  
-- [ ] 🤔 唤醒词在线生成 
-- [ ] 🤔 其他语言编写插件的方法（避免只能使用nodejs进行开发插件） 
+- [ ] 🤔 唤醒词在线生成  
 
 # 📦 安装
 
@@ -99,14 +126,20 @@ docker run -itd -p 8088:8088 -v /esp-ai-server/index.js:/server/index.js --name 
 <img src="https://espai.fun/images/arduino.png" />
 <img src="https://espai.fun/images/nodejs.png" />
 
-# 🏪 交流群
-QQ 交流群: 854445223
+# 🏪 交流群 
 
+<p>QQ 交流群1: 854445223</p>
+<p>QQ 交流群2: 952051286</p>
  
-# 🎥 案例视频
-[bilibili](https://www.bilibili.com/video/BV1gE421w7Dw/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b)
+# 🎥 案例视频  
 
+【生活不易，Doro卖艺！】 https://www.bilibili.com/video/BV1uvbKzREYP/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
 
+【一键制作你的AI动图桌宠（在线免费制作）】 https://www.bilibili.com/video/BV1xut4zuEf8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【ESP-AI 玩偶方案板】 https://www.bilibili.com/video/BV1YTbDzQEk8/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
+
+【强噪音下对话和tft屏(ESP-AI新版预)】 https://www.bilibili.com/video/BV1KD7KzsEoc/?share_source=copy_web&vd_source=041c9610a29750f498de1bafe953086b
 
 ## 🤝 贡献 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
