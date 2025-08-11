@@ -156,6 +156,7 @@ void app_main_mp3(void)
     ESP_LOGI(TAG, "[4.1] Create i2s stream to write data to codec chip");
     i2s_stream_cfg_t i2s_cfg = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg.type = AUDIO_STREAM_WRITER;
+    
     i2s_stream_writer = i2s_stream_init(&i2s_cfg);
     i2s_stream_set_clk(i2s_stream_writer, 48000, 16, 2);
 
