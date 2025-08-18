@@ -1,1 +1,2 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
+client/libraries/libraries.zip filter=lfs diff=lfs merge=lfs -text
