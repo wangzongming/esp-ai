@@ -17,7 +17,7 @@ void setup()
   // [可 填] 服务配置： { 服务协议, 服务IP， 服务端口, "[可选] 请求参数，用免费服务时，在 dev.espai.fun 中复制 key 即可" }
   ESP_AI_server_config server_config = {};
   // [必  填] 唤醒方案： { 方案, 语音唤醒用的阈值 , 引脚唤醒方案(本方案忽略), 发送的字符串(本方案忽略) }
-  ESP_AI_wake_up_config wake_up_config = {"edge_impulse",  0.95}; 
+  ESP_AI_wake_up_config wake_up_config = {"pin_high", 1, 10};
   // 启动
   esp_ai.begin({debug, wifi_config, server_config, wake_up_config});
 }

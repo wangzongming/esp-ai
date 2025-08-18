@@ -43,13 +43,17 @@ const WebSocket = require('ws')
  * @param {Function}    serverTimeOutCb     当 IAT 服务连接成功了，但是长时间不响应时
  * @param {Function}    iatEndQueueCb       iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.iat_info("iat 专属信息")
- * 
+ * @param {(pluginsName: String)=> ({ sample_rate?: Number; channels?: Number; format?: String; language?: String })}  iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
  *  
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb, getClientAudioConfig = ()=> ({}) }) {
+    
+    let sendTimer = null;
     try {
         const { api_key, vad_first = '', vad_course = '', ...other_config } = iat_config;
         if (!api_key) return log.error(`请配给 IAT 配置 api_key 参数。`)
+
+        const { sample_rate = 16000, channels = 1, format = "pcm", language = "" } = getClientAudioConfig("esp-ai-asr");
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
@@ -58,11 +62,10 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
 
         // 全部音频 
         const audioBuffers = [];
-        let sendTimer = null;
-
-        connectServerBeforeCb();  
-        const iat_ws = new WebSocket(`wss://api.espai2.fun/ai_api/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}`); 
  
+        connectServerBeforeCb();
+        const iat_ws = new WebSocket(`wss://api.espai.fun/ai_api/asr?api_key=${api_key}&vad_first=${vad_first}&vad_course=${vad_course}&sample_rate=${sample_rate}&channels=${channels}&format=${format}&language=${language}`);
+
         logWSServer({
             close: () => {
                 shouldClose = true;
@@ -72,8 +75,10 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
             end: () => {
                 devLog && log.iat_info('框架调用 IAT 关闭:' + session_id);
                 clearInterval(sendTimer);
-                audioBuffers.length && iat_ws.send(Buffer.concat(audioBuffers)) 
-                setTimeout(() => iat_ws.send("end"), 200) 
+                audioBuffers.length && iat_ws.send(Buffer.concat(audioBuffers))
+                setTimeout(() => { 
+                    iat_ws.OPEN && iat_ws.send("end")
+                }, 200)
                 // ws 中还需要接受信息，所以不能改状态
                 // shouldClose = true;
             }
@@ -83,7 +88,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
         iat_ws.on('open', (event) => {
             if (shouldClose) return;
             iat_server_connected = true;
-            connectServerCb(true);
+            connectServerCb(true); 
 
             clearInterval(sendTimer);
             sendTimer = setInterval(() => {
@@ -114,7 +119,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
                     devLog && log.iat_info(data.text)
                     break;
                 case 'final':
-                    if (shouldClose) return;  
+                    if (shouldClose) return;
                     realStr += data.text;
                     devLog && log.iat_info(`IAT 已完成：${realStr}`)
                     cb({ text: realStr, device_id });
@@ -153,12 +158,13 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, onIATText, cb,
 
         function send_pcm(data) {
             if (shouldClose) return;
-            if (!iat_server_connected) return;  
+            if (!iat_server_connected) return; 
             audioBuffers.push(data);
         }
 
         logSendAudio(send_pcm)
     } catch (err) {
+        clearInterval(sendTimer);
         connectServerCb(false);
         console.log(err);
         log.error("ESP-AI-ASR  插件错误：", err)

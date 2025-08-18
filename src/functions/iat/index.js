@@ -30,6 +30,10 @@ const log = require("../../utils/log");
  */
 
 const { clear_sid } = require("../device_fns");
+const VAD = require("node-vad");
+const ffmpeg = require('fluent-ffmpeg');
+const { PassThrough } = require('stream');
+
 async function cb({ device_id, text }) {
     try {
         const { onIATcb, onSleep } = G_config;
@@ -78,13 +82,26 @@ async function cb({ device_id, text }) {
 module.exports = async (device_id, connected_cb) => {
     try {
         const TTS_FN = require(`../tts`);
-        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course, api_key: g_api_key, ai_server } = G_config;
-        const { ws: ws_client, api_key: user_api_key, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config }, llm_historys = [] } = G_devices.get(device_id)
+        const { devLog, plugins = [], onIAT, onSleep, vad_first, vad_course, vad_course_webrtc, api_key: g_api_key, ai_server } = G_config;
+        const { ws: ws_client, api_key: user_api_key, session_id, error_catch, user_config: { iat_server, llm_server, tts_server, iat_config }, client_params = {} } = G_devices.get(device_id)
+
+        const mic_format = client_params?.mic_format || "pcm";
+        const need_vad = mic_format === "pcm";
 
         const api_key = user_api_key || g_api_key;
         let prev_asr_text = ""; // 上一次识别出来的文字  
+        let prev_asr_time = 0;
         let vad_ended = false;     // vad 结束
         let asr_timeouter = null;     // vad 结束 
+        let done_timer = null;
+
+        let prev_speech_time = null;
+
+        const vad = need_vad && VAD.createStream({
+            mode: VAD.Mode.VERY_AGGRESSIVE,
+            audioFrequency: 16000,
+            debounceTime: 200
+        })
 
         devLog && log.info('');
         devLog && log.iat_info('-> 开始请求语音识别');
@@ -117,7 +134,7 @@ module.exports = async (device_id, connected_cb) => {
                 clearTimeout(asr_timeouter);
                 asr_timeouter = setTimeout(() => {
                     if (!G_devices.get(device_id)) return;
-                    const { iat_ws } = G_devices.get(device_id)
+                    const { iat_ws } = G_devices.get(device_id);
                     if (!iat_ws) return;
                     clear_sid(device_id);
                     iat_ws.end && iat_ws.end();
@@ -170,11 +187,25 @@ module.exports = async (device_id, connected_cb) => {
             })
         }
 
+
+        const over_do = () => {
+            if (!G_devices.get(device_id)) return;
+            const { iat_ws } = G_devices.get(device_id)
+            if (!iat_ws) return;
+            iat_ws.end && iat_ws.end();
+            vad_ended = true;
+        }
+
+
         const logSendAudio = (send_pcm) => {
             if (!G_devices.get(device_id)) return;
+
             G_devices.set(device_id, {
                 ...G_devices.get(device_id),
-                send_pcm
+                send_pcm: (pcm_buffer) => {
+                    need_vad && vad.write(pcm_buffer);
+                    send_pcm(pcm_buffer);
+                }
             })
         }
 
@@ -226,30 +257,42 @@ module.exports = async (device_id, connected_cb) => {
             })
         }
 
+        if (need_vad) {
+            vad.on("data", (e) => {
+                const is_speech = e.speech.state;
+                if (is_speech) {
+                    if (prev_asr_time && ((+new Date() - prev_asr_time) > vad_course)) {
+                        over_do();
+                    } else {
+                        prev_speech_time = +new Date();
+                        clearTimeout(done_timer);
+                    }
+                } else {
+                    if (prev_asr_text !== "") {
+                        if (vad_ended) return;
+                        if ((+new Date() - prev_speech_time) > vad_course_webrtc) {
+                            over_do();
+                        }
+                    }
+                }
+            })
+        }
+
         /**
          * 语音识别的回调，只要客户端发送音频数据到了服务端，服务端转送到了 ASR 后就一定会触发本函数
         */
-        let done_timer = null;  
         const onIATText = (text) => {
-            if (vad_ended) return; 
+            if (vad_ended) return;
             if (text !== prev_asr_text) {
-                clearTimeout(asr_timeouter); 
-                prev_asr_text = text; 
-                clearTimeout(done_timer); 
-                done_timer = setTimeout(() => {  
-                    const over_do = () => {
-                        if (!G_devices.get(device_id)) return;
-                        const { iat_ws } = G_devices.get(device_id)
-                        if (!iat_ws) return;
-                        iat_ws.end && iat_ws.end();
-                        vad_ended = true;
-                    }
-                    over_do(); 
+                clearTimeout(asr_timeouter);
+                prev_asr_text = text;
+                prev_asr_time = Date.now();
+                clearTimeout(done_timer);
+                done_timer = setTimeout(() => {
+                    over_do();
                 }, vad_course);
             }
-
         }
-
 
 
         return IAT_FN({
@@ -267,11 +310,15 @@ module.exports = async (device_id, connected_cb) => {
             logSendAudio,
             serverTimeOutCb,
             iatEndQueueCb,
-            onIATText
+            onIATText,
+            getClientAudioConfig: () => {
+                const { client_params = {} } = G_devices.get(device_id);
+                const { mic_sample_rate, mic_format, language, mic_channels } = client_params;
+                return { sample_rate: mic_sample_rate, format: mic_format, language, channels: mic_channels }
+            }
         })
     } catch (err) {
         console.log("IAT 错误：", err);
         log.error(`IAT 错误： ${err}`)
     }
 };
- 

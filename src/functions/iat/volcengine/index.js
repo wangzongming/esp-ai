@@ -49,16 +49,26 @@ const JSON_TYPE = 0x01;
 
 
 class volcengineAsrClient {
-    constructor({ url, appid, token, cluster, uid }) {
+    constructor({ url, appid, token, cluster, uid, getClientAudioConfig }) {
+        const { sample_rate = 16000, channels = 1, format = "pcm", language = "" } = getClientAudioConfig("volcengine");
         this.appid = appid;
         this.token = token;
         this.cluster = cluster;
         // 固定的工作流
         this.workflow = "audio_in,resample,partition,vad,fe,decode";
         // 默认音频格式与编解码方式
+        this.channel = channels;
+        this.rate = sample_rate;
+        
         // this.format = "mp3";
-        this.format = "pcm";
-        this.codec = "raw";  
+        this.format =  format;
+        this.codec =  "";
+        if(format === "pcm"){ 
+            this.codec = "raw";  
+        }
+        if(format === "ogg" || format === "opus"){ 
+            this.codec = "opus";  
+        }
 
         this.url = url || "wss://openspeech.bytedance.com/api/v2/asr";
         this.onOpen = null;
@@ -90,7 +100,7 @@ class volcengineAsrClient {
             this.ws.send(fullClientMsg);
 
             clearInterval(this.sendTimer);
-            this.sendTimer = setInterval(() => {
+            this.sendTimer = setInterval(() => { 
                 if (this.audioBuffers.length) {
                     const sends = this.audioBuffers.splice(0, this.audioBuffers.length);
                     this.sendChunk(Buffer.concat(sends))
@@ -126,7 +136,8 @@ class volcengineAsrClient {
             app: {
                 appid: this.appid,
                 cluster: this.cluster,
-                token: this.token
+                token: this.token,
+                rate: this.rate
             },
             user: {
                 uid: this.uid
@@ -141,7 +152,8 @@ class volcengineAsrClient {
             },
             audio: {
                 format: this.format,
-                codec: this.codec
+                codec: this.codec,
+                channel: this.channel
             }
         };
         const reqStr = JSON.stringify(req);
@@ -256,10 +268,11 @@ class volcengineAsrClient {
  * @param {Function}    serverTimeOutCb     当 IAT 服务连接成功了，但是长时间不响应时
  * @param {Function}    iatEndQueueCb       iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.iat_info("iat 专属信息")
+ * @param {(pluginsName: String)=> ({ sample_rate?: Number; channels?: Number; format?: String; language?: String })}  iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
  *
  *
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, cb, logWSServer, logSendAudio, onIATText, connectServerCb, connectServerBeforeCb, iatEndQueueCb }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, cb, logWSServer, logSendAudio, onIATText, connectServerCb, connectServerBeforeCb, iatEndQueueCb, getClientAudioConfig = ()=> ({}) }) {
     try {
         const { url = "", appid, accessToken, vad_course = 5000, clusterId = "volcengine_streaming_common" } = iat_config;
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
@@ -278,7 +291,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, cb, logWSServe
 
         connectServerBeforeCb();
 
-        const client = new volcengineAsrClient({ url, appid, token: accessToken, cluster: clusterId, uid: device_id });
+        const client = new volcengineAsrClient({ url, appid, token: accessToken, cluster: clusterId, uid: device_id, getClientAudioConfig });
         client.onOpen = () => {
             if (shouldClose) return;
             iat_server_connected = true;

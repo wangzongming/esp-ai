@@ -17,8 +17,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -29,7 +29,7 @@ const log = require("../utils/log");
 /***
  * 终止会话
  * 一般配合 .newSession 使用，用于重启一个会话，单独使用时就为停止会话
- * 
+ *
  * @param {String} device_id 设备ID
  * @param {String} at 在什么情况下的打断，一句描述语句
  * @param {Boolean} stop_all 是否停止所有（包括 .tts 方法播放的音频）
@@ -99,7 +99,7 @@ function stop(device_id, at, stop_all) {
                 resolve(true);
             }
 
-            // 清空正在播放的 tts 任务 
+            // 清空正在播放的 tts 任务
             for (const [key, ttsWS] of tts_list) {
                 try {
                     ttsWS && ttsWS.close && ttsWS.close();
@@ -111,7 +111,7 @@ function stop(device_id, at, stop_all) {
             }
 
             // 旧版兼容，新版不走这里，而是走 ACK，旧版没有 ACK 帧，也不会走 ACK 回调，所以只需要在这里做兼容即可
-            Number(client_version_arr[0]) === 2 && Number(client_version_arr[0]) < 86 && resolve(true);
+            (Number(client_version_arr[0]) <= 2 && Number(client_version_arr[1]) < 86) && resolve(true);
         } else {
             resolve(true);
         }

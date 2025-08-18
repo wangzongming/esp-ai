@@ -22,5 +22,18 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#pragma once
-#include "esp-ai.h"
+#pragma once 
+#include <Arduino.h> 
+#include "../configs/common.h" 
+
+struct VolListenContext
+{   
+    int *pin; 
+    int *max_val;
+    std::function<void(float volume)> onChange;
+};
+
+void vol_listen_task_static(void *arg);
+
+extern StaticTask_t volListenTaskBuffer;
+extern StackType_t volListenTaskStack[VOL_LISTEN_TASK_SIZE];

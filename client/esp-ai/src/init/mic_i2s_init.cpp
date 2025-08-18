@@ -52,6 +52,6 @@ int ESP_AI::mic_i2s_init(uint32_t sampling_rate)
     vcfg.copyFrom(i2sConfig);
     vcfg.allow_boost = true;
     esp_ai_mic_volume.begin(vcfg);
-    if (!unusual) esp_ai_mic_volume.setVolume(10);
+    if (!unusual) esp_ai_mic_volume.setVolume(5);
     return 0;
 }

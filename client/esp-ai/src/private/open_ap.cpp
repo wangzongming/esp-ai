@@ -29,9 +29,14 @@
 #include "open_ap.h"
 
 void ESP_AI::open_ap()
-{ 
+{
+#if !defined(DISABLE_AP_NET)
+
+    // 防止内存不足，先进行播报
+    play_builtin_audio(qing_pei_wang, qing_pei_wang_len); 
+    awaitPlayerDone(); 
+
     String ap_name = get_ap_name(wifi_config.ap_name);
- 
     WiFi.mode(WIFI_AP);
     WiFi.softAP(ap_name.c_str());
     IPAddress ip = WiFi.softAPIP();
@@ -40,17 +45,15 @@ void ESP_AI::open_ap()
     DEBUG_PRINTLN(debug, "[Info] 配网地址：" + httpUrl);
 
     if (esp_ai_dns_server.start(53, "*", ip))
-    { 
+    {
         DEBUG_PRINTLN(debug, "[Info] DNS 服务器启动成功");
     }
     else
     {
-        DEBUG_PRINTLN(debug, "[Error] DNS 服务器启动失败"); 
-    }
-
-    play_builtin_audio(qing_pei_wang, qing_pei_wang_len);
-
+        DEBUG_PRINTLN(debug, "[Error] DNS 服务器启动失败");
+    }  
     xTaskCreate(ESP_AI::scan_wifi_wrapper, "scan_wifi", 1024 * 8, this, 1, NULL);
+ 
 
     // 启动配网服务
     web_server_init();
@@ -66,4 +69,7 @@ void ESP_AI::open_ap()
         esp_ai_net_status = "0_ap";
         onNetStatusCb("0_ap");
     }
+#else
+    Serial.println(F("[Error] AP 配网功能已禁用，请检查配置文件。"));
+#endif
 }

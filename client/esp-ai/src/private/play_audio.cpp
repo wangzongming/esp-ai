@@ -26,47 +26,69 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#include "play_audio.h"
-void ESP_AI::play_audio_wrapper(void *arg)
-{
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->play_audio();
-}
 
-void ESP_AI::play_audio()
+#include "play_audio.h"
+
+StaticTask_t playAudioTaskBuffer;
+StackType_t playAudioTaskStack[PLAY_AUDIO_TASK_SIZE];
+
+void play_audio_task_static(void *arg)
 {
-    // 发送正在可用音频流的频率
-    int frequency = 1000;
+    PlayAudioContext *ctx = static_cast<PlayAudioContext *>(arg);
+    if (!ctx)
+    {
+        Serial.println(F("[Error] PlayAudioContext ctx is null!"));
+        vTaskDelete(NULL);
+        return;
+    }
+
+    int frequency = 1000; // 上报间隔
     long prev_time = millis();
-    // 是否已经发送过可用为 0 的数据
-    bool send0_ed = false;
+    long prev_up_time = 0;
+    bool send0_done = true;
+
+    char msg_buf[256]; // 用于构造 JSON 消息，避免频繁堆分配
 
     while (true)
     {
-        int available = esp_ai_spk_queue.available();
-        if (available > 0)
-        {
-            if (send0_ed)
-            {
-                send0_ed = false;
-            }
-            esp_ai_copier.copy();
-        }
-        if (esp_ai_ws_connected && ((millis() - prev_time) > frequency) && !send0_ed)
-        {
-            prev_time = millis();
-            if (available == 0)
-            {
-                send0_ed = true;
-            }
-            if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
-            {
-                esp_ai_webSocket.sendTXT("{ \"type\":\"client_available_audio\", \"session_id\": \"" + esp_ai_session_id + "\", \"value\": \"" + available + "\"}");
+        int available = ctx->available();
 
-                xSemaphoreGive(esp_ai_ws_mutex);
+        // 有音频数据并且正在播放
+        if (available > 0 && *(ctx->spk_ing)) 
+        {
+            if (*(ctx->esp_ai_ws_connected) && send0_done)
+            {
+                send0_done = false;
+            } 
+            ctx->copy();
+        }
+
+        // 上报可用缓冲区信息
+        if (*(ctx->esp_ai_ws_connected) &&
+            (((millis() - prev_time) >= frequency) || (available < (AUDIO_BUFFER_SIZE / 2))) &&
+            !send0_done && *(ctx->spk_ing))
+        {
+            if ((millis() - prev_up_time) > 500)
+            {
+                prev_time = millis();
+                prev_up_time = millis();
+
+                if (available == 0)
+                {
+                    send0_done = true;
+                }
+ 
+                snprintf(msg_buf, sizeof(msg_buf),
+                         "{ \"type\":\"client_available_audio\", \"session_id\": \"%s\", \"value\": \"%d\" }",
+                         ctx->esp_ai_session_id->c_str(),
+                         available);
+
+                ctx->sendTXT(msg_buf);
             }
         }
-        vTaskDelay(10 / portTICK_RATE_MS);
+
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
+
     vTaskDelete(NULL);
 }

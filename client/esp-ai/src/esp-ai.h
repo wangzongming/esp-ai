@@ -27,21 +27,6 @@
  * @websit https://espai.fun
  */
 
-/***
- * RAM
- * |   task                  |     occupy     |
- * |-------------------------|----------------|
- * |   long press            |     -kb        |
- * |   capture samples       |     -kb       |
- * |   wakeup inference      |     -kb       |
- * |   i2s_listener          |     -kb       |
- * |   volume                |     -kb        |
- * |   ws2812                |     -kb        |
- * |   reporting sensor data |     -kb        |
- *
- *
- */
-
 #pragma once
 #include "globals.h"
 
@@ -51,11 +36,49 @@ public:
     ESP_AI();
     void begin(ESP_AI_CONFIG config);
     void loop();
-    bool wifiIsConnected();
-    std::string localIP();
-    void wakeUp(String scene = "wakeup");
-    // 设置音量 0-1
-    void setVolume(float volume);
+    /**
+     * 返回是否连接WiFi
+     */
+    bool wifiIsConnected() { return WiFi.status() == WL_CONNECTED; };
+    /**
+     * 返回本地IP
+     * 调用案例： Serial.println(ESP_AI.localIP().c_str());
+     */
+    std::string localIP() { return std::string(WiFi.localIP().toString().c_str()); };
+    void wakeUp(const String &scene = "wakeup");
+
+    /**
+     *  设置音量 0.0-1.0
+     */
+    void setVolume(float volume)
+    {
+        volume_config.volume = volume;
+        // 如果你的 codec 本身声音偏大，可以在这里缩放一次，但值保持在 0~1.0 范围
+#if defined(CODEC_TYPE_ES8311_NS4150) || defined(CODEC_TYPE_ES8311_ES7210)
+        float adjusted = volume_config.volume * 0.1f; // 比如最多60%
+        if(adjusted==0)
+        {
+            adjusted = 0.01f; // 最小音量
+        }
+        Serial.printf("setVolume: %f, adjusted: %f\n", volume_config.volume, adjusted);
+        esp_ai_volume.setVolume(adjusted);
+#else
+        if(volume_config.volume == 0){ 
+        esp_ai_volume.setVolume(0.01);
+        }else{ 
+        esp_ai_volume.setVolume(volume_config.volume);
+        }
+#endif 
+        if (onVolumeCb != nullptr)
+        {
+            onVolumeCb(volume_config.volume);
+        }
+    };
+    /**
+     * 监听音量变化
+     * 设置音量 0.0-1.0
+     **/
+    void onVolume(void (*func)(float volume)) { onVolumeCb = func; }
 
     /**
      * 手动设置 wifi账号/wifi密码/api_key/本地缓存数据，设置后会重新连接wifi
@@ -77,7 +100,7 @@ public:
      * @param {String} command_id 命令id
      * @param {String} data       其他数据
      **/
-    void onEvent(void (*func)(String command_id, String data));
+    void onEvent(void (*func)(const String &command_id, const String &data)) { onEventCb = func; }
 
     /**
      * 统一错误回调
@@ -86,19 +109,19 @@ public:
      *  002    |  服务端认证错误
      *  003    |  获取服务信息失败，说明 api_key 有问题
      */
-    void onError(void (*func)(String code, String at_pos, String message));
+    void onError(void (*func)(const String &code, const String &at_pos, const String &message)) { onErrorCb = func; };
 
     /**
      * 设备连接上wifi后的回调
      * device_ip 是局域网ip
      */
-    void onConnectedWifi(void (*func)(String device_ip));
+    void onConnectedWifi(void (*func)(const String &device_ip)) { onConnectedWifiCb = func; };
 
     /**
      * 板子连接不上时会启动热点并且调用本回调，收到这个回调说明该提示用户打开配网页面了
      * @url 配网地址, 有屏幕的情况下建议将 url 生成为二维码显示
      */
-    void onAPInfo(void (*func)(String url, String ip, String ap_name));
+    void onAPInfo(void (*func)(const String &url, const String &ip, const String &ap_name)) { onAPInfoCb = func; };
 
     /**
      * 设备网络状态、与服务连接状态改变的回调
@@ -112,7 +135,7 @@ public:
      * "2"      |  未连接服务
      * "3"      |  已连接服务器
      */
-    void onNetStatus(void (*func)(String status));
+    void onNetStatus(void (*func)(const String &status)) { onNetStatusCb = func; };
 
     /**
      * 设备会话状态回调
@@ -128,12 +151,12 @@ public:
      * "llm_end"    |  llm 推理完毕 (推理完毕并不代表 tts 完毕)
      *
      */
-    void onSessionStatus(void (*func)(String status));
+    inline void onSessionStatus(void (*func)(const String &status)) { onSessionStatusCb = func; }
 
     /**
      * 设备准备就绪回调
      */
-    void onReady(void (*func)());
+    inline void onReady(void (*func)()) { onReadyCb = func; }
 
     /**
      * 用户配网成功后会执行一次，开发者可以在本函数中发出设备绑定的请求
@@ -148,39 +171,56 @@ public:
      * "{\"success\":false,\"message\":\"设备绑定失败，重启设备试试呢。\"}"
      * "{\"success\":true,\"message\":\"设备激活成功，即将重启设备。\"}"
      */
-    void onBindDevice(String (*func)(JSONVar data));
+    void onBindDevice(String (*func)(JSONVar data)) { onBindDeviceCb = func; };
 
     /**
      * 获取存储在芯片中的数据
      * String ext1 = getLocalData("ext1");
      * 可读取的数据项 device_id |  wifi_name | wifi_pwd | api_key | 其他自定义参数
      */
-    String getLocalData(String field_name);
+    String getLocalData(const String &field_name) { return get_local_data(field_name); };
 
     /**
      * 设置存储在芯片中的数据
      * set_local_data("ext1", "自定义数据xxx");
      * 可设置的数据项 wifi_name | wifi_pwd | api_key | 其他自定义参数
      */
-    void setLocalData(String field_name, String new_value);
+    void setLocalData(String field_name, String new_value) { set_local_data(field_name, new_value); };
 
     /**
      * 获取存储在芯片中的全部数据
      * JSONVar data = getLocalAllData();
      * Serial.println(data["wifi_name"]);
      */
-    JSONVar getLocalAllData();
+    JSONVar getLocalAllData() { return get_local_all_data(); };
 
     /**
      * 手动控制设备输出语音
      */
-    void tts(String text);
+    void tts(const String &text)
+    {
+        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+        {
+            JSONVar data;
+            data["type"] = "tts";
+            data["text"] = text;
+            String send_data = JSON.stringify(data);
+            esp_ai_webSocket.sendTXT(send_data);
+            xSemaphoreGive(esp_ai_ws_mutex);
+        }
+    };
 
     /**
      * 停止会话, 表现为打断 TTS 等
      * 硬件端要停止会话时，必须用这个方法进行停止，而不是由服务进行终止
      */
-    void stopSession();
+    void stopSession()
+    {
+        DEBUG_PRINTLN(debug, F("[Info] -> 调用 SDK 停止会话"));
+        esp_ai_start_ed = false;
+        esp_ai_session_id = "";
+        mp3_player_stop();
+    };
 
     /**
      * 获取坐标定位
@@ -192,18 +232,18 @@ public:
      * @province    省份
      * @city        城市
      */
-    void onPosition(void (*func)(String ip, String nation, String province, String city, String latitude, String longitude));
+    void onPosition(void (*func)(const String &ip, const String &nation, const String &province, const String &city, const String &latitude, const String &longitude)) { onPositionCb = func; };
 
     /**
      * 按五次按钮回调，内部会自动执行清除配网信息的操作，
      * 如果开发者还需要执行其他操作，请在函数回调中执行
      */
-    void onRepeatedlyClick(void (*func)());
+    void onRepeatedlyClick(void (*func)()) { onRepeatedlyClickCb = func; };
 
     /**
      * 清除设备所有数据，包括开发者存储的数据和配网信息
      */
-    void clearData();
+    void clearData() { clear_local_all_data(); };
 
     /**
      * 让设备重新进行一次音频缓存
@@ -214,12 +254,12 @@ public:
      * 返回 false 则在 begin 时就停止程序执行，
      * 如检查到电池没电了，应该提示没电了，而不应该让程序继续执行下去
      */
-    void onBegin(bool (*func)());
+    inline void onBegin(bool (*func)()) { onBeginCb = func; }
 
     /**
      * 情绪监听回调
      */
-    void onEmotion(void (*func)(String emotion));
+    inline void onEmotion(void (*func)(const String &emotion)) { onEmotionCb = func; }
 
     /**
      * 挂起所有 xTaskCreate 任务
@@ -239,18 +279,18 @@ public:
     /**
      * 获取设备是否正在播放音频
      */
-    bool isSpeaking();
+    bool isSpeaking() { return mp3_player_is_playing(); };
 
     /**
      * 等待设备播放完毕
      */
-    void awaitPlayerDone();
+    void awaitPlayerDone() { wait_mp3_player_done(); };
 
     /**
      * 播放 MP3 音频流
      * 16k采样率，16位深度，单声道音频
      */
-    void playBuiltinAudio(const unsigned char *data, size_t len);
+    void playBuiltinAudio(const unsigned char *data, size_t len) { play_builtin_audio(data, len); };
 
 private:
     ESP_AI_i2s_config_mic i2s_config_mic;
@@ -265,56 +305,32 @@ private:
 
     long send_start_time = 0;
     bool ready_ed = false;
-    int asr_break_num = 0; 
+    int asr_break_num = 0;
 
     void (*onReadyCb)() = nullptr;
-    void (*onEventCb)(String command_id, String data) = nullptr;
-    void (*onErrorCb)(String code, String at_pos, String message) = nullptr;
-    void (*onAPInfoCb)(String url, String ip, String ap_name) = nullptr;
-    void (*onNetStatusCb)(String status) = nullptr;
-    void (*onConnectedWifiCb)(String device_ip) = nullptr;
-    void (*onSessionStatusCb)(String status) = nullptr;
-    void (*onPositionCb)(String ip, String nation, String province, String city, String latitude, String longitude) = nullptr;
+    void (*onEventCb)(const String &command_id, const String &data) = nullptr;
+    void (*onVolumeCb)(float volume) = nullptr;
+    void (*onErrorCb)(const String &code, const String &at_pos, const String &message) = nullptr;
+    void (*onAPInfoCb)(const String &url, const String &ip, const String &ap_name) = nullptr;
+    void (*onNetStatusCb)(const String &status) = nullptr;
+    void (*onConnectedWifiCb)(const String &device_ip) = nullptr;
+    void (*onSessionStatusCb)(const String &status) = nullptr;
+    void (*onPositionCb)(const String &ip, const String &nation, const String &province, const String &city, const String &latitude, const String &longitude) = nullptr;
     void (*onRepeatedlyClickCb)() = nullptr;
     bool (*onBeginCb)() = nullptr;
-    void (*onEmotionCb)(String emotion) = nullptr;
+    void (*onEmotionCb)(const String &emotion) = nullptr;
     String (*onBindDeviceCb)(JSONVar data) = nullptr;
 
-    void speaker_i2s_setup();
-    void adjustVolume(int16_t *buffer, size_t length, float volume);
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
     int mic_i2s_init(uint32_t sampling_rate);
     void open_ap();
 
     void open_ble_server();
-    static void on_ble_device_connected_wrapper(void *arg);
-    void on_ble_device_connected();
-    static void on_ble_device_disconnected_wrapper(void *arg);
-    void on_ble_device_disconnected();
-    static void characteristic_callbacks_wrapper(void *arg);
-    void characteristic_callbacks();
     void ble_connect_wifi();
 
     void connect_ws();
 
-    static void volume_listener_wrapper(void *arg);
-    void volume_listener();
-
-    static void lights_wrapper(void *arg);
-    void lights();
-
-    bool microphone_inference_start(uint32_t n_samples);
-    void microphone_inference_end(void);
-
-    static void capture_samples_wrapper(void *arg);
-    void capture_samples();
-
-    void wakeup_init();
-    static void wakeup_inference_wrapper(void *arg);
-    void wakeup_inference();
-
-    static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr);
-    void status_change(String status);
+    void status_change(const String &status) { esp_ai_status = status; };
 
     void web_server_setCrossOrigin();
     void web_server_init();
@@ -328,34 +344,11 @@ private:
     void clear_config();
     bool get_server_config();
 
-    static void get_position_wrapper(void *arg);
-    void get_position();
-
     static void scan_wifi_wrapper(void *arg);
     void scan_wifi();
-
-    static void on_repeatedly_click_wrapper(void *arg);
-    void on_repeatedly_click();
-
-    static void on_wakeup_wrapper(void *arg);
-    void on_wakeup();
-
-    static void play_audio_wrapper(void *arg);
-    void play_audio();
-
-    static void send_audio_wrapper(void *arg);
-    void send_audio();
-
-    void audio_inference_callback(uint32_t n_bytes);
-    int i2s_deinit(void);
 
     static void reporting_sensor_data_wrapper(void *arg);
     void reporting_sensor_data();
 
-    TaskHandle_t wakeup_task_handle = NULL;
     TaskHandle_t sensor_task_handle = NULL;
-    TaskHandle_t on_wakeup_task_handle = NULL;
-    TaskHandle_t get_position_task_handle = NULL;
-    TaskHandle_t send_audio_task_handle = NULL;
-    TaskHandle_t volume_listener_task_handle = NULL;
 };

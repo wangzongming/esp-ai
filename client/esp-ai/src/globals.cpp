@@ -30,9 +30,7 @@
 #include "globals.h"
 #include <vector>
 
-String ESP_AI_VERSION = "2.86.49";
-
-String esp_ai_start_ed = "0";         // AST 服务推理中
+bool esp_ai_start_ed = false;         // AST 服务推理中
 bool esp_ai_ws_connected = false;     // ws 服务已经连接成功
 String esp_ai_session_id = "";        // 会话ID，用于判断是否应该丢弃会话
 String esp_ai_session_status = "";    // 会话状态
@@ -42,42 +40,15 @@ bool esp_ai_is_listen_model = true;   // 是否为按住对话模式, 这个模�
 bool esp_ai_sleep = false;            // 是否为休眠状态，开发中...
 bool esp_ai_played_connected = false; // 是否已经播放过 服务连接成功 的提示语了
 bool asr_ing = false;                 // 硬件是否正在进行收音
-String esp_ai_prev_session_id = "";   // 上一轮会话ID
-
-/**
- * [特定的数据帧]
- * 0000 -> 嘟提示音数据
- * 0001 -> 服务连接成功提示语
- * 0010 -> 调用 .tts() 方法时播放的音频
- * 1000 -> 提示音缓存数据
- * 1001 -> 唤醒问候语缓存数据
- * 1002 -> 休息时回复缓存数据
- * xxxx -> 正常会话ID
- */
-String SID_TONE = "0000";
-String SID_CONNECTED_SERVER = "0001";
-String SID_TONE_CACHE = "1000";
-String SID_WAKEUP_REP_CACHE = "1001";
-String SID_SLEEP_REP_CACHE = "1002";
-String SID_TTS_FN = "0010";
-
-/**
- *[会话状态]
- * 00 -> TTS 片段
- * 01 -> TTS 片段（并且是分组最后一个片段）
- * 02 -> 整个回复的TTS最后一组数据，需要继续对话
- * 03 -> 整个回复的TTS最后一组数据，无需继续对话
- */
-String SID_SESSION = "00";
-String SID_TTS_CHUNK_END = "01";
-String SID_TTS_END_RESTART = "02";
-String SID_TTS_END = "03";
+int I2S_model = 3;                    // i2s 处于什么模式， 0 输入模式，1 输出模式, 3 闲置模式
 
 // 开始将音频发往服务
 bool esp_ai_start_send_audio = false;
 
-// 尝试连接多个 wifi
+#if !defined(LITTLE_ROM)
+// 连接多个 wifi
 WiFiMulti wifiMulti;
+#endif
 // 使用串口2进行串口通信
 HardwareSerial Esp_ai_serial(2);
 Preferences esi_ai_prefs;
@@ -92,117 +63,133 @@ SemaphoreHandle_t esp_ai_ws_mutex;
 
 bool spk_ing = false;
 SemaphoreHandle_t audio_mutex = xSemaphoreCreateMutex();
+
+MP3DecoderHelix esp_ai_dec_mp3;
+#if defined(CODEC_TYPE_ES8311_NS4150)
+DriverPins esp_ai_audio_pins;
+AudioBoard esp_ai_audio_board(AudioDriverES8311, esp_ai_audio_pins);
+AudioInfo esp_ai_audio_info(AUDIO_OUTPUT_SAMPLE_RATE, 1, 16);
+I2SCodecStream esp_ai_spk_i2s(esp_ai_audio_board);
+VolumeStream esp_ai_volume(esp_ai_spk_i2s);
+BufferRTOS<uint8_t> esp_ai_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_CHUNK_SIZE);
+QueueStream<uint8_t> esp_ai_spk_queue(esp_ai_audio_buffer);
+// EncodedAudioStream esp_ai_dec(&esp_ai_spk_i2s, &esp_ai_dec_mp3);
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, &esp_ai_dec_mp3);
+StreamCopy esp_ai_copier(esp_ai_dec, esp_ai_spk_queue);
+BufferPrint esp_ai_spk_buffer_print(esp_ai_audio_buffer);
+
+WebsocketStream ws_stream;
+I2SCodecStream esp_ai_i2s_input(esp_ai_audio_board);
+StreamCopy mic_to_ws_copier(ws_stream, esp_ai_i2s_input, AUDIO_COPY_CHUNK_SIZE);
+#elif defined(CODEC_TYPE_ES8311_ES7210)
+DriverPins esp_ai_audio_pins;
+AudioBoard esp_ai_audio_board(AudioDriverES8311, esp_ai_audio_pins);
+AudioInfo esp_ai_audio_info(AUDIO_OUTPUT_SAMPLE_RATE, 1, 16);
+I2SCodecStream esp_ai_spk_i2s(esp_ai_audio_board);
+VolumeStream esp_ai_volume(esp_ai_spk_i2s);
+BufferRTOS<uint8_t> esp_ai_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_CHUNK_SIZE);
+QueueStream<uint8_t> esp_ai_spk_queue(esp_ai_audio_buffer);
+// EncodedAudioStream esp_ai_dec(&esp_ai_spk_i2s, &esp_ai_dec_mp3);
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, &esp_ai_dec_mp3);
+StreamCopy esp_ai_copier(esp_ai_dec, esp_ai_spk_queue);
+BufferPrint esp_ai_spk_buffer_print(esp_ai_audio_buffer);
+
+WebsocketStream ws_stream;
+DriverPins esp_ai_mic_pins;
+AudioBoard esp_ai_mic_board(AudioDriverES7210, esp_ai_mic_pins);
+AudioInfo esp_ai_mic_info(AUDIO_INPUT_SAMPLE_RATE, 1, 16);
+I2SCodecStream esp_ai_i2s_input(esp_ai_mic_board);
+StreamCopy mic_to_ws_copier(ws_stream, esp_ai_i2s_input, AUDIO_COPY_CHUNK_SIZE);
+
+#else
 I2SStream esp_ai_spk_i2s;
 BufferRTOS<uint8_t> esp_ai_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_CHUNK_SIZE);
 QueueStream<uint8_t> esp_ai_spk_queue(esp_ai_audio_buffer);
 VolumeStream esp_ai_volume(esp_ai_spk_i2s);
-EncodedAudioStream esp_ai_dec(&esp_ai_volume, new MP3DecoderHelix());
+EncodedAudioStream esp_ai_dec(&esp_ai_volume, &esp_ai_dec_mp3);
 StreamCopy esp_ai_copier(esp_ai_dec, esp_ai_spk_queue);
 BufferPrint esp_ai_spk_buffer_print(esp_ai_audio_buffer);
 
 WebsocketStream ws_stream;
 I2SStream esp_ai_i2s_input;
 VolumeStream esp_ai_mic_volume(esp_ai_i2s_input);
-StreamCopy mic_to_ws_copier(ws_stream, esp_ai_mic_volume, 1024);
+StreamCopy mic_to_ws_copier(ws_stream, esp_ai_mic_volume, AUDIO_COPY_CHUNK_SIZE);
+#endif
 
+#if !defined(DISABLE_AP_NET)
 WebServer esp_ai_server(80);
 DNSServer esp_ai_dns_server;
-
+#endif
 #if defined(ARDUINO_XIAO_ESP32S3)
 // 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num }
 ESP_AI_i2s_config_mic default_i2s_config_mic = {I2S_PIN_NO_CHANGE, 42, 41};
 // 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
-ESP_AI_i2s_config_speaker default_i2s_config_speaker = {2, 3, 1, 16000};
+ESP_AI_i2s_config_speaker default_i2s_config_speaker = {2, 3, 1, AUDIO_INPUT_SAMPLE_RATE};
 // 重置按钮 { 输入引脚，电平： high | low}
 ESP_AI_reset_btn_config default_reset_btn_config = {9, "high"};
 // 灯光配置
-ESP_AI_lights_config default_lights_config = {18};
-#else
-// 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num, i2s_bits_per_sample, 声道选择 }
-ESP_AI_i2s_config_mic default_i2s_config_mic = {4, 5, 6, 16, I2S_CHANNEL_FMT_ONLY_LEFT};
-// 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
-ESP_AI_i2s_config_speaker default_i2s_config_speaker = {16, 17, 15, 16000};
-// 重置按钮 { 输入引脚，电平： high | low}
-ESP_AI_reset_btn_config default_reset_btn_config = {10, "high"};
-// 灯光配置
-ESP_AI_lights_config default_lights_config = {4};
-#endif
-
+ESP_AI_lights_config default_lights_config = {4, 1};
 // 音量配置 { 输入引脚，输入最大值，默认音量 }
 ESP_AI_volume_config default_volume_config = {7, 4096, 1, false};
-
 // 默认离线唤醒方案
-ESP_AI_wake_up_config default_wake_up_config = {"edge_impulse", 0.9};
-// { wifi 账号， wifi 密码, "热点名字", "配网页面HTML", "配网方式：AP | BLE" }
-ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", "", "AP"};
-// { ip， port, api_key }
-ESP_AI_server_config default_server_config = {"http", "node.espai.fun", 80, "", ""};
-
-inference_t inference;
-// Set this to true to see e.g. features generated from the raw signal
-bool debug_nn = false;
-bool esp_ai_wakeup_record_status = true;
-
-int mic_bits_per_sample = 16;
-int16_t *esp_ai_asr_sample_buffer = NULL;
-int16_t *mic_sample_buffer = NULL;
-
-// 音频缓存
-std::vector<uint8_t> esp_ai_cache_audio_du;
-std::vector<uint8_t> esp_ai_cache_audio_greetings;
-
-long last_silence_time = 0;
-long last_not_silence_time = 0;
-long last_silence_time_wakeup = 0;
-long last_not_silence_time_wekeup = 0;
-
-String wake_up_scheme = "edge_impulse";
-
-#if defined(ARDUINO_XIAO_ESP32S3)
-Adafruit_NeoPixel esp_ai_pixels(1, 4, NEO_GRB + NEO_KHZ800);
+ESP_AI_wake_up_config default_wake_up_config = {"pin_high", 1, 10};
+#elif defined(ARDUINO_ESP32C3_DEV)
+ESP_AI_i2s_config_mic default_i2s_config_mic = {};
+ESP_AI_i2s_config_speaker default_i2s_config_speaker = {};
+ESP_AI_reset_btn_config default_reset_btn_config = {BOOT_BUTTON_GPIO, "low"};
+ESP_AI_lights_config default_lights_config = {BUILTIN_LED_GPIO, 1};
+ESP_AI_volume_config default_volume_config = {};
+ESP_AI_wake_up_config default_wake_up_config = {"pin_low", 1, BOOT_BUTTON_GPIO};
 #else
-// 灯的数量, 灯带的连接引脚, 使用RGB模式控制ws2812类型灯带，灯带的频率为800KH
-Adafruit_NeoPixel esp_ai_pixels(1, 18, NEO_GRB + NEO_KHZ800);
+// 麦克风默认配置 { bck_io_num, ws_io_num, data_in_num, i2s_bits_per_sample, 声道选择 }
+ESP_AI_i2s_config_mic default_i2s_config_mic = {MIC_I2S_GPIO_BCLK, MIC_I2S_GPIO_WS, MIC_I2S_GPIO_DIN, I2S_BITS_PER_SAMPLE, I2S_CHANNEL_FMT_ONLY_LEFT};
+// 扬声器默认配置 { bck_io_num, ws_io_num, data_in_num, 采样率 }
+ESP_AI_i2s_config_speaker default_i2s_config_speaker = {SPK_I2S_GPIO_BCLK, SPK_I2S_GPIO_WS, SPK_I2S_GPIO_DIN, AUDIO_INPUT_SAMPLE_RATE};
+// 重置按钮 { 输入引脚，电平： high | low}
+ESP_AI_reset_btn_config default_reset_btn_config = {RESET_BTN_GPIO, "high"};
+// 灯光配置
+ESP_AI_lights_config default_lights_config = {LIGHTS_GPIO, 1};
+// 音量配置 { 输入引脚，输入最大值，默认音量 }
+ESP_AI_volume_config default_volume_config = {VOL_GPIO, 4096, 1, false};
+// 默认离线唤醒方案
+ESP_AI_wake_up_config default_wake_up_config = {DEFAULT_WAKEUP_SCHEME, 1, 10};
 #endif
 
-/**
- * 生成34位uiud
- */
-String generateUUID()
-{
-    String uuid = "";
+// { wifi 账号， wifi 密码, "热点名字", "配网页面HTML", "配网方式：AP | BLE" }
+#if defined(DISABLE_BLE_NET)
+ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", "", "AP"};
+#else
+ESP_AI_wifi_config default_wifi_config = {"", "", "ESP-AI", "", "BLE"};
+#endif
 
-    // 生成 UUID 的每部分
-    for (int i = 0; i < 8; i++)
-    {
-        uuid += String(random(0, 16), HEX);
-    }
-    uuid += "-";
-    for (int i = 0; i < 4; i++)
-    {
-        uuid += String(random(0, 16), HEX);
-    }
-    uuid += "-4"; // UUID 版本 4
-    uuid += String(random(0, 16), HEX);
-    uuid += "-";
-    uuid += String(random(8, 12), HEX); // UUID 的变种
-    for (int i = 0; i < 3; i++)
-    {
-        uuid += String(random(0, 16), HEX);
-    }
-    uuid += "-";
-    for (int i = 0; i < 12; i++)
-    {
-        uuid += String(random(0, 16), HEX);
-    }
-    uuid.toUpperCase();
-    return uuid;
-}
+// { ip， port, api_key }
+ESP_AI_server_config default_server_config = {"http", "node.espai.fun", 80, "", ""};
+int mic_bits_per_sample = 16;
+
+// 音频缓存
+#if !defined(LITTLE_ROM)
+std::vector<uint8_t> esp_ai_cache_audio_du;
+std::vector<uint8_t> esp_ai_cache_audio_greetings;
+#endif
+
+String wake_up_scheme = WAKEUP_SCHEME; 
+Adafruit_NeoPixel *esp_ai_pixels = nullptr;
 
 // 获取ESP32的硬件地址（eFuse MAC地址）
 String get_device_id()
 {
     return WiFi.macAddress();
+    // 正常应该用这个 MAC 地址，做一下倒叙即可。
+    // uint64_t mac = ESP.getEfuseMac();
+    // char macStr[18];
+    // sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+    //         (uint8_t)(mac >> 40),
+    //         (uint8_t)(mac >> 32),
+    //         (uint8_t)(mac >> 24),
+    //         (uint8_t)(mac >> 16),
+    //         (uint8_t)(mac >> 8),
+    //         (uint8_t)mac);
+    // return macStr;
 }
 
 /**
@@ -232,7 +219,7 @@ JSONVar get_local_all_data()
     JSONVar data;
 
     String keys_list = esi_ai_prefs.getString("_keys_list_", "");
-  
+
     if (keys_list != "")
     {
         int start = 0;
@@ -259,7 +246,7 @@ JSONVar get_local_all_data()
  * 清除本地存储的所有信息
  */
 void clear_local_all_data()
-{  
+{
     // 擦除整个NVS分区（所有命名空间数据都会被清除）
     esp_err_t err = nvs_flash_erase();
     if (err != ESP_OK)
@@ -268,7 +255,7 @@ void clear_local_all_data()
     }
     else
     {
-        Serial.println("NVS擦除成功"); 
+        Serial.println("NVS擦除成功");
         // 擦除后需要重新初始化NVS
         err = nvs_flash_init();
         if (err != ESP_OK)
@@ -277,7 +264,6 @@ void clear_local_all_data()
         }
     }
 }
- 
 
 /**
  * set_local_data("wifi_name", "oldwang");
@@ -405,26 +391,8 @@ void espai_system_mem_init()
     }
     else
     {
-        Serial.println(F("[Error] PSRAM 无效，请确保您使用的是 esp32s3 开发板，并且开启了【设置/PSRAM/OPI PSRAM】"));
-        Serial.println(F("[Error] 注意分区方案需要选择： 16MB Flash(3MB APP/9.9MB FATFS)"));
-    }
-
-    if (psramFound())
-    {
-        esp_ai_asr_sample_buffer = (int16_t *)ps_malloc(ESP_AI_ASR_SAMPLE_BUFFER_SIZE * sizeof(int16_t));
-        mic_sample_buffer = (int16_t *)ps_malloc(mic_sample_buffer_size * sizeof(int16_t));
-    }
-    else
-    {
-        esp_ai_asr_sample_buffer = (int16_t *)malloc(ESP_AI_ASR_SAMPLE_BUFFER_SIZE * sizeof(int16_t));
-        mic_sample_buffer = (int16_t *)malloc(mic_sample_buffer_size * sizeof(int16_t));
-    }
-
-    if (NULL == esp_ai_asr_sample_buffer || NULL == mic_sample_buffer)
-    {
-        Serial.println(F("[Error] 内存分配失败，请检查内存是否足够"));
-        while (1)
-            ;
+        Serial.println(F("[Info] PSRAM 无效，如果您使用的是 esp32s3 开发板，请【设置/PSRAM/OPI PSRAM】，否则请忽略！"));
+        Serial.println(F("[Info] 注意分区方案需要选择： 16MB Flash(3MB APP/9.9MB FATFS)"));
     }
 }
 
@@ -448,51 +416,116 @@ void mp3_player_write(const unsigned char *data, size_t len)
 {
     if (len > 0)
     {
-        esp_ai_spk_buffer_print.write(data, len);
+        if (esp_ai_volume.volume(0) == 0)
+        {
+            esp_ai_volume.setVolume(1); // 设置音量为 70%
+        }
+
+        size_t remaining = len;
+        const unsigned char *current = data;
+        while (remaining > 0)
+        {
+            size_t chunk_size = (remaining < AUDIO_CHUNK_SIZE) ? remaining : AUDIO_CHUNK_SIZE;
+            esp_ai_spk_buffer_print.write(current, chunk_size);
+            current += chunk_size;
+            remaining -= chunk_size;
+        }
     }
 }
 
 void mp3_player_stop()
 {
+    // 必须先拿到spk锁, 避免  _buffer.writeArray 写入卡死导致解锁失败。
+    xSemaphoreTake(audio_mutex, portMAX_DELAY);
     spk_ing = false;
-    // 等待写入任务停止
-    vTaskDelay(pdMS_TO_TICKS(100));
+    xSemaphoreGive(audio_mutex); 
+
     // 进入临界区
     xSemaphoreTake(audio_mutex, portMAX_DELAY);
-    esp_ai_spk_i2s.flush();      // 停止 I2S 输出
-    esp_ai_spk_queue.flush();    // 清空 QueueStream
-    esp_ai_audio_buffer.reset(); // 重置 ring buffer
+    esp_ai_spk_buffer_print.reset();
+    esp_ai_audio_buffer.reset();
+    esp_ai_spk_queue.flush();
+    esp_ai_spk_i2s.flush(); 
+
     xSemaphoreGive(audio_mutex);
+    // esp_ai_volume.setVolume(0);
+    wait_mp3_player_done(); // 停止后必须把剩余的播放完毕
 }
 
 void wait_mp3_player_done()
 {
     while (mp3_player_is_playing())
     {
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(30));
         // Serial.printf("*");
     }
     // Serial.printf("\n");
+
     vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 void play_builtin_audio(const unsigned char *data, size_t len)
 {
-    spk_ing = true;
-    size_t remaining = len;
-    const unsigned char *current = data;
-
-    while ((remaining > 0) && spk_ing)
+    open_spk();
+    if (!spk_ing)
     {
-        size_t chunk_size = (remaining < AUDIO_CHUNK_SIZE) ? remaining : AUDIO_CHUNK_SIZE;
-        mp3_player_write(current, chunk_size);
-        current += chunk_size;
-        remaining -= chunk_size;
+        // 必须先拿到spk锁, 避免  _buffer.writeArray 写入卡死导致解锁失败。
+        xSemaphoreTake(audio_mutex, portMAX_DELAY);
+        spk_ing = true;
+        xSemaphoreGive(audio_mutex);
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
+    mp3_player_write(data, len); 
+    wait_mp3_player_done();
     spk_ing = false;
 }
 
-BLEServer *esp_ai_ble_server;
-BLECharacteristic *esp_ai_ble_characteristic;
-BLEService *esp_ai_ble_service;
-BLEAdvertising *esp_ai_ble_advertising;
+void open_spk()
+{
+#if defined(CODEC_TYPE_ES8311_NS4150)
+    if (I2S_model == 1)
+        return;
+    // 切换播放模式
+    esp_ai_i2s_input.flush();
+    esp_ai_i2s_input.end();
+
+    digitalWrite(AUDIO_CODEC_PA_PIN, HIGH);
+    static auto config = esp_ai_spk_i2s.defaultConfig(TX_MODE);
+    config.copyFrom(esp_ai_audio_info); 
+    esp_ai_spk_i2s.begin(config);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    I2S_model = 1;
+#endif
+}
+
+void open_mic()
+{
+#if defined(CODEC_TYPE_ES8311_NS4150)
+
+    esp_ai_spk_i2s.flush();          // 停止 I2S 输出
+    esp_ai_spk_queue.flush();        // 清空 QueueStream
+    esp_ai_audio_buffer.reset();     // 重置 ring buffer
+    esp_ai_spk_buffer_print.reset(); // 重置输出 buffer
+
+    if (I2S_model == 0)
+        return;
+
+    esp_ai_spk_i2s.end();
+
+    digitalWrite(AUDIO_CODEC_PA_PIN, LOW);
+    static auto config_mic = esp_ai_i2s_input.defaultConfig(RX_MODE);
+    config_mic.copyFrom(esp_ai_audio_info);
+    config_mic.sample_rate = 16000;
+    config_mic.channels = 1;
+    esp_ai_i2s_input.begin(config_mic);
+    mic_to_ws_copier.begin(ws_stream, esp_ai_i2s_input);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    I2S_model = 0;
+#endif
+}
+ 
+
+NimBLEServer *esp_ai_ble_server;
+NimBLECharacteristic *esp_ai_ble_characteristic;
+NimBLEService *esp_ai_ble_service;
+NimBLEAdvertising *esp_ai_ble_advertising;

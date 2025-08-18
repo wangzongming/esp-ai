@@ -30,6 +30,70 @@
 const log = require("../../utils/log");
 const axios = require('axios');
 
+async function sendTextToClient(device_id, ttsText, user_text, texts, is_over, llm_historys, ws_client, G_Instance) {
+    if (!G_config.onLLMcb) return;
+    // 创建一个专门用于跟踪WebSocket发送状态的Promise
+    let resolveWebSocketSend;
+    const webSocketSendCompleted = new Promise(resolve => {
+        resolveWebSocketSend = resolve;
+    });
+
+    // 封装sendToClient为Promise，确保文字下发操作可被等待
+    const sendToClientAsync = (_chunk_text) => {
+        return new Promise((resolve, reject) => {
+            if (!ws_client) {
+                resolve();
+                resolveWebSocketSend(); // 无客户端时直接标记WebSocket发送完成
+                return;
+            }
+
+            const timeoutId = setTimeout(() => {
+                console.error("文字下发超时");
+                reject(new Error("文字下发超时"));
+                resolveWebSocketSend(); // 超时也标记发送完成
+            }, 2000); // 减少超时时间为2秒，避免长时间阻塞
+
+            ws_client.send(
+                JSON.stringify({
+                    type: "instruct",
+                    command_id: "on_llm_cb",
+                    data: _chunk_text || ttsText
+                }),
+                (err) => {
+                    clearTimeout(timeoutId);
+                    if (err) {
+                        console.error("文字下发失败:", err);
+                        reject(err);
+                    } else {
+                        // log.tts_info(`-> TTS文字发送完成: ${ttsText}`);
+                        resolve();
+                    }
+                    resolveWebSocketSend(); // 无论成功失败，都标记WebSocket发送完成
+                }
+            );
+        });
+    };
+
+    // 立即执行WebSocket发送，并跟踪其完成状态
+    const sendPromise = sendToClientAsync();
+
+    // 调用onLLMcb，但不等待其完成（只关心WebSocket发送状态）
+    G_config.onLLMcb({
+        device_id,
+        text: ttsText,
+        user_text,
+        llm_text: texts.count_text,
+        is_over,
+        llm_historys,
+        ws: ws_client,
+        instance: G_Instance,
+        sendToClient: () => sendPromise // 传入已启动的发送Promise
+    });
+
+    // 只等待WebSocket发送完成，而不是onLLMcb整体
+    await webSocketSendCompleted;
+}
+
 /**
  * 接下来的 session_id 都当前形参为准
 */
@@ -38,25 +102,24 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         const { devLog, onLLMcb, llm_qa_number, ai_server } = G_config;
         if (!G_devices.get(device_id)) return;
         const TTS_FN = require(`../tts`);
-        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue } = G_devices.get(device_id); 
+        const { llm_historys = [], ws: ws_client, llm_ws, tts_buffer_chunk_queue } = G_devices.get(device_id);
         if (!texts.index) {
             texts.index = 0;
         }
 
-        onLLMcb && onLLMcb({
-            device_id,
-            text: chunk_text,
-            user_text,
-            llm_text: texts.count_text,
-            is_over, llm_historys, ws: ws_client,
-            instance: G_Instance,
-            sendToClient: (_chunk_text) => ws_client && ws_client.send(JSON.stringify({
-                type: "instruct",
-                command_id: "on_llm_cb",
-                data: _chunk_text || chunk_text
-            }))
-        });
-
+        // onLLMcb && onLLMcb({
+        //     device_id,
+        //     text: chunk_text,
+        //     user_text,
+        //     llm_text: texts.count_text,
+        //     is_over, llm_historys, ws: ws_client,
+        //     instance: G_Instance,
+        //     sendToClient: (_chunk_text) => ws_client && ws_client.send(JSON.stringify({
+        //         type: "instruct",
+        //         command_id: "on_llm_cb",
+        //         data: _chunk_text || chunk_text
+        //     }))
+        // });
 
         // 截取TTS算法需要累计动态计算每次应该取多少文字转TTS，而不是固定每次取多少
         const notPlayText = texts.count_text.substr(texts.all_text.length);
@@ -65,21 +128,34 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
             llm_ws && llm_ws.close()
             // 最后在检查一遍确认都 tts 了，因为最后返回的字数小于播放阈值可能不会被播放，所以这里只要不是空的都需要播放
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, true, 0)
-            ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
+            // ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
             const textNowNull = ttsText.replace(/\s/g, '') !== "";
 
 
             if (textNowNull && (ttsText.replace(/\s/g, '')).replace(/[,;!?()<>"‘”《》’!?【】。、，；！？（）”’…~～]?/g, "") !== "") {
                 // 添加音频播放任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
-                    const tts_res = await TTS_FN(device_id, {
+                    // 1. 先执行情绪下发，异步发送
+                    ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
+                    // 2. 等待文字下发完成
+                    await sendTextToClient(
+                        device_id,
+                        ttsText,
+                        user_text,
+                        texts,
+                        is_over,
+                        llm_historys,
+                        ws_client,
+                        G_Instance
+                    );
+                    // 3. 文字下发完成后，执行TTS
+                    return await TTS_FN(device_id, {
                         text: ttsText,
                         pauseInputAudio: true,
                         session_id,
                         text_is_over: true,
                         need_record: true
                     })
-                    return tts_res;
                 })
                 texts.all_text += org_text;
             } else {
@@ -137,7 +213,7 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
         }
         else {
             const { speak_text: ttsText = "", org_text = "" } = extractBeforeLastPunctuation(notPlayText, false, texts.index);
-            ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
+            // ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
             if (ttsText) {
                 devLog && log.llm_info('客户端播放：', ttsText);
                 texts.all_text += org_text;
@@ -145,6 +221,20 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
 
                 // 添加任务
                 tts_buffer_chunk_queue && tts_buffer_chunk_queue.push(async () => {
+                    // 1. 先执行情绪下发，异步发送
+                    ttsText && sendEmotion({ device_id, text: ttsText, ai_server, ws_client });
+                    // 2. 等待文字下发完成
+                    await sendTextToClient(
+                        device_id,
+                        ttsText,
+                        user_text,
+                        texts,
+                        is_over,
+                        llm_historys,
+                        ws_client,
+                        G_Instance
+                    );
+                    // 3. 文字下发完成后，执行TTS
                     return await TTS_FN(device_id, {
                         text: ttsText,
                         pauseInputAudio: true,
@@ -172,20 +262,22 @@ async function cb(device_id, { text, user_text, is_over, texts, chunk_text, sess
  *  3. 部分非停顿符号不要，还需要注意数学中的小数点
 */
 function extractBeforeLastPunctuation(str, isLast, index) {
-    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格  
+    // 匹配句子结束的标点，包括中英文，并考虑英文句号后的空格
     const punctuationRegex = /[。，！？!?；;！？…~～]|(?<![A-Za-z0-9])\.(?![A-Za-z0-9])|(?<![A-Za-z])'(?![A-Za-z])/g;
     const matches = [...str.matchAll(punctuationRegex)];
 
     if (!isLast && str.length <= 1) return {};
     if (!isLast && matches.length === 0) return {};
-    const notSpeak = /[\*|\n]/g;
+    const notSpeak = /[\*|\n|～]/g;
 
     const matchData = matches.filter((item) => item[0]);
     // 获取最后一个匹配的标点符号的索引
     const lastIndex = matchData[matchData.length - 1]?.index;
     if (lastIndex || lastIndex === 0) {
         const res = str.substring(0, lastIndex + 1);
-        const min_len = (index <= 1 ? 1 : Math.min(index * 30, 100));
+        // 首包字数过低会导致低码率设备卡顿
+        // const min_len = (index <= 1 ? 1 : Math.min(index * 30, 100));
+        const min_len = (index <= 1 ? 5 : Math.min(index * 30, 100));
         if ((res.length < min_len) && !isLast) {
             return {}
         }

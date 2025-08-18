@@ -23,4 +23,20 @@
  * @websit https://espai.fun
  */
 #pragma once
-#include "esp-ai.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <Adafruit_NeoPixel.h> 
+#include "../configs/common.h"
+
+struct LightContext { 
+    Adafruit_NeoPixel* pixels;
+    int count;
+    const String* status;         
+    bool* esp_ai_start_send_audio;
+    bool (*isPlaying)();          
+};
+
+void light_task_static(void* arg);
+
+extern StaticTask_t lightsTaskBuffer;
+extern StackType_t lightsTaskStack[LIGHTS_TASK_SIZE];

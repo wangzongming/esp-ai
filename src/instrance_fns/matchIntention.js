@@ -143,7 +143,7 @@ async function matchIntention(device_id, text, reply) {
 
                             const { abort_controllers = [] } = G_devices.get(device_id);
                             G_devices.set(device_id, { ...G_devices.get(device_id), abort_controllers: [...abort_controllers, controller] })
-
+                            ws_client && ws_client.send(JSON.stringify({ type: "instruct",  command_id: "music_gen_ing" }));
                             const { url, seek, message: errMessage } = await music_server(__name__ || text, {
                                 user_config, instance: G_Instance, device_id, signal,
                                 sendToClient: (_text) => ws_client && ws_client.send(JSON.stringify({

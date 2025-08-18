@@ -18,7 +18,7 @@ void setup()
   ESP_AI_wifi_config wifi_config = { "", "", "ESP-AI"};
   // [可 填] 服务配置： { 服务协议, 服务IP， 服务端口, "[可选] 请求参数 " }
   ESP_AI_server_config server_config = {};
-  ESP_AI_wake_up_config wake_up_config = {"edge_impulse", 0.95};
+  ESP_AI_wake_up_config wake_up_config = {"pin_high", 1, 10};
 
   // [可留空] 麦克风引脚配置：{ bck_io_num, ws_io_num, data_in_num }
   ESP_AI_i2s_config_mic i2s_config_mic = {4, 5, 6};

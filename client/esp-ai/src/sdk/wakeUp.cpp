@@ -28,13 +28,13 @@
  */
 #include "wakeUp.h"
 
-void ESP_AI::wakeUp(String scene)
+void ESP_AI::wakeUp(const String &scene)
 {
     if (!ready_ed)
         return;
 
     if (asr_ing && asr_break_num < 1)
-    {  
+    {
         // 上一次唤醒距离本次唤醒时间过长时需要考虑结束上次唤醒 ...
         DEBUG_PRINTLN(debug, F("[Info] -> 正在聆听中，唤醒无效。"));
         asr_break_num += 1;
@@ -54,39 +54,35 @@ void ESP_AI::wakeUp(String scene)
     asr_break_num = 0;
 
     if (esp_ai_ws_connected)
-    {
+    { 
         esp_ai_session_id = "";
-        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
-        {
-            /**
-             * 会话开始
-             * 但这里不能相信服务器会百分百响应
-             * */
-            DEBUG_PRINTLN(debug, F("[Info] -> 发送 start"));
-            esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
-            send_start_time = millis();
-            // esp_ai_webSocket.disableHeartbeat();
-            xSemaphoreGive(esp_ai_ws_mutex);
-        }
+        bool is_playing = mp3_player_is_playing();
+        mp3_player_stop();   
 
-        mp3_player_stop();
-
-        // 播放问候语
-        if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
+        // 用户打断不播放问候语，这样给人反应会快很多
+        if (!is_playing)
         {
-            play_builtin_audio(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
+#if !defined(LITTLE_ROM)
+            // 播放问候语
+            if (scene == "wakeup" && !esp_ai_cache_audio_greetings.empty() && !esp_ai_is_listen_model)
+            {
+                play_builtin_audio(esp_ai_cache_audio_greetings.data(), esp_ai_cache_audio_greetings.size());
+                wait_mp3_player_done();
+            }
+
+            // 播放提示音
+            if (!esp_ai_cache_audio_du.empty())
+            {
+                play_builtin_audio(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
+                wait_mp3_player_done();
+            }
+#endif
+
+#if defined(LITTLE_ROM)
+            play_builtin_audio(du_mp3, du_mp3_len);
             wait_mp3_player_done();
+#endif
         }
-
-        // 播放提示音
-        if (!esp_ai_cache_audio_du.empty())
-        {
-            play_builtin_audio(esp_ai_cache_audio_du.data(), esp_ai_cache_audio_du.size());
-            wait_mp3_player_done();
-        }
-
-        // 清空缓冲区
-        memset(esp_ai_asr_sample_buffer, 0, sizeof(esp_ai_asr_sample_buffer));
 
         // 内置状态处理
         if (scene == "wakeup")
@@ -98,6 +94,19 @@ void ESP_AI::wakeUp(String scene)
             }
         }
 
+        // 先切换为录音模式
+        open_mic();
+        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
+        {
+            /**
+             * 会话开始
+             * 但这里不能相信服务器会百分百响应
+             * */
+            DEBUG_PRINTLN(debug, F("[Info] -> 发送 start"));
+            esp_ai_webSocket.sendTXT("{ \"type\":\"start\" }");
+            send_start_time = millis();
+            xSemaphoreGive(esp_ai_ws_mutex);
+        }
         esp_ai_tts_task_id = "";
         asr_ing = true;
         spk_ing = false;

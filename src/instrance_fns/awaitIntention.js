@@ -35,6 +35,7 @@ function awaitIntention(device_id, doFn) {
             const { intention_ing } = G_devices.get(device_id);
             if (intention_ing && awaitCount < 10) {
                 setTimeout(() => {
+                    if (!G_devices.get(device_id)) return;
                     const { intention_ing } = G_devices.get(device_id);
                     if (intention_ing) {
                         awaitCount += 1;
@@ -48,7 +49,7 @@ function awaitIntention(device_id, doFn) {
             }
         }
         fn(doFn);
-    } catch (err) { 
+    } catch (err) {
         console.error(err);
     }
 }

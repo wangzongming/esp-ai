@@ -28,17 +28,21 @@
  */
 #include "reporting_sensor_data.h"
 
+#if !defined(LITTLE_ROM)
 JSONVar digitalReadJSONData;
 JSONVar analogReadJSONData;
-
+#endif
 void ESP_AI::reporting_sensor_data_wrapper(void *arg)
 {
+#if !defined(LITTLE_ROM)
     ESP_AI *instance = static_cast<ESP_AI *>(arg);
     instance->reporting_sensor_data();
+#endif
 }
 
 void ESP_AI::reporting_sensor_data()
 {
+#if !defined(LITTLE_ROM)
     while (true)
     {
         for (int i = 0; i < digital_read_pins.size(); i++)
@@ -68,10 +72,11 @@ void ESP_AI::reporting_sensor_data()
                 String sendData = JSON.stringify(analogReadJSONData);
                 esp_ai_webSocket.sendTXT(sendData);
                 xSemaphoreGive(esp_ai_ws_mutex);
-            } 
+            }
         }
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+#endif
     vTaskDelete(NULL);
 }

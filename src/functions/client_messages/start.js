@@ -40,7 +40,6 @@ async function fn({ device_id, _ws }) {
 
         const { auth } = G_config;
         const { ws, client_params } = G_devices.get(device_id);
-
         if (auth && client_params) {
             const { success: auth_success, message: auth_message, code: auth_code } = await auth({
                 ws,

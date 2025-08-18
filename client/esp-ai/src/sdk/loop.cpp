@@ -23,10 +23,11 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#include "loop.h"
+#include "loop.h" 
 
 void handle_ble_data()
 {
+#if !defined(DISABLE_BLE_NET)
     if (ESP_AI_BLE_RD != "")
     {
         JSONVar data = JSON.parse(ESP_AI_BLE_RD);
@@ -62,19 +63,23 @@ void handle_ble_data()
         // 重启板子
         ESP.restart();
     }
+#endif
 }
+ 
 
 void ESP_AI::loop()
 {
+#if !defined(DISABLE_AP_NET)
     if (esp_ai_status == "0_ap" && wifi_config.way == "AP")
     {
         esp_ai_dns_server.processNextRequest();
     }
-
     esp_ai_server.handleClient();
+#endif
     esp_ai_webSocket.loop();
-
+#if !defined(DISABLE_BLE_NET)
     handle_ble_data();
+#endif
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -91,7 +96,7 @@ void ESP_AI::loop()
             {
                 esp_ai_net_status = "0";
                 onNetStatusCb("0");
-                DEBUG_PRINTLN(debug, ("[Error] -> WIFI 异常断开，将自动重启板子"));
+                DEBUG_PRINTLN(debug, F("[Error] -> WIFI 异常断开，将自动重启板子"));
                 ESP.restart();
             }
         }
@@ -101,7 +106,14 @@ void ESP_AI::loop()
     if (esp_ai_ws_connected && !esp_ai_webSocket.isConnected())
     {
         esp_ai_ws_connected = false;
-        DEBUG_PRINTLN(debug, ("[Error] -> WS 连接异常，将自动重新连接服务。"));
+        DEBUG_PRINTLN(debug, F("[Error] -> WS 连接异常，将自动重新连接服务。"));
         connect_ws();
     }
+
+    // 音频复制
+    if (esp_ai_ws_connected && esp_ai_start_send_audio && esp_ai_session_id != "")
+    {
+        mic_to_ws_copier.copyBytes(1024);
+        vTaskDelay(10);
+    } 
 }

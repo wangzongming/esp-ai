@@ -26,13 +26,14 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#include "tts.h"
+#include "reCache.h"
 
 void ESP_AI::reCache()
 {
 
     if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
     {
+#if !defined(LITTLE_ROM)
         if (!esp_ai_cache_audio_du.empty())
         {
             esp_ai_cache_audio_du.clear();
@@ -40,8 +41,8 @@ void ESP_AI::reCache()
         if (!esp_ai_cache_audio_greetings.empty())
         {
             esp_ai_cache_audio_greetings.clear();
-        } 
-
+        }
+#endif
         esp_ai_webSocket.sendTXT("{ \"type\":\"re_cache\" }");
         xSemaphoreGive(esp_ai_ws_mutex);
     }

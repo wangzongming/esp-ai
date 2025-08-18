@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -27,9 +27,10 @@ const log = require("./utils/log");
 const gen_intention_prompt = require("./utils/gen_intention_prompt");
 
 const matchIntention = require("./instrance_fns/matchIntention")
+const llm = require("./instrance_fns/llm")
 const tts = require("./instrance_fns/tts")
 const stop = require("./instrance_fns/stop")
-const newSession = require("./instrance_fns/newSession") 
+const newSession = require("./instrance_fns/newSession")
 const pinMode = require("./instrance_fns/pinMode")
 const LEDCInit = require("./instrance_fns/LEDCInit")
 const ledcWrite = require("./instrance_fns/ledcWrite")
@@ -78,8 +79,8 @@ class EspAiInstance {
     updateClientConfig(device_id, config) {
         !device_id && log.error(`调用 updateClientConfig 方法时，请传入 device_id`);
         const oldConfig = G_devices.get(device_id);
-        if (oldConfig) { 
-            // 缓存信息不可在此处清除，本函数仅仅用于更新配置 
+        if (oldConfig) {
+            // 缓存信息不可在此处清除，本函数仅仅用于更新配置
             const new_config = {
                 ...oldConfig,
                 user_config: {
@@ -103,10 +104,11 @@ class EspAiInstance {
         ws_client && ws_client.send(JSON.stringify({ type: "clear_cache" }), () => reCache({ device_id }));
     }
 
+    llm = llm;
     tts = tts;
     stop = stop;
     newSession = newSession;
-    matchIntention = matchIntention; 
+    matchIntention = matchIntention;
     pinMode = pinMode;
     LEDCInit = LEDCInit;
     ledcWrite = ledcWrite;
@@ -158,7 +160,7 @@ class EspAiInstance {
 
     /**
      * 获取用户的上下文，在设置上下文时一般需要将当前上下文先存起来，否则切换回来时会丢失
-     * @return llm_historys {"role": "user" | "assistant" | "system", "content":string}[]   
+     * @return llm_historys {"role": "user" | "assistant" | "system", "content":string}[]
     */
     getLLMHistorys(device_id) {
         !device_id && log.error(`调用 getLLMHistorys 方法时，请传入 device_id`);

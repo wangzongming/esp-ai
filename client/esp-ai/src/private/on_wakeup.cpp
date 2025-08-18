@@ -27,6 +27,9 @@
  * @websit https://espai.fun
  */
 #include "on_wakeup.h"
+ 
+StaticTask_t onWakeupTaskBuffer;
+StackType_t onWakeupTaskStack[ON_WAKE_UP_TASK_SIZE];
 String cleanString(String input)
 {
     String output = "";
@@ -41,114 +44,95 @@ String cleanString(String input)
     return output;
 }
 
-void ESP_AI::on_wakeup_wrapper(void *arg)
-{
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->on_wakeup();
-}
-
 /**
  * 聆听中时不需要被打断，否则会带来更多问题
  * 比如：不做回音消除时用户说话就不可以触发唤醒词等等...
  */
-void ESP_AI::on_wakeup()
+void on_wakeup_task_static(void *arg)
 {
-    long esp_ai_last_debounce_time = 0;
-    int esp_ai_debounce_delay = 200;
-    int esp_ai_prev_state = 0;
-    int esp_ai_prev_state_listen = 0;
-    long esp_ai_btn_up_time = 0;
+    OnWakeUpContext *ctx = static_cast<OnWakeUpContext *>(arg);
+    long last_debounce_time = 0;
+    int debounce_delay = 150;
+    int prev_pin_state = 0;
+    int prev_listen_state = 0;
+    long btn_up_time = 0;
 
     while (true)
     {
-        if ((wake_up_scheme == "pin_high" || wake_up_scheme == "pin_low"))
+        long curTime = millis();
+
+        // 方式一：GPIO 触发
+        if (*ctx->wake_up_scheme == "pin_high" || *ctx->wake_up_scheme == "pin_low")
         {
-            int reading = digitalRead(wake_up_config.pin);
-            long curTime = millis();
-            int target_val = wake_up_scheme == "pin_high" ? 1 : 0;
+            int target_val = (*ctx->wake_up_scheme == "pin_high") ? HIGH : LOW;
+            int reading = digitalRead(*ctx->pin);
+
             if (reading == target_val)
             {
-                if ((curTime - esp_ai_last_debounce_time) > esp_ai_debounce_delay)
+                if ((curTime - last_debounce_time) > debounce_delay && prev_pin_state != reading)
                 {
-                    esp_ai_last_debounce_time = curTime;
-                    if (esp_ai_prev_state != reading)
-                    {
-                        esp_ai_prev_state = reading;
-                        DEBUG_PRINTLN(debug, ("[Info] -> 按下了按钮唤醒"));
-                        wakeUp("wakeup");
-                    }
+                    last_debounce_time = curTime;
+                    prev_pin_state = reading;
+                    DEBUG_PRINTLN(ctx->debug, F("[Info] -> 按钮唤醒触发"));
+                    ctx->wakeUp("wakeup");
                 }
             }
             else
             {
-                esp_ai_prev_state = reading;
+                prev_pin_state = reading;
             }
         }
-        // else if ((esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
-        // else if ((asr_ing == false && esp_ai_start_ed == "0" && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
-        else if ((asr_ing == false && (wake_up_scheme == "asrpro" || wake_up_scheme == "serial")))
+
+        // 方式二：串口唤醒（非 ASR 时）
+        else if (!(*ctx->asr_ing) && (*ctx->wake_up_scheme == "asrpro" || *ctx->wake_up_scheme == "serial"))
         {
-            if (Esp_ai_serial.available())
+            if (ctx->Esp_ai_serial->available())
             {
-                String command = Esp_ai_serial.readStringUntil('\n');
-                String clear_str = cleanString(command);
-                if (clear_str == String(wake_up_config.str))
+                String command = ctx->Esp_ai_serial->readStringUntil('\n');
+                String cleaned = cleanString(command); 
+                if (cleaned == ctx->wake_up_str)
                 {
-                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口唤醒"));
-                    wakeUp("wakeup");
-                }
-            }
-            else if (Serial.available())
-            {
-                String command = Serial.readStringUntil('\n');
-                String clear_str = cleanString(command);
-                if (clear_str == String(wake_up_config.str))
-                {
-                    DEBUG_PRINTLN(debug, ("[Info] -> 收到串口唤醒"));
-                    wakeUp("wakeup");
+                    DEBUG_PRINTLN(ctx->debug, F("[Info] -> 串口唤醒触发"));
+                    ctx->wakeUp("wakeup");
                 }
             }
         }
-        else if (esp_ai_is_listen_model)
+
+        // 方式三：监听模式，按钮控制
+        else if (*ctx->esp_ai_is_listen_model)
         {
-            int reading = digitalRead(wake_up_config.pin);
-            int target_val = wake_up_scheme == "pin_high_listen" ? 1 : 0;
-            if ((reading == target_val))
+            int target_val = (*ctx->wake_up_scheme == "pin_high_listen") ? HIGH : LOW;
+            int reading = digitalRead(*ctx->pin);
+
+            if (reading == target_val && prev_listen_state != reading)
             {
-                if (esp_ai_prev_state_listen != reading)
-                {
-                    esp_ai_btn_up_time = 0;
-                    esp_ai_prev_state_listen = reading;
-                    DEBUG_PRINTLN(debug, ("[Info] -> 您请说话。"));
-                    wakeUp("wakeup");
-                }
+                btn_up_time = 0;
+                prev_listen_state = reading;
+                DEBUG_PRINTLN(ctx->debug, F("[Info] -> 您请说话。"));
+                ctx->wakeUp("wakeup");
             }
-            else
+            else if (reading != target_val)
             {
-                // 需要给 mic 和解码器一些时间来处理还没有收集到的数据
-                esp_ai_prev_state_listen = reading;
-                if (esp_ai_start_send_audio)
+                prev_listen_state = reading;
+
+                if (*(ctx->esp_ai_start_send_audio))
                 {
-                    if (esp_ai_btn_up_time == 0)
-                    {
-                        esp_ai_btn_up_time = millis();
-                    }
-                    if ((millis() - esp_ai_btn_up_time) >= 300)
+                    if (btn_up_time == 0)
+                        btn_up_time = millis();
+
+                    if ((curTime - btn_up_time) >= 300)
                     {
 
-                        if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
-                        {
-                            DEBUG_PRINTLN(debug, ("[Info] -> 大语言模型正在推理。"));
-                            esp_ai_webSocket.sendTXT("{\"type\":\"iat_end\"}");
- 
-                            xSemaphoreGive(esp_ai_ws_mutex);
-                        }
+                        *ctx->esp_ai_start_send_audio = false;
+                        DEBUG_PRINTLN(ctx->debug, F("[Info] -> 大语言模型正在推理。"));
+                        ctx->sendTXT("{\"type\":\"iat_end\"}");
                     }
                 }
             }
         }
 
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
+
     vTaskDelete(NULL);
 }

@@ -29,7 +29,7 @@ void setup()
   ESP_AI_wifi_config wifi_config = {"", "", "ESP-AI"};
   // [可 填] 服务配置： { 服务协议, 服务IP， 服务端口, "[可选] 请求参数 }
   ESP_AI_server_config server_config = {};
-  // [必  填] 离线唤醒方案：{ 方案, 识别阈值 }, "edge_impulse" | "diy"，为 "diy" 时可调用 esp_ai.wakeUp() 方法进行唤醒
+  // [必  填] 离线唤醒方案：{ 方案, 识别阈值 },  
   ESP_AI_wake_up_config wake_up_config = {"diy"};
 
   // 开始运行 ESP-AI

@@ -57,22 +57,25 @@ const getServerURL = require("../../getServerURL");
  * @param {Function}    serverTimeOutCb     当 IAT 服务连接成功了，但是长时间不响应时
  * @param {Function}    iatEndQueueCb       iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别
  * @param {Function}    log                 为保证日志输出的一致性，请使用 log 对象进行日志输出，eg: log.error("错误信息")、log.info("普通信息")、log.iat_info("iat 专属信息")
+ * @param {(pluginsName: String)=> ({ sample_rate?: Number; channels?: Number; format?: String; language?: String })}  iat 静默时间达到后触发， 一般在这里面进行最后一帧的发送，告诉服务端结束识别 
  *
  *
 */
-function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb, onIATText }) {
+function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, llm_server, tts_server, cb, iatServerErrorCb, logWSServer, logSendAudio, connectServerCb, connectServerBeforeCb, serverTimeOutCb, iatEndQueueCb, onIATText, getClientAudioConfig = ()=> ({}) }) {
+    let sendTimer = null;
     try {
         const { appid, apiSecret, apiKey, ...other_config } = iat_config;
         if (!apiKey) return log.error(`请配给 IAT 配置 apiKey 参数。`)
         if (!apiSecret) return log.error(`请配给 IAT 配置 apiSecret 参数。`)
         if (!appid) return log.error(`请配给 IAT 配置 appid 参数。`)
+        const { sample_rate = 16000, channels = 1, format = "pcm", language = "" } = getClientAudioConfig("xun_fei");
 
         // 如果关闭后 message 还没有被关闭，需要定义一个标志控制
         let shouldClose = false;
 
         // 全部音频 
         const audioBuffers = [];
-        let sendTimer = null;
+      
 
         // console.log('开始连接 IAT 服务...')
         const iatResult = [];
@@ -215,10 +218,15 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
             const frameDataSection = {
                 status: iat_status,
                 audio: chunk ? chunk.toString('base64') : "",
-                "format": "audio/L16;rate=16000",
-                "encoding": "raw",
-                // "encoding": "lame",
+                "format": `audio/L16;rate=${sample_rate}`,
+                "encoding": format, 
             };
+            if(format === "pcm"){
+                frameDataSection.encoding = "raw";
+            }
+            if(format === "mp3"){
+                frameDataSection.encoding = "lame";
+            }
 
             let frame = {};
             switch (iat_status) {
@@ -264,6 +272,7 @@ function IAT_FN({ device_id, session_id, log, devLog, iat_config, iat_server, ll
 
         logSendAudio(send_pcm)
     } catch (err) {
+        clearInterval(sendTimer);
         connectServerCb(false);
         console.log(err);
         log.error("讯飞 IAT 插件错误：", err)

@@ -27,77 +27,72 @@
  * @websit https://espai.fun
  */
 #include "get_position.h"
+ 
+StaticTask_t getPositionContextTaskBuffer;
+StackType_t getPositionContextTaskStack[GET_POSITION_TASK_SIZE];
 
-
-void ESP_AI::get_position_wrapper(void *arg)
+void get_position_task_static(void *arg)
 {
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->get_position();
-}
-
-void ESP_AI::get_position()
-{
-    if (WiFi.status() != WL_CONNECTED)
+    GetPositionContext *ctx = static_cast<GetPositionContext *>(arg);
+    if (ctx->IS_WL_CONNECTED() == false)
     {
+        vTaskDelete(NULL);
         return;
     }
- 
-    String ip = "";
-    String nation = "";
-    String province = "";
-    String city = "";
-    String latitude = "";
-    String longitude = "";
 
-    DEBUG_PRINTLN(debug, "[Info] 定位中..."); 
+    String ip, nation, province, city, latitude, longitude;
+    ip.reserve(32);
+    nation.reserve(32);
+    province.reserve(32);
+    city.reserve(32);
+    latitude.reserve(16);
+    longitude.reserve(16);
 
-    String api2 = "http://api.espai2.fun/sdk/position";
-    HTTPClient esp_ai_get_position_http; 
-    esp_ai_get_position_http.begin(api2);
-    esp_ai_get_position_http.addHeader("Content-Type", "application/json");
-    esp_ai_get_position_http.setTimeout(10000);   
-    int httpCode2 = esp_ai_get_position_http.GET();
-  
-    if (httpCode2 > 0)
+    DEBUG_PRINTLN(ctx->debug, ("[Info] -> 正在获取位置..."));
+
+    HTTPClient http;
+    http.begin("http://api.espai.fun/sdk/position");
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(10000);
+    int httpCode = http.GET();
+
+    if (httpCode > 0)
     {
-        String payload = esp_ai_get_position_http.getString();
-        Serial.printf("[HTTPS] GET code: %d\n", httpCode2); 
-        JSONVar parse_res = JSON.parse(payload);
-        if (parse_res.hasOwnProperty("success"))
-        { 
+        String payload = http.getString();
+        JSONVar res = JSON.parse(payload);
 
-            ip = (const char *)parse_res["data"]["ip"];
-            nation = (const char *)parse_res["data"]["country_name"];
-            province = (const char *)parse_res["data"]["region"];
-            city = (const char *)parse_res["data"]["city"];
-            latitude = (const char *)parse_res["data"]["latitude"];
-            longitude = (const char *)parse_res["data"]["longitude"]; 
-            DEBUG_PRINT(debug, "[Info] 定位完毕：");
-            DEBUG_PRINT(debug, nation);
-            DEBUG_PRINT(debug, "/");
-            DEBUG_PRINT(debug, province);
-            DEBUG_PRINT(debug, "/");
-            DEBUG_PRINTLN(debug, city);  
-            esp_ai_get_position_http.end(); 
-            if (onPositionCb != nullptr)
+        if (res.hasOwnProperty("success"))
+        {
+            ip = (const char *)res["data"]["ip"];
+            nation = (const char *)res["data"]["country_name"];
+            province = (const char *)res["data"]["region"];
+            city = (const char *)res["data"]["city"];
+            latitude = (const char *)res["data"]["latitude"];
+            longitude = (const char *)res["data"]["longitude"];
+
+            DEBUG_PRINT(ctx->debug, "\n[Info] -> 位置获取成功: ");
+            DEBUG_PRINT(ctx->debug, nation);
+            DEBUG_PRINT(ctx->debug, "/");
+            DEBUG_PRINT(ctx->debug, province);
+            DEBUG_PRINT(ctx->debug, "/");
+            DEBUG_PRINTLN(ctx->debug, city);
+
+            if (ctx->onPositionCb)
             {
-                onPositionCb(ip, nation, province, city, latitude, longitude);
+                ctx->onPositionCb(ip, nation, province, city, latitude, longitude);
             }
         }
         else
         {
-            DEBUG_PRINTLN(debug, "[Info] 定位请求失败， 返回数据错误。");
-            esp_ai_get_position_http.end();
+            DEBUG_PRINTLN(ctx->debug, "[Warn] -> API响应格式错误，无 success 字段");
         }
     }
     else
     {
-        Serial.printf("[HTTPS] GET code: %d\n", httpCode2);
-        DEBUG_PRINTLN(debug, "[Info] 定位请求失败");
-        esp_ai_get_position_http.end();
+        DEBUG_PRINTLN(ctx->debug, "[Error] -> HTTP 请求失败，状态码: " + httpCode);
     }
 
-    // 任务执行完毕，删除自身 
-    get_position_task_handle = NULL;  
+    http.end();
+    http.~HTTPClient();
     vTaskDelete(NULL);
 }

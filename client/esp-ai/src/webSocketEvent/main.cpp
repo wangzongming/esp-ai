@@ -37,14 +37,16 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         if (esp_ai_ws_connected)
         {
             esp_ai_ws_connected = false;
-            esp_ai_start_ed = "0";
+            esp_ai_start_ed = false;
             esp_ai_session_id = "";
             asr_ing = false;
-            Serial.print("[Info] -> ESP-AI 服务已断开：");
+            Serial.print(F("[Info] -> ESP-AI 服务已断开："));
             Serial.println(length);
+
+#if !defined(LITTLE_ROM)
             esp_ai_cache_audio_du.clear();
             esp_ai_cache_audio_greetings.clear();
-            // esp_ai_cache_audio_sleep_reply.clear();
+#endif
 
             // 内置状态处理
             status_change("2");
@@ -54,18 +56,20 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 esp_ai_net_status = "2";
                 onNetStatusCb("2");
             }
-            
+            mp3_player_stop();
             connect_ws();
         }
         break;
     case WStype_CONNECTED:
     {
-        Serial.println("[Info] -> ESP-AI 服务连接成功");
+        Serial.println(F("[Info] -> ESP-AI 服务连接成功"));
         esp_ai_ws_connected = true;
-        esp_ai_start_ed = "0";
+        esp_ai_start_ed = false;
         esp_ai_session_id = "";
         asr_ing = false;
+        xSemaphoreTake(audio_mutex, portMAX_DELAY);
         spk_ing = false;
+        xSemaphoreGive(audio_mutex);
 
         if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
         {
@@ -89,12 +93,14 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     case WStype_TEXT:
         if (strcmp((char *)payload, "session_end") == 0)
         {
-            esp_ai_start_ed = "0";
+            esp_ai_start_ed = false;
             esp_ai_session_id = "";
             esp_ai_tts_task_id = "";
             esp_ai_status = "3";
             asr_ing = false;
+            xSemaphoreTake(audio_mutex, portMAX_DELAY);
             spk_ing = false;
+            xSemaphoreGive(audio_mutex);
         }
         else
         {
@@ -167,15 +173,20 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                         esp_ai_tts_task_id = "";
                         return;
                     }
+
+                    open_spk();
+                    xSemaphoreTake(audio_mutex, portMAX_DELAY);
                     spk_ing = true;
-                    esp_ai_tts_task_id = (const char *)parseRes["tts_task_id"];
-                    String now_session_id = (const char *)parseRes["session_id"];
-                    DEBUG_PRINTLN(debug, "[TTS] -> TTS 任务：" + esp_ai_tts_task_id + " 所属会话：" + now_session_id);
+                    xSemaphoreGive(audio_mutex);
+                    esp_ai_tts_task_id = (const char *)parseRes["tts_task_id"]; 
+                    DEBUG_PRINTLN(debug, "[TTS] -> TTS 任务：" + esp_ai_tts_task_id);
                 }
                 else if (type == "session_start")
                 {
                     esp_ai_session_id = (const char *)parseRes["session_id"];
+                    xSemaphoreTake(audio_mutex, portMAX_DELAY);
                     spk_ing = true;
+                    xSemaphoreGive(audio_mutex);
                 }
 
                 else if (type == "session_stop")
@@ -211,11 +222,33 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 {
                     String message = (const char *)parseRes["message"];
                     String code = (const char *)parseRes["code"];
-                    Serial.println("[Error] -> 连接服务失败，鉴权失败：code: " + code + ", message: " + message);
-                    Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。"));
-                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
-                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
-                    Serial.println(F("[Error] -> 如果你想用开放平台服务请到配网页面配置秘钥！"));
+                    Serial.print("\n[Error] -> 连接服务失败，code: ");
+                    Serial.print(code);
+                    Serial.println(" message: ");
+                    Serial.println(message);
+                    Serial.println(F("[Error] -> 请检测服务器配置中是否配置了鉴权参数。")); 
+
+                    if (code == "4002")
+                    {
+                        play_builtin_audio(yu_e_bu_zuo, yu_e_bu_zuo_len);
+                    }
+                    else if (code == "4001")
+                    {
+                        play_builtin_audio(e_du_ka_bu_cun_zai, e_du_ka_bu_cun_zai_len);
+                    }
+                    else if (code == "4000")
+                    {
+                        play_builtin_audio(chao_ti_wei_qi_yong, chao_ti_wei_qi_yong_len);
+                    }
+                    else if (code == "4003")
+                    {
+                        play_builtin_audio(jian_quan_shi_bai, jian_quan_shi_bai_len);
+                    }
+                    else if (code == "4004")
+                    {
+                        play_builtin_audio(she_bei_wei_bang_ding_mp3, she_bei_wei_bang_ding_mp3_len);
+                    }
+
                     if (onErrorCb != nullptr)
                     {
                         onErrorCb("002", "auth", message);
@@ -240,6 +273,15 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         play_builtin_audio(chao_ti_wei_qi_yong, chao_ti_wei_qi_yong_len);
                     }
+                    else if (code == "4003")
+                    {
+                        play_builtin_audio(jian_quan_shi_bai, jian_quan_shi_bai_len);
+                    }
+                    else if (code == "4004")
+                    {
+                        play_builtin_audio(she_bei_wei_bang_ding_mp3, she_bei_wei_bang_ding_mp3_len);
+                    }
+                    
                     else if (code == "102" || code == "101" || code == "100")
                     {
                         esp_ai_session_id = "";
@@ -253,29 +295,29 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
 
                 else if (type == "session_status")
-                {
-                    String status = (const char *)parseRes["status"];
-
+                { 
+                    String status = (const char *)parseRes["status"]; 
                     if (status == "iat_end")
                     {
-                        esp_ai_start_ed = "0";
+
+                        esp_ai_start_ed = false;
                         esp_ai_start_send_audio = false;
-                        asr_ing = false;
+                        asr_ing = false; 
+                        open_spk();
+                        xSemaphoreTake(audio_mutex, portMAX_DELAY);
                         spk_ing = true;
+                        xSemaphoreGive(audio_mutex);
                     }
                     else if (status == "iat_start")
-                    {
+                    { 
                         send_start_time = 0;
                         // 开始发送音频时，先等话说完
                         wait_mp3_player_done();
                         // 正在说话时就不要继续推理了，否则会误唤醒
-                        esp_ai_start_ed = "1";
+                        esp_ai_start_ed = true;
                         // 开始发送音频时，将缓冲区中的数据发送出去
                         esp_ai_start_send_audio = true;
-                        // 记录时间戳
-                        last_silence_time = millis();
                     }
-
                     // 内置状态处理
                     status_change(status);
                     if (onSessionStatusCb != nullptr)
@@ -308,6 +350,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 }
                 else if (type == "clear_cache")
                 {
+#if !defined(LITTLE_ROM)
                     if (!esp_ai_cache_audio_du.empty())
                     {
                         esp_ai_cache_audio_du.clear();
@@ -316,6 +359,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                     {
                         esp_ai_cache_audio_greetings.clear();
                     }
+#endif
                     // 应答帧
                     if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
                     {
@@ -428,7 +472,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
         if (length < 6)
         {
-            Serial.print("[Error] -> 数据帧长度小于6字节: ");
+            Serial.print(F("[Error] -> 数据帧长度小于6字节: "));
             Serial.println(length);
             return;
         }
@@ -445,7 +489,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         session_status_string[2] = '\0';
         esp_ai_session_status = String(session_status_string);
 
-        // // test...
+        // test...
         // Serial.print("内容长度：");
         // Serial.print(length);
         // Serial.print("  会话ID：");
@@ -460,11 +504,15 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
         if (sid == SID_TONE_CACHE)
         {
+#if !defined(LITTLE_ROM)
             esp_ai_cache_audio_du.insert(esp_ai_cache_audio_du.end(), audioData, audioData + audioLength);
+#endif
         }
         else if (sid == SID_WAKEUP_REP_CACHE)
         {
+#if !defined(LITTLE_ROM)
             esp_ai_cache_audio_greetings.insert(esp_ai_cache_audio_greetings.end(), audioData, audioData + audioLength);
+#endif
         }
         else
         {
@@ -483,13 +531,13 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
         if (esp_ai_session_status == SID_TTS_END_RESTART)
         {
+
             esp_ai_tts_task_id = "";
             // 内置状态处理
             status_change("tts_real_end");
             if (esp_ai_session_id != "")
-            {
+            { 
                 wait_mp3_player_done();
-
                 if (xSemaphoreTake(esp_ai_ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE)
                 {
                     esp_ai_webSocket.sendTXT("{ \"type\":\"client_out_audio_over\", \"session_id\": \"" + sid + "\",  \"session_status\": \"" + esp_ai_session_status + "\", \"tts_task_id\": \"" + esp_ai_tts_task_id + "\" }");
@@ -505,17 +553,17 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 {
                     // tts发送完毕，需要重新开启录音
                     DEBUG_PRINTLN(debug, F("[TTS] -> TTS 数据全部接收完毕，需继续对话。"));
-                    // 等待音频播放完毕
-                    // wait_mp3_player_done();
                     asr_ing = false;
+                    xSemaphoreTake(audio_mutex, portMAX_DELAY);
                     spk_ing = false;
+                    xSemaphoreGive(audio_mutex);
                     wakeUp("continue");
                 }
             }
         }
         else if (esp_ai_session_status == SID_TTS_END)
         {
-
+           
             // 服务连接成功播放完毕
             bool is_first_connect = esp_ai_played_connected == false && sid == SID_CONNECTED_SERVER && esp_ai_session_status == SID_TTS_END;
             if (is_first_connect)
@@ -537,9 +585,10 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             if (onSessionStatusCb != nullptr)
             {
                 onSessionStatusCb("tts_real_end");
+                onSessionStatusCb("session_end");
             }
             DEBUG_PRINT(debug, F("[TTS] -> TTS 数据全部接收完毕，无需继续对话"));
-            esp_ai_start_ed = "0";
+            esp_ai_start_ed = false;
 
             // 服务连接成功播放完毕
             if (is_first_connect && onReadyCb != nullptr)
@@ -549,6 +598,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
                 onReadyCb();
             }
             ready_ed = true;
+
             return;
         }
         else if (esp_ai_session_status == SID_TTS_CHUNK_END)
@@ -564,7 +614,7 @@ void ESP_AI::webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     //     Serial.println("Pong");
     //     break;
     case WStype_ERROR:
-        Serial.println("[Error] 服务 WebSocket 连接错误");
+        Serial.println(F("[Error] 服务 WebSocket 连接错误"));
         break;
     }
 }

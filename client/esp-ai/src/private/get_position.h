@@ -22,5 +22,21 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#pragma once
-#include "esp-ai.h"
+#pragma once 
+
+#include <Arduino.h> 
+#include <HTTPClient.h>
+#include <Arduino_JSON.h>
+#include "../configs/common.h" 
+
+struct GetPositionContext
+{
+    bool *debug; 
+    bool (*IS_WL_CONNECTED)();
+    std::function<void(const String &ip, const String &nation, const String &province, const String &city, const String &latitude, const String &longitude)> onPositionCb;
+};
+
+void get_position_task_static(void *arg);
+
+extern StaticTask_t getPositionContextTaskBuffer;
+extern StackType_t getPositionContextTaskStack[GET_POSITION_TASK_SIZE];

@@ -23,26 +23,7 @@
  * @websit https://espai.fun
  */
  
-#include "esp-ai.h"
- 
-#include "wakeUp/edge-impulse/main.h"
-#include "init/speaker_i2s_setup.h"
-#include "init/mic_i2s_init.h" 
-#include "webSocketEvent/main.h"
-
-#include "private/adjustVolume.h"
-
-#include "sdk/begin.h"
-#include "sdk/loop.h"
-#include "sdk/setWifiConfig.h"
-#include "sdk/wifiIsConnected.h" 
-#include "sdk/localIP.h" 
-#include "sdk/onEvent.h" 
-#include "sdk/onError.h" 
-#include "sdk/wakeUp.h" 
-#include "sdk/setVolume.h"  
-
-#include "webServer/main.h" 
+#include "esp-ai.h" 
  
 ESP_AI::ESP_AI() : debug(false), wifi_config(default_wifi_config), server_config(default_server_config), wake_up_config(default_wake_up_config), volume_config(default_volume_config), i2s_config_mic(default_i2s_config_mic), i2s_config_speaker(default_i2s_config_speaker), reset_btn_config(default_reset_btn_config), lights_config(default_lights_config)
 {

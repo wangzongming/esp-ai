@@ -22,5 +22,37 @@
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
  */
-#pragma once
-#include "esp-ai.h"
+#pragma once 
+#include <Arduino.h> 
+#include "../configs/common.h"
+ 
+// 前向声明模板类
+// namespace audio_tools { 
+//     template <typename T> class QueueStream;
+//     template <typename T> class StreamCopyT;
+// }
+
+struct PlayAudioContext {  
+    // 读取剩余音频缓冲区数量
+    int (*available)();
+
+    // 执行一次音频数据拷贝
+    void (*copy)();
+
+    // 上报当前 buffer 可用空间到服务端
+    void (*sendTXT)(const char *msg);
+
+    // 是否正在播放音频
+    bool *spk_ing;
+
+    // 是否连接到 websocket
+    bool *esp_ai_ws_connected;
+
+    // 会话 ID 指针
+    const String *esp_ai_session_id;    
+};
+
+void play_audio_task_static(void* arg);
+
+extern StaticTask_t playAudioTaskBuffer;
+extern StackType_t playAudioTaskStack[PLAY_AUDIO_TASK_SIZE];

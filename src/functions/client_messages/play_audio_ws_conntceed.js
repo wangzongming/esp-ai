@@ -34,8 +34,48 @@ const play_audio = require("../../audio_temp/play_audio");
 */
 async function fn({ device_id }) {
     try {
-        const { devLog, gen_client_config } = G_config;
-        const { ws, client_params, client_version, error_catch } = G_devices.get(device_id);
+        const { devLog, gen_client_config, auth } = G_config;
+        const { ws, client_params = {}, client_version, error_catch } = G_devices.get(device_id);
+        const { LITTLE_ROM } = client_params;
+        
+
+        if (auth) {
+            const { success: auth_success, message: auth_message, code: auth_code } = await auth({
+                ws,
+                client_params: client_params,
+                type: "connect",
+                send_error_to_client: (code, message) => {
+                    ws.send(JSON.stringify({
+                        type: "error",
+                        message: message,
+                        code: code
+                    }));
+                }
+            });
+            if (!auth_success) {
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    authed: false
+                })
+                ws.send(JSON.stringify({
+                    type: "auth_fail",
+                    message: `${auth_message || "-"}`,
+                    code: isOutTimeErr(auth_message) ? "007" : auth_code,
+                }));
+                // 防止大量失效用户重复请求
+                setTimeout(() => {
+                    ws.close();
+                    G_devices.delete(device_id);
+                }, 5000)
+                return;
+            } else {
+                G_devices.set(device_id, {
+                    ...G_devices.get(device_id),
+                    authed: true
+                })
+            };
+        }
+        
         const user_config = await gen_client_config({
             client_params,
             ws,
@@ -72,6 +112,9 @@ async function fn({ device_id }) {
             error_catch("TTS", "300", `请配置 tts_server、tts_config 参数。`);
             return log.error(`请配置 tts_server、tts_config 参数。`)
         }
+
+
+
         devLog && log.info(`---------------------------------------------------`);
         devLog && log.t_info(`客户端连接成功：${device_id}`);
         devLog && log.t_info(`客户端版本号：v${client_version}`);
@@ -116,37 +159,43 @@ async function fn({ device_id }) {
         //     // 播放音频测试 
         //     const session_id = await G_Instance.newSession(device_id);
         //     play_audio(
-        //         // "https://xiaomingio.top/music.mp3"
-        //         "https://xiaomingio.top/music2.mp3" 
+        //         "https://xiaomingio.top/music.mp3"
+        //         // "https://xiaomingio.top/music2.mp3" 
         //         // "http://192.168.3.16:8000/ad.opus"
         //         // "http://192.168.3.16:8000/ad_16.mp3"
         //         , ws, "play_music", session_id, device_id, 0, () => { 
         //         console.log("音乐播放完毕")
         //     })
         // }, 2000)
-        // return;
+        // return; 
 
         // await TTS_FN(device_id, {
-        //     text: "好的",  
+        //     session_id: "0010",
+        //     // text: "好的好的，连接成功了。",
+        //     text: "小米从创立之初就非常重视与用户的互动。我们有一个专门的论坛，用户可以在那里提出建议和反馈。有一次，一位米粉在论坛上发帖，哈哈哈哈。",
+        //     // text: `<speak>一匹马受了惊吓<soundEvent src="http://nls.alicdn.com/sound-event/horse-neigh.wav"/>人们四散躲避</speak>`, 
         //     text_is_over: true,
-        //     // tts_task_id: "connected_reply"
-        // }) 
-        // await TTS_FN(device_id, {
-        //     // text: "哦，听起来不太好受。记得多穿衣服保暖。", 
-        //     text: "东方财富最新的股价为13.74元/股。需要注意的是股市随时都在变化。", 
-        //     text_is_over: true,  
-        // }) 
+        // })  
         // return;
- 
+
+
+        //  await TTS_FN(device_id, {
+        //     session_id: "0010", 
+        //     text: "听起来不太好受。记得多穿衣服保暖。东方财富最新的股价为13.74元/股。",
+        //     // text: `<speak>一匹马受了惊吓<soundEvent src="http://nls.alicdn.com/sound-event/horse-neigh.wav"/>人们四散躲避</speak>`, 
+        //     text_is_over: true,
+        // })  
+        // return;
+
 
         // 缓存提示音 
-        if (user_config.iatDu !== false) {
+        if (user_config.iatDu !== false && LITTLE_ROM !== "1") {
             du_cache(ws);
         }
 
         // 缓存问候语 
         const f_reply = _user_config.f_reply;
-        if (f_reply !== false) {
+        if (f_reply !== false && LITTLE_ROM !== "1") {
             await TTS_FN(device_id, {
                 text: f_reply,
                 text_is_over: true,
@@ -154,9 +203,9 @@ async function fn({ device_id }) {
                 is_create_cache: true,
             })
         }
- 
+
         // 播放ws连接成功语音
-        if (connected_reply) { 
+        if (connected_reply) {
             await TTS_FN(device_id, {
                 text: connected_reply,
                 text_is_over: true,

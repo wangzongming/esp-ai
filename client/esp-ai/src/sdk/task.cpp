@@ -30,110 +30,30 @@
 
 void ESP_AI::delAllTask()
 { 
-
-    if (wakeup_task_handle != NULL)
-    {
-        vTaskDelete(wakeup_task_handle);
-        wakeup_task_handle = NULL; // 防止悬空指针
-        DEBUG_PRINTLN(debug, F("[TASK] -> wakeup_task_handle 已删除。"));
-    }
+ 
     if (sensor_task_handle != NULL)
     {
         vTaskDelete(sensor_task_handle);
         sensor_task_handle = NULL; // 防止悬空指针
         DEBUG_PRINTLN(debug, F("[TASK] -> sensor_task_handle 已删除。"));
-    }
-    if (on_wakeup_task_handle != NULL)
-    {
-        vTaskDelete(on_wakeup_task_handle);
-        on_wakeup_task_handle = NULL; // 防止悬空指针
-        DEBUG_PRINTLN(debug, F("[TASK] -> on_wakeup_task_handle 已删除。"));
-    }
-    if (get_position_task_handle != NULL)
-    {
-        vTaskDelete(get_position_task_handle);
-        get_position_task_handle = NULL; // 防止悬空指针
-        DEBUG_PRINTLN(debug, F("[TASK] -> get_position_task_handle 已删除。"));
-    }
-    if (send_audio_task_handle != NULL)
-    {
-        vTaskDelete(send_audio_task_handle);
-        send_audio_task_handle = NULL; // 防止悬空指针
-        DEBUG_PRINTLN(debug, F("[TASK] -> send_audio_task_handle 已删除。"));
-    }
-    if (volume_listener_task_handle != NULL)
-    {
-        vTaskDelete(volume_listener_task_handle);
-        volume_listener_task_handle = NULL; // 防止悬空指针
-        DEBUG_PRINTLN(debug, F("[TASK] -> volume_listener_task_handle 已删除。"));
-    }
+    }  
 }
 
 
 void ESP_AI::suspendAllTask()
-{
-    if (wakeup_task_handle != NULL)
-    {
-        vTaskSuspend(wakeup_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> wakeup_task_handle 已挂起。"));
-    }
+{ 
     if (sensor_task_handle != NULL)
     {
         vTaskSuspend(sensor_task_handle);
         DEBUG_PRINTLN(debug, F("[TASK] -> sensor_task_handle 已挂起。"));
-    }
-    if (on_wakeup_task_handle != NULL)
-    {
-        vTaskSuspend(on_wakeup_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> on_wakeup_task_handle 已挂起。"));
-    }
-    if (get_position_task_handle != NULL)
-    {
-        vTaskSuspend(get_position_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> get_position_task_handle 已挂起。"));
-    }
-    if (send_audio_task_handle != NULL)
-    {
-        vTaskSuspend(send_audio_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> send_audio_task_handle 已挂起。"));
-    }
-    if (volume_listener_task_handle != NULL)
-    {
-        vTaskSuspend(volume_listener_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> volume_listener_task_handle 已挂起。"));
-    } 
+    }  
 }
 
 void ESP_AI::resumeAllTask()
-{
-    if (wakeup_task_handle != NULL)
-    {
-        vTaskResume(wakeup_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> wakeup_task_handle 已恢复"));
-    }
+{ 
     if (sensor_task_handle != NULL)
     {
         vTaskResume(sensor_task_handle);
         DEBUG_PRINTLN(debug, F("[TASK] -> sensor_task_handle 已恢复"));
-    }
-    if (on_wakeup_task_handle != NULL)
-    {
-        vTaskResume(on_wakeup_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> on_wakeup_task_handle 已恢复"));
-    }
-    if (get_position_task_handle != NULL)
-    {
-        vTaskResume(get_position_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> get_position_task_handle 已恢复"));
-    }
-    if (send_audio_task_handle != NULL)
-    {
-        vTaskResume(send_audio_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> send_audio_task_handle 已恢复"));
-    }
-    if (volume_listener_task_handle != NULL)
-    {
-        vTaskResume(volume_listener_task_handle);
-        DEBUG_PRINTLN(debug, F("[TASK] -> volume_listener_task_handle 已恢复"));
-    }
+    } 
 }

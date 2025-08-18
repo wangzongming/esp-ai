@@ -27,94 +27,111 @@
  * @websit https://espai.fun
  */
 #include "lights.h"
-void ESP_AI::lights_wrapper(void *arg)
-{
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->lights();
-}
+
+StaticTask_t lightsTaskBuffer;
+StackType_t lightsTaskStack[LIGHTS_TASK_SIZE];
 
 // 根据位置返回对应的颜色
-uint32_t wheel(byte pos)
+uint32_t wheel(Adafruit_NeoPixel *esp_ai_pixels, byte pos)
 {
+    int c0 = 0, c1 = 0, c2 = 0;
     if (pos < 85)
     {
-        return esp_ai_pixels.Color(pos * 3, 255 - pos * 3, 0); // 红->绿渐变
+        c0 = pos * 3;       // 绿色分量
+        c1 = 255 - pos * 3; // 红色分量
+        c2 = 0;             // 蓝色分量
     }
     else if (pos < 170)
     {
         pos -= 85;
-        return esp_ai_pixels.Color(255 - pos * 3, 0, pos * 3); // 绿->蓝渐变
+        c0 = 255 - pos * 3; // 红色分量
+        c1 = 0;             // 绿色分量
+        c2 = pos * 3;       // 蓝色分量
     }
     else
     {
         pos -= 170;
-        return esp_ai_pixels.Color(0, pos * 3, 255 - pos * 3); // 蓝->红渐变
+        c0 = 0;             // 红色分量
+        c1 = pos * 3;       // 绿色分量
+        c2 = 255 - pos * 3; // 蓝色分量
     }
+
+    return esp_ai_pixels->Color(c0, c1, c2);
 }
 
-void ESP_AI::lights()
+void set_color_all(Adafruit_NeoPixel *esp_ai_pixels, int count, uint8_t brightness, uint32_t color)
 {
+    for (int i = 0; i < count; i++)
+    {
+        esp_ai_pixels->setPixelColor(i, color);
+    }
+    esp_ai_pixels->setBrightness(brightness);
+    esp_ai_pixels->show();
+}
+
+void light_task_static(void *arg)
+{
+
+    LightContext *ctx = static_cast<LightContext *>(arg);
+    if (ctx == nullptr) {
+        Serial.println(F("[Error] LightContext ctx is null!"));
+        vTaskDelete(NULL);
+        return;
+    }
 
     int rainbow_step_ai = 0;
 
     while (true)
     { 
-        if (mp3_player_is_playing())
+        if (ctx->isPlaying())
         {
-            esp_ai_pixels.setPixelColor(0, wheel(rainbow_step_ai));
-            esp_ai_pixels.show();
+            set_color_all(ctx->pixels, ctx->count, 100, wheel(ctx->pixels, rainbow_step_ai));
             rainbow_step_ai = (rainbow_step_ai + 15) & 255;
         }
         else
-        {
-            if (esp_ai_status == "iat_start" || esp_ai_status == "wakeup")
+        { 
+            // if (*ctx->status == "iat_start" || *ctx->status == "wakeup")
+            if (*ctx->esp_ai_start_send_audio)
             {
-                esp_ai_pixels.clear();
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(18, 170, 156));
-                esp_ai_pixels.setBrightness(100);
+                ctx->pixels->clear();
+                set_color_all(ctx->pixels, ctx->count, 100, ctx->pixels->Color(18, 170, 156));
             }
-
-            else if (esp_ai_status == "iat_end" || esp_ai_status == "tts_real_end")
+            else if (*ctx->status == "iat_end" || *ctx->status == "tts_real_end")
             {
-                esp_ai_pixels.clear();
+                ctx->pixels->clear();
             }
-            else if (esp_ai_status == "0_ing")
+            else if (*ctx->status == "0_ing")
             {
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-                esp_ai_pixels.setBrightness(50);
+                set_color_all(ctx->pixels, ctx->count, 50, ctx->pixels->Color(238, 39, 70));
             }
-            else if (esp_ai_status == "0_ing_after")
+            else if (*ctx->status == "0_ing_after")
             {
-                esp_ai_pixels.clear();
+                ctx->pixels->clear();
             }
             // 未初始化完毕
-            else if (esp_ai_status == "0")
+            else if (*ctx->status == "0")
             {
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(255, 0, 0));
-                esp_ai_pixels.setBrightness(100);
+                set_color_all(ctx->pixels, ctx->count, 100, ctx->pixels->Color(255, 0, 0));
             }
-            else if (esp_ai_status == "0_ap")
+            else if (*ctx->status == "0_ap")
             {
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(241, 202, 23));
-                esp_ai_pixels.setBrightness(100);
+                set_color_all(ctx->pixels, ctx->count, 100, ctx->pixels->Color(241, 202, 23));
             }
-            else if (esp_ai_status == "2")
+            else if (*ctx->status == "2")
             {
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-                esp_ai_pixels.setBrightness(50);
+                set_color_all(ctx->pixels, ctx->count, 50, ctx->pixels->Color(238, 39, 70));
             }
-            else if (esp_ai_status == "3")
+            else if (*ctx->status == "3")
             {
-                esp_ai_pixels.clear();
+                ctx->pixels->clear();
             }
-            else if (esp_ai_status == "long_press_ing")
-            {
-                esp_ai_pixels.setPixelColor(0, esp_ai_pixels.Color(238, 39, 70));
-                esp_ai_pixels.setBrightness(50);
+            else if (*ctx->status == "long_press_ing")
+            { 
+                set_color_all(ctx->pixels, ctx->count, 50, ctx->pixels->Color(238, 39, 70));
             }
-            esp_ai_pixels.show();
+            ctx->pixels->show();
         }
-
+ 
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

@@ -33,6 +33,7 @@ isSpeaking KEYWORD2
 awaitPlayerDone KEYWORD2
 playBuiltinAudio KEYWORD2
 onReady KEYWORD2
+onVolumeCb KEYWORD2
  
 #constant (LITERAL1)
 #none

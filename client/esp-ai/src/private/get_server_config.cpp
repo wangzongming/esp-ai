@@ -31,9 +31,8 @@
 // 获取服务节点信息
 bool ESP_AI::get_server_config()
 {
-    // 创建一个HTTP客户端对象
-    HTTPClient http;
 
+#if !defined(LITTLE_ROM)
     String loc_api_key = get_local_data("api_key");
     if (loc_api_key == "")
     {
@@ -42,8 +41,10 @@ bool ESP_AI::get_server_config()
         DEBUG_PRINTLN(debug, ("[Info] 在配网页面中填入 ESP-AI 开放平台中的超体 api_key 即可完成服务对接。开放平台：https://dev.espai.fun\n"));
         return true;
     }
+    // 创建一个HTTP客户端对象
+    HTTPClient http;
     DEBUG_PRINTLN(debug, "[Info] api_key：" + loc_api_key);
-    String domain = "https://api.espai2.fun";
+    String domain = "http://api.espai.fun";
     String url = domain + "/sdk/get_server_info_by_api_key?api_key=" + loc_api_key;
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
@@ -52,10 +53,11 @@ bool ESP_AI::get_server_config()
     if (httpCode > 0)
     {
         String payload = http.getString();
-        Serial.printf("[HTTPS] GET... code: %d\n", httpCode); 
+        Serial.printf("[HTTPS] GET... code: %d\n", httpCode);
         JSONVar parse_res = JSON.parse(payload);
         if (JSON.typeof(parse_res) == "undefined")
         {
+            http.end();
             return false;
         }
 
@@ -83,8 +85,7 @@ bool ESP_AI::get_server_config()
             }
             else
             {
-                String ip_str = (const char *)parse_res["data"]["ip"];
-                // String ip_str = "192.168.3.3";
+                String ip_str = (const char *)parse_res["data"]["ip"]; 
                 int port = (int)parse_res["data"]["port"];
                 String protocol = (const char *)parse_res["data"]["protocol"];
                 String path = (const char *)parse_res["data"]["path"];
@@ -97,6 +98,7 @@ bool ESP_AI::get_server_config()
                 strcpy(server_config.protocol, protocol.c_str());
                 strcpy(server_config.path, path.c_str());
                 server_config.port = port;
+                http.end();
                 return true;
             }
         }
@@ -104,8 +106,11 @@ bool ESP_AI::get_server_config()
     else
     {
         Serial.printf("\n[HTTPS] 获取ESP-AI服务节点信息失败, error: %s\n", http.errorToString(httpCode).c_str());
+        http.end();
         return false;
     }
 
     http.end();
+#endif
+    return false;
 }

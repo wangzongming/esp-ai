@@ -12,12 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -87,8 +87,8 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         let start_audio_time = null;
         const audio_sender = new Audio_sender(client_ws, device_id);
         audio_sender.startSend(session_id);
-        client_ws && client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id:task_id  }));
-
+        client_ws && client_ws.send(JSON.stringify({ type: "play_audio", tts_task_id: task_id }));
+        client_ws && client_ws.send(JSON.stringify({ type: "session_status", status: "tts_chunk_start" }));
 
         // 结束时一定要调用本函数
         let ended = false;
@@ -121,9 +121,10 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
 
         G_devices.set(device_id, {
             ...G_devices.get(device_id),
-            // 播放音频的参数 
+            // 播放音频的参数
             play_audio_on_end: (event) => {
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_all_end"]);
+
                 audio_sender.stop();
                 endCb(event);
             },
@@ -134,12 +135,12 @@ function play_audio(url, client_ws, task_id, session_id, device_id, seek, on_end
         const output_stream = urlToStream(url,
             () => {
                 endCb("error");
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_all_end"]);
                 audio_sender.stop();
             },
             () => {
                 is_parse_over = true;
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_all_end"]);
             }
         );
 

@@ -16,8 +16,8 @@
  * Commercial use of this software requires prior written authorization from the Licensor.
  * 请注意：将 ESP-AI 代码用于商业用途需要事先获得许可方的授权。
  * 删除与修改版权属于侵权行为，请尊重作者版权，避免产生不必要的纠纷。
- * 
- * @author 小明IO   
+ *
+ * @author 小明IO
  * @email  1746809408@qq.com
  * @github https://github.com/wangzongming/esp-ai
  * @websit https://espai.fun
@@ -58,8 +58,8 @@ function init_server() {
             log.t_info(`设备连接参数：`, req.url);
             const client_version = client_params.v;
             const device_id = client_params.device_id;
-            if (!device_id) {
-                log.error("设备异常，未读取到 device_id");
+            if (!device_id || !client_version) {
+                log.error("设备异常，未读取到 device_id || v || api_key 参数，请检查设备配置。");
                 setTimeout(() => {
                     ws.send(JSON.stringify({ type: "error", message: `设备异常，未读取到 device_id`, code: "004" }));
                     ws.close();
@@ -68,7 +68,9 @@ function init_server() {
             }
             log.t_info(`[${device_id}] 硬件连接`)
 
+
             // 断电重连
+            // 这里存在问题，如果删除掉设备会导致设备端无法进入 ready 状态， ing...
             if (G_devices.get(device_id)) {
                 const { ws: _ws } = G_devices.get(device_id);
                 await G_Instance.stop(device_id, "打断会话时");
@@ -109,6 +111,14 @@ function init_server() {
 
             ws.on('message', async function (data) {
                 const comm_args = { device_id };
+
+                if(!G_devices.get(device_id)){
+                    log.error(`客戶端异常断开，马上进行重启：${device_id}`);
+                    ws && ws.close();
+                    return;
+                }
+
+
                 try {
                     if (typeof data === "string") {
                         // console.log('data', data)
@@ -142,6 +152,9 @@ function init_server() {
                                 break;
                             case "play_audio_ws_conntceed":
                                 play_audio_ws_conntceed(comm_args)
+                                break;
+                            case "char_txt":
+                                G_Instance.llm(device_id, text)
                                 break;
                             case "tts":
                                 G_Instance.tts(device_id, text)
@@ -189,35 +202,6 @@ function init_server() {
                 this.isAlive = true;
             });
 
-
-            if (auth) {
-                const { success: auth_success, message: auth_message, code: auth_code } = await auth({
-                    ws,
-                    client_params: client_params,
-                    type: "connect",
-                    send_error_to_client: (code, message) => {
-                        ws.send(JSON.stringify({
-                            type: "error",
-                            message: message,
-                            code: code
-                        }));
-                    }
-                });
-                if (!auth_success) {
-                    ws.send(JSON.stringify({
-                        type: "auth_fail",
-                        message: `${auth_message || "-"}`,
-                        code: isOutTimeErr(auth_message) ? "007" : auth_code,
-                    }));
-                    // 防止大量失效用户重复请求
-                    setTimeout(() => {
-                        ws.close();
-                        G_devices.delete(device_id);
-                    }, 5000)
-                    return;
-                };
-            }
-
             ws.on('close', (code, reason) => {
                 devLog && log.info(``);
                 devLog && log.t_red_info(`硬件设备断开连接: ${device_id}， code: ${code}， reason: ${reason}`);
@@ -247,7 +231,7 @@ function init_server() {
                     onDeviceDisConnect && onDeviceDisConnect({ device_id: ws.device_id, client_params: ws.client_params, instance: G_Instance });
                     log.t_info(`[${ws.device_id}] 设备掉线了，关闭连接`);
                     return ws.terminate()
-                };
+                }
 
                 ws.isAlive = false;
                 ws.ping();

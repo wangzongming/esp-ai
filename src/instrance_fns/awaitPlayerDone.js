@@ -36,6 +36,7 @@ function awaitPlayerDone(device_id) {
                 let timerOutNum = 1200;
                 clearInterval(awaitSpeakingTimer);
                 awaitSpeakingTimer = setInterval(() => {
+                    // console.log('isSpeaking::: ', isSpeaking);
                     if (!G_devices.get(device_id) || timerOutNum <= 0) {
                         // 设备断开后自动清除定时器
                         clearInterval(awaitSpeakingTimer);
@@ -43,7 +44,6 @@ function awaitPlayerDone(device_id) {
                         return;
                     }
                     const isSpeaking = G_Instance.isSpeaking(device_id);
-                    // console.log('isSpeaking::: ', isSpeaking);
                     if (!isSpeaking) {
                         clearInterval(awaitSpeakingTimer);
                         resolve();

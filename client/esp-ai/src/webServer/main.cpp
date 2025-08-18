@@ -30,7 +30,7 @@
 #include "main.h"
 
 bool start_scan_ssids_ed = false;
- 
+
 void ESP_AI::set_config()
 {
     String loc_wifi_name = get_local_data("wifi_name");
@@ -303,9 +303,11 @@ void ESP_AI::get_ssids()
     {
         xTaskCreate(ESP_AI::scan_wifi_wrapper, "scan_wifi", 1024 * 8, this, 1, NULL);
         json_response["status"] = "scaning";
+        Serial.println("扫描为完毕，正在扫描中...");
     }
     else
     {
+        Serial.println("扫描完毕");
         json_response["data"] = esp_ai_wifi_scan_json_response_data;
     }
     web_server_setCrossOrigin();
@@ -673,13 +675,13 @@ const char esp_ai_html_str[] PROGMEM = R"rawliteral(
     )rawliteral";
 void ESP_AI::web_server_page_index()
 {
-    web_server_setCrossOrigin();
+    web_server_setCrossOrigin(); 
     if (wifi_config.html_str[0] != '\0')
     {
-        esp_ai_server.send(200, "text/html", wifi_config.html_str.c_str());
+        esp_ai_server.send_P(200, "text/html", wifi_config.html_str);
     }
     else
     {
-        esp_ai_server.send(200, "text/html", esp_ai_html_str);
+        esp_ai_server.send_P(200, "text/html", esp_ai_html_str);
     }
 }

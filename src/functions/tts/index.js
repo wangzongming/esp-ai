@@ -41,14 +41,14 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
         const { devLog, onTTScb } = G_config;
         if (!G_devices.get(device_id)) return;
         const { ws: ws_client, tts_list, session_id: now_session_id } = G_devices.get(device_id);
-        if (!ws_client) return; 
+        if (!ws_client) return;
         if (
             !is_create_cache &&
             session_id &&
             now_session_id &&
             session_id !== now_session_id &&
             !([G_session_ids["tts_fn"]].includes(session_id))
-        ) return; 
+        ) return;
 
         !is_create_cache && onTTScb && onTTScb({
             device_id,
@@ -72,11 +72,10 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
             ws.close && ws.close();
             tts_list.delete(tts_task_id);
             function sendEndBuffer() {
-                devLog && log.tts_info(`-> 服务端发送 LLM 结束的标志流: ${G_session_ids["tts_all_end"]}`);
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_all_end"]);
             }
             function sendEndAlignBuffer() {
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_all_end_align"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_all_end_align"]);
             }
 
 
@@ -100,7 +99,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
                 })
             } else {
                 // 文本没有结束，发送 chunk 标识
-                audio_sender.sendAudio(Buffer.from(G_session_ids["tts_chunk_end"], 'utf-8'));
+                audio_sender.sendAudio(null, G_session_ids["tts_chunk_end"]);
             }
         }
 
@@ -115,7 +114,7 @@ async function cb({ device_id, is_over, audio, ws, tts_task_id, session_id, text
 /**
  * TTS 模块
  * @param {String} device_id 设备id
- * @param {String} text 待播报的文本 
+ * @param {String} text 待播报的文本
  * @param {Boolean} session_id 会话id(这里绝不是从设备信息中取，设备信息会实时更新)
  * @param {Boolean} text_is_over 文本是否完整，或者文本是否是最后一段
  * @param {Boolean} need_record  是否需要重新识别，由客户端控制
@@ -139,9 +138,10 @@ function TTSFN(device_id, opts) {
 
                 const TTS_FN = plugin || require(`./${tts_server}`);
                 if (!is_pre_connect) {
-                    if (!text || !(`${text}`.replace(/\s/g, ''))) {
-                        return true;
-                    }
+                    if (!text || !(`${text}`.replace(/\s/g, ''))) return true;
+                    // 只有一个符号时放弃
+                    const punctuationRegex = /[。，！？!?；;！？…~～」]|(?<![A-Za-z0-9])\.(?![A-Za-z0-9])|(?<![A-Za-z])'(?![A-Za-z])/g;
+                    if(text.replace(punctuationRegex, "") === "")return true;
                 }
                 if (is_create_cache) {
                     devLog && log.tts_info('-> 开始缓存TTS: ', text);
@@ -168,7 +168,7 @@ function TTSFN(device_id, opts) {
                  * 记录 tts 服务对象
                 */
                 const logWSServer = (wsServer) => {
-                    tts_list.set(tts_task_id, wsServer)
+                    tts_list && typeof tts_list.set === 'function' && tts_list.set(tts_task_id, wsServer)
                 }
 
                 /**
@@ -202,7 +202,7 @@ function TTSFN(device_id, opts) {
                             type: "session_status",
                             status: "tts_chunk_start",
                         }));
-                        // 启动音频发送任务 
+                        // 启动音频发送任务
                         audio_sender.startSend(tts_task_id === "connected_reply" ? "0001" : session_id, () => {
                             G_devices.set(device_id, {
                                 ...G_devices.get(device_id),
@@ -218,7 +218,7 @@ function TTSFN(device_id, opts) {
                                 resolve_tts_task: null
                             })
                             return resolve(true);
-                        };
+                        }
                         G_devices.set(device_id, {
                             ...G_devices.get(device_id),
                             tts_server_connected: false,

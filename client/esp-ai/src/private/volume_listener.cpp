@@ -27,15 +27,20 @@
  * @websit https://espai.fun
  */
 #include "volume_listener.h"
-void ESP_AI::volume_listener_wrapper(void *arg)
-{
-    ESP_AI *instance = static_cast<ESP_AI *>(arg);
-    instance->volume_listener();
-}
 
-void ESP_AI::volume_listener()
-{ 
-    const int numReadings = 20;  
+StaticTask_t volListenTaskBuffer;
+StackType_t volListenTaskStack[VOL_LISTEN_TASK_SIZE];
+
+void vol_listen_task_static(void *arg)
+{
+    VolListenContext *ctx = static_cast<VolListenContext *>(arg);
+    if (!ctx)
+    {
+        Serial.println(F("[Error] VolListenContext ctx is null!"));
+        vTaskDelete(NULL);
+        return;
+    }
+    const int numReadings = 20;
     int readings[numReadings];
     int readIndex = 0;
     int total = 0;
@@ -48,20 +53,29 @@ void ESP_AI::volume_listener()
 
     while (true)
     {
+        // 旋钮方式变化音量
         total -= readings[readIndex];
-        readings[readIndex] = analogRead(volume_config.input_pin);
+        readings[readIndex] = analogRead(*(ctx->pin));
         total += readings[readIndex];
         readIndex = (readIndex + 1) % numReadings;
         average = total / numReadings;
-        float _t = static_cast<float>(average) / volume_config.max_val;
+        float _t = static_cast<float>(average) / *(ctx->max_val);
         String formattedValue = String(_t, 1);
+        // 音量
         float formattedNumber = formattedValue.toFloat();
-        if (fabs(volume_config.volume - formattedNumber) >= 0.1)
-        { 
-            volume_config.volume = formattedNumber;
-            esp_ai_volume.setVolume(volume_config.volume);
-        }
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        ctx->onChange(formattedNumber);
+
+        /**
+         * boot 按钮方式控制音量
+         * 如果音量不是 1, 则长两秒后开始进行音量增加，增加到1后停止增加
+         * 反之如果音量是 1, 则长两秒后开始进行音量减少，减少到0后停止减少
+         *
+         * 和对话冲突了...
+         */
+        // ing...
+
+        // vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }

@@ -36,6 +36,7 @@ void ESP_AI::connect_ws()
         DEBUG_PRINTLN(debug, F("[Error] 正确的服务配置： ESP_AI_server_config server_config = { \"http或者https\", \"ip或者域名\", 端口 };"));
         return;
     }
+
     String loc_device_id = get_device_id();
     String loc_api_key = get_local_data("api_key");
     String loc_ext1 = get_local_data("ext1");
@@ -46,7 +47,58 @@ void ESP_AI::connect_ws()
     String loc_ext6 = get_local_data("ext6");
     String loc_ext7 = get_local_data("ext7");
 
-    DEBUG_PRINTLN(debug, ("[Info] 开始连接后台服务，如果长时间无响应说明你的服务有问题。"));
+
+    // size_t freeHeap = ESP.getFreeHeap() / 1024;
+    // Serial.print("剩余内存：");
+    // Serial.println(freeHeap);
+
+    String real_path = String(server_config.path) + "/?v=" + ESP_AI_VERSION + "&device_id=" + loc_device_id;
+    if (loc_api_key)
+    {
+        real_path += ("&api_key=" + loc_api_key);
+    }
+    if (loc_ext1 || loc_api_key)
+    {
+        real_path += ("&ext1=" + (loc_ext1 ? loc_ext1 : loc_api_key));
+    }
+    if (loc_ext2 != "")
+    {
+        real_path += ("&ext2=" + loc_ext2);
+    }
+    if (loc_ext3 != "")
+    {
+        real_path += ("&ext3=" + loc_ext3);
+    }
+    if (loc_ext4 != "")
+    {
+        real_path += ("&ext4=" + loc_ext4);
+    }
+    if (loc_ext5 != "")
+    {
+        real_path += ("&ext5=" + loc_ext5);
+    }
+    if (loc_ext6 != "")
+    {
+        real_path += ("&ext6=" + loc_ext6);
+    }
+    if (loc_ext7 != "")
+    {
+        real_path += ("&ext7=" + loc_ext7);
+    }
+#if defined(AUDIO_OUTPUT_BITRATE)
+    real_path += ("&bitrate=" + String(AUDIO_OUTPUT_BITRATE));
+#endif
+
+#if defined(LITTLE_ROM)
+    real_path += ("&LITTLE_ROM=1");
+#endif 
+    // 增加设备缓存能力参数
+    real_path += ("&AUDIO_BUFFER_SIZE=" + String(AUDIO_BUFFER_SIZE));
+    if (server_config.params)
+    {
+        real_path += ("&" + String(server_config.params));
+    }
+    DEBUG_PRINTLN(debug, F("[Info] 开始连接后台服务，如果长时间无响应说明你的服务有问题。"));
     DEBUG_PRINT(debug, server_config.protocol);
     DEBUG_PRINT(debug, " ");
     DEBUG_PRINT(debug, server_config.ip);
@@ -55,25 +107,17 @@ void ESP_AI::connect_ws()
     DEBUG_PRINT(debug, " ");
     DEBUG_PRINT(debug, server_config.path);
     DEBUG_PRINT(debug, " ");
-    DEBUG_PRINTLN(debug, server_config.params);
+    DEBUG_PRINT(debug, server_config.params); 
+    DEBUG_PRINT(debug, " ");
+    DEBUG_PRINTLN(debug, real_path); 
 
-    // size_t freeHeap = ESP.getFreeHeap() / 1024;
-    // Serial.print("剩余内存：");
-    // Serial.println(freeHeap);
-
-    String real_path = String(server_config.path) + "/?v=" + ESP_AI_VERSION +
-                       "&device_id=" + loc_device_id +
-                       "&api_key=" + loc_api_key +
-                       "&ext1=" + (loc_ext1 ? loc_ext1 : loc_api_key) +
-                       "&ext2=" + loc_ext2 +
-                       "&ext3=" + loc_ext3 +
-                       "&ext4=" + loc_ext4 +
-                       "&ext5=" + loc_ext5 +
-                       "&ext6=" + loc_ext6 +
-                       "&ext7=" + loc_ext7 +
-                       "&" + server_config.params;
- 
-    // ws 服务
+#if defined(LITTLE_ROM)
+    if (String(server_config.protocol) == "https")
+    {
+        DEBUG_PRINTLN(debug, F("[Error] 此开发板不支持 https 连接 ！"));
+    }
+    esp_ai_webSocket.begin(server_config.ip, server_config.port, real_path);
+#else
     if (String(server_config.protocol) == "https")
     {
         esp_ai_webSocket.beginSSL(server_config.ip, server_config.port, real_path);
@@ -82,6 +126,7 @@ void ESP_AI::connect_ws()
     {
         esp_ai_webSocket.begin(server_config.ip, server_config.port, real_path);
     }
+#endif
 
     esp_ai_webSocket.onEvent(std::bind(&ESP_AI::webSocketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     esp_ai_webSocket.setReconnectInterval(3000);
