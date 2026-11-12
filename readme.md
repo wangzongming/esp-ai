@@ -25,10 +25,7 @@
 [download-image]: https://img.shields.io/npm/dm/esp-ai.svg?style=flat
 [bundlephobia-url]: https://bundlephobia.com/package/esp-ai 
    
-
-<div style="background:#fff;border-radius: 12px;">
-<img src="https://espai.fun/images/ESP-AI.png"/>
-</div>
+ 
 
 
 </div>
