@@ -2,9 +2,9 @@
 <div align="center"> 
 <a name="readme-top"></a>
 
-<div style="background:#fff;border-radius: 12px;width:300px;">
-  <img src="https://espai.fun/images/logo.png"/> 
-</div>
+<b style="color: red;">espai.fun 域名已经不再使用，并且被不良商家注册！</b><br/>
+<b style="color: red;">espai.fun 域名已经不再使用，并且被不良商家注册！</b><br/>
+<b style="color: red;">espai.fun 域名已经不再使用，并且被不良商家注册！</b> 
 
 <h1>ESP-AI</h1>
 
@@ -14,10 +14,7 @@
 [![NPM version][npm-image]][npm-url] 
 [![NPM downloads][download-image]][download-url]
 [![][bundlephobia-image]][bundlephobia-url] 
-
-[Changelog](https://espai.fun/change-logs.html) · 
-[中文文档](https://espai.fun/) · 
-[English Docs](https://espai.fun/en)
+ 
 
 ![](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
@@ -72,11 +69,9 @@ The server-side code of this project is based on `Node.js`, and the hardware cod
 
 Open source is not easy, click the `Star` button in the upper right corner to show your support~
 
-# 🖥 Website
+# 🖥 Website 
 
-- [中文网站](https://espai.fun/)
-- [English](https://espai.fun/en)
-
+-
 
 # 🖥 open platform 
 
@@ -123,9 +118,7 @@ Below are the `Node.js` and `Arduino` codes you need to write if you only requir
 
 <!-- <img src="./imgs/arduino.png" /> -->
 <!-- <img src="./imgs/nodejs.png" /> -->
-<img src="https://espai.fun/images/arduino.png" />
-<img src="https://espai.fun/images/nodejs.png" />
-
+ 
 
 # 🏪 Discussion Group
 
